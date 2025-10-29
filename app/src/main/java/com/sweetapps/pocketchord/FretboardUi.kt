@@ -50,7 +50,8 @@ fun FretboardDiagram(
     uiParams: DiagramUiParams = DefaultDiagramUiParams,
     firstFretIsNut: Boolean = true,
     diagramWidth: Dp? = null,
-    diagramHeight: Dp? = null
+    diagramHeight: Dp? = null,
+    fretCount: Int = 4
 ) {
     Column(
         modifier = modifier
@@ -75,28 +76,41 @@ fun FretboardDiagram(
             val boxWpx = with(density) { boxW.toPx() }
             val boxHpx = with(density) { boxH.toPx() }
             val leftInsetPx = with(density) { uiParams.leftInsetDp.toPx() }
-            val openOffsetPx = with(density) { uiParams.openMarkerOffsetDp.toPx() }
+            val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
             val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
             val nutPx = if (firstFretIsNut) computedNutPx else 0f
-            val fretCount = 5
+            // use provided fretCount
             val stringCount = 6
             // available width for frets = total width - leftInset - nut width
             val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
-            val fretSpacingPx = if (fretCount > 0) availableWidth / fretCount else 0f
+            // compute fret spacing so 'fretCount' frets fit inside the available width
+            // dividing by (fretCount + 1) positions the last fret inside the canvas
+            val spacingDiv = if (fretCount > 0) (fretCount + 1) else 1
+            val fretSpacingPx = if (spacingDiv > 0) availableWidth / spacingDiv else 0f
             val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
 
             Canvas(modifier = Modifier.matchParentSize()) {
                 // background
                 drawRect(Color.White, size = size)
                 // nut or vertical frets (shifted by leftInset)
+                // compute stroke half-width and a safe right-edge clamp
+                val vStrokeHalf = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
+                val maxFretX = size.width - vStrokeHalf
+                // draw frets for f = 0..fretCount (inclusive) so we have nut + 'fretCount' frets visible
                 for (f in 0..fretCount) {
                     if (f == 0 && firstFretIsNut) {
                         drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
                     } else {
-                        val x = leftInsetPx + nutPx + f * fretSpacingPx
-                        drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                        val xRaw = leftInsetPx + nutPx + f * fretSpacingPx
+                        // clamp into visible canvas so the final fret isn't dropped
+                        val x = xRaw.coerceAtMost(maxFretX)
+                        // ensure fret is drawn only if it lies to the right of the nut area
+                        if (x > leftInsetPx + nutPx + 0.5f) {
+                            drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                        }
                     }
                 }
+
                 // horizontal strings (start after leftInset)
                 for (s in 0 until stringCount) {
                     val y = s * stringSpacingPx
@@ -129,7 +143,7 @@ fun FretboardDiagram(
                         }
                         // Compute open marker radius first, then derive mute 'X' size so both visually match
                         fretNum == 0 -> {
-                            val x = leftInsetPx - with(density) { uiParams.openMarkerOffsetDp.toPx() }
+                            val x = leftInsetPx - markerOffsetPx
                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
@@ -143,7 +157,7 @@ fun FretboardDiagram(
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val muteScale = uiParams.muteMarkerSizeFactor / openFactor
                             val muteHalf = openRadius * 0.70710677f * muteScale
-                            val x = leftInsetPx - with(density) { uiParams.muteMarkerOffsetDp.toPx() }
+                            val x = leftInsetPx - markerOffsetPx
                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
                             val inset = muteHalf * uiParams.muteMarkerInsetFactor
                             // draw lines from corners inside by inset to achieve balanced visual weight
@@ -161,10 +175,10 @@ fun FretboardDiagram(
 fun FretboardDiagramOnly(
     modifier: Modifier = Modifier,
     uiParams: DiagramUiParams = DefaultDiagramUiParams,
-    stringStrokeWidthDp: Dp? = null,
     positions: List<Int>? = null,
     fingers: List<Int>? = null,
-    firstFretIsNut: Boolean = true
+    firstFretIsNut: Boolean = true,
+    fretCount: Int = 4
 ) {
     // Small variant: fills given modifier size
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -172,27 +186,34 @@ fun FretboardDiagramOnly(
         val boxWpx = with(density) { maxWidth.toPx() }
         val boxHpx = with(density) { maxHeight.toPx() }
         val leftInsetPx = with(density) { uiParams.leftInsetDp.toPx() }
-        val openOffsetPx = with(density) { uiParams.openMarkerOffsetDp.toPx() }
+        val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
         val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
         val nutPx = if (firstFretIsNut) computedNutPx else 0f
-        val fretCount = 5
+        // use provided fretCount
         val stringCount = 6
         val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
-        val fretSpacingPx = if (fretCount > 0) availableWidth / fretCount else 0f
+        val spacingDivSmall = if (fretCount > 0) (fretCount + 1) else 1
+        val fretSpacingPx = if (spacingDivSmall > 0) availableWidth / spacingDivSmall else 0f
         val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
 
         Canvas(modifier = Modifier.matchParentSize()) {
              drawRect(Color.White, size = size)
+             // draw nut + frets, but skip any fret line that would lie at/ beyond the canvas right edge
+             val vStrokeHalfSmall = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
+             val maxFretXSmall = size.width - vStrokeHalfSmall
              for (f in 0..fretCount) {
                  if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
                  else {
-                     val x = leftInsetPx + nutPx + f * fretSpacingPx
-                     drawLine(Color.Black, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                     val xRaw = leftInsetPx + nutPx + f * fretSpacingPx
+                     val x = xRaw.coerceAtMost(maxFretXSmall)
+                     if (x > leftInsetPx + nutPx + 0.5f) drawLine(Color.Black, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
                  }
              }
-              for (s in 0 until stringCount) {
+
+             for (s in 0 until stringCount) {
                   val y = s * stringSpacingPx
-                 drawLine(Color.Black, start = Offset(leftInsetPx, y), end = Offset(size.width, y), strokeWidth = stringStrokeWidthDp?.let { with(density) { it.toPx() } } ?: with(density) { uiParams.horizontalLineWidthDp.toPx() })
+                 // always use the uiParams.horizontalLineWidthDp for string thickness
+                 drawLine(Color.Black, start = Offset(leftInsetPx, y), end = Offset(size.width, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
               }
 
              // draw markers directly on canvas (positions indexed low->high strings: [6th..1st])
@@ -220,7 +241,7 @@ fun FretboardDiagramOnly(
                          }
                          fn == 0 -> {
                             // open marker uses open-specific params
-                            val x = leftInsetPx - with(density) { uiParams.openMarkerOffsetDp.toPx() }
+                            val x = leftInsetPx - markerOffsetPx
                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
@@ -234,7 +255,7 @@ fun FretboardDiagramOnly(
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val muteScale = uiParams.muteMarkerSizeFactor / openFactor
                             val muteHalf = openRadius * 0.70710677f * muteScale
-                            val x = leftInsetPx - with(density) { uiParams.muteMarkerOffsetDp.toPx() }
+                            val x = leftInsetPx - markerOffsetPx
                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
                             val inset = muteHalf * uiParams.muteMarkerInsetFactor
                             drawLine(Color.Black, start = Offset(x - muteHalf + inset, y - muteHalf + inset), end = Offset(x + muteHalf - inset, y + muteHalf - inset), strokeWidth = strokeW)

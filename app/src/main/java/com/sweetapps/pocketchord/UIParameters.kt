@@ -15,13 +15,12 @@ import androidx.compose.foundation.layout.*
 data class DiagramUiParams(
     val nutWidthFactor: Float = 0.03f, // fraction of diagram width when nutWidthDp is null
     val nutWidthDp: Dp? = null, // if set, overrides nutWidthFactor
-    val markerRadiusFactor: Float = 0.35f, // fraction of min(fretSpacing, stringSpacing)
-    val markerTextScale: Float = 1.2f, // multiplier for marker text size relative to radius
+    val markerRadiusFactor: Float = 0.40f, // fraction of min(fretSpacing, stringSpacing)
+    val markerTextScale: Float = 1.5f, // multiplier for marker text size relative to radius
     // left inset: space from the canvas left edge to the nut's left edge
     val leftInsetDp: Dp = 1.dp,
-    // how far (center) outside the nut to place open/mute markers
-    val openMarkerOffsetDp: Dp = 8.dp,
-    val muteMarkerOffsetDp: Dp = 8.dp,
+    // how far (center) outside the nut to place open/mute markers (single control for both)
+    val markerOffsetDp: Dp = 14.dp,
     // stroke widths for open/mute markers (allows material-like thin outlines)
     val openMarkerStrokeDp: Dp = 1.dp,
     // make mute stroke similar to open by default to improve perceived weight
@@ -32,9 +31,8 @@ data class DiagramUiParams(
     // inset factor applied when drawing the mute 'X' (fraction of half-size)
     // use zero inset by default so the 'X' diagonal matches the circle diameter visually
     val muteMarkerInsetFactor: Float = 0f,
-    val verticalLineWidthDp: Dp = 2.dp, // stroke for vertical frets
-    val horizontalLineWidthDp: Dp = 2.dp, // stroke for horizontal frets (strings)
-    val stringStrokeWidthDp: Dp = 1.6.dp // fallback stroke for strings if separately exposed
+    val verticalLineWidthDp: Dp = 1.dp, // stroke for vertical frets
+    val horizontalLineWidthDp: Dp = 1.dp, // stroke for horizontal frets (strings)
 )
 
 val DefaultDiagramUiParams = DiagramUiParams()

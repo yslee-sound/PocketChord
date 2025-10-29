@@ -514,7 +514,6 @@ fun FretboardCard(
                     FretboardDiagramOnly(
                         modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
                         uiParams = uiParams,
-                        stringStrokeWidthDp = 1.8.dp,
                         positions = positionsForC,
                         fingers = fingersForC,
                         firstFretIsNut = true
@@ -522,8 +521,7 @@ fun FretboardCard(
                 } else {
                     FretboardDiagramOnly(
                         modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
-                        uiParams = uiParams,
-                        stringStrokeWidthDp = 1.8.dp
+                        uiParams = uiParams
                     )
                 }
              }
