@@ -127,32 +127,35 @@ fun FretboardDiagram(
                                 }
                             }
                         }
+                        // Compute open marker radius first, then derive mute 'X' size so both visually match
                         fretNum == 0 -> {
-                            // open string: draw outside left of nut (white fill + black stroke to be visible)
-                            val x = leftInsetPx - openOffsetPx
-                            val radius = min(fretSpacingPx, stringSpacingPx) * 0.22f
-                            // Material-like thin open circle: transparent center with thin stroke
+                            val x = leftInsetPx - with(density) { uiParams.openMarkerOffsetDp.toPx() }
+                            val minSpacing = min(fretSpacingPx, stringSpacingPx)
+                            val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
-                            drawCircle(color = Color.Transparent, center = Offset(x, y), radius = radius)
-                            drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
+                            drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
+                            drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
                         }
                         fretNum < 0 -> {
-                            // mute: draw an X symbol outside left of nut using two diagonal lines
-                            val x = leftInsetPx - openOffsetPx
-                            val size = min(fretSpacingPx, stringSpacingPx) * 0.22f
-                            val half = size / 2f
+                            val minSpacing = min(fretSpacingPx, stringSpacingPx)
+                            // compute open radius and scale mute half-size so diagonal ~ open diameter
+                            val openFactor = uiParams.openMarkerSizeFactor.takeIf { it > 0f } ?: 0.0001f
+                            val openRadius = minSpacing * uiParams.openMarkerSizeFactor
+                            val muteScale = uiParams.muteMarkerSizeFactor / openFactor
+                            val muteHalf = openRadius * 0.70710677f * muteScale
+                            val x = leftInsetPx - with(density) { uiParams.muteMarkerOffsetDp.toPx() }
                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
-                            // draw a thinner X (centered) to match Material icon proportions
-                            val inset = half * 0.15f // make lines extend more to edges so X looks larger
-                            drawLine(Color.Black, start = Offset(x - half + inset, y - half + inset), end = Offset(x + half - inset, y + half - inset), strokeWidth = strokeW)
-                            drawLine(Color.Black, start = Offset(x - half + inset, y + half - inset), end = Offset(x + half - inset, y - half + inset), strokeWidth = strokeW)
+                            val inset = muteHalf * uiParams.muteMarkerInsetFactor
+                            // draw lines from corners inside by inset to achieve balanced visual weight
+                            drawLine(Color.Black, start = Offset(x - muteHalf + inset, y - muteHalf + inset), end = Offset(x + muteHalf - inset, y + muteHalf - inset), strokeWidth = strokeW)
+                            drawLine(Color.Black, start = Offset(x - muteHalf + inset, y + muteHalf - inset), end = Offset(x + muteHalf - inset, y - muteHalf + inset), strokeWidth = strokeW)
                         }
-                    }
-                }
-            }
-        }
-    }
-}
+                     }
+                 }
+             }
+         }
+     }
+ }
 
 @Composable
 fun FretboardDiagramOnly(
@@ -216,21 +219,26 @@ fun FretboardDiagramOnly(
                              }
                          }
                          fn == 0 -> {
-                             val x = leftInsetPx - openOffsetPx
-                             val radius = min(fretSpacingPx, stringSpacingPx) * 0.22f
-                             // Material-like thin open circle: transparent center with thin stroke
-                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
-                             drawCircle(color = Color.Transparent, center = Offset(x, y), radius = radius)
-                             drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
+                            // open marker uses open-specific params
+                            val x = leftInsetPx - with(density) { uiParams.openMarkerOffsetDp.toPx() }
+                            val minSpacing = min(fretSpacingPx, stringSpacingPx)
+                            val openRadius = minSpacing * uiParams.openMarkerSizeFactor
+                            val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
+                            drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
+                            drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
                          }
                          fn < 0 -> {
-                             val x = leftInsetPx - openOffsetPx
-                             val size = min(fretSpacingPx, stringSpacingPx) * uiParams.openMuteMarkerSizeFactor
-                             val half = size / 2f
-                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
-                             val inset = half * 0.12f
-                             drawLine(Color.Black, start = Offset(x - half + inset, y - half + inset), end = Offset(x + half - inset, y + half - inset), strokeWidth = strokeW)
-                             drawLine(Color.Black, start = Offset(x - half + inset, y + half - inset), end = Offset(x + half - inset, y - half + inset), strokeWidth = strokeW)
+                            // mute marker derived from open radius to visually match sizes
+                            val minSpacing = min(fretSpacingPx, stringSpacingPx)
+                            val openFactor = uiParams.openMarkerSizeFactor.takeIf { it > 0f } ?: 0.0001f
+                            val openRadius = minSpacing * uiParams.openMarkerSizeFactor
+                            val muteScale = uiParams.muteMarkerSizeFactor / openFactor
+                            val muteHalf = openRadius * 0.70710677f * muteScale
+                            val x = leftInsetPx - with(density) { uiParams.muteMarkerOffsetDp.toPx() }
+                            val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
+                            val inset = muteHalf * uiParams.muteMarkerInsetFactor
+                            drawLine(Color.Black, start = Offset(x - muteHalf + inset, y - muteHalf + inset), end = Offset(x + muteHalf - inset, y + muteHalf - inset), strokeWidth = strokeW)
+                            drawLine(Color.Black, start = Offset(x - muteHalf + inset, y + muteHalf - inset), end = Offset(x + muteHalf - inset, y - muteHalf + inset), strokeWidth = strokeW)
                          }
                      }
                  }
