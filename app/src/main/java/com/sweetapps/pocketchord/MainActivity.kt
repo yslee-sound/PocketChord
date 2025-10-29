@@ -491,8 +491,25 @@ fun FretboardCard(
 
                 // 우측 다이어그램: 카드 높이에 맞춰 크기가 결정됨
                 // C 코드(첫 항목)에 대해 표준 핑거링을 더미로 표시
-                val positionsForC = listOf(-1, 3, 2, 0, 1, 0)
-                val fingersForC = listOf(0, 3, 2, 0, 1, 0)
+                // Define chord data in DB-style (1 = topmost string)
+                val dbPositionsForC = mapOf(
+                    1 to 0,  // string 1 (top) -> open
+                    2 to 1,  // string 2 -> fret 1
+                    3 to 0,  // string 3 -> open
+                    4 to 2,  // string 4 -> fret 2
+                    5 to 3,  // string 5 -> fret 3
+                    6 to -1  // string 6 -> mute
+                )
+                val dbFingersForC = mapOf(
+                    1 to 0,
+                    2 to 1,
+                    3 to 0,
+                    4 to 2,
+                    5 to 3,
+                    6 to 0
+                )
+                val positionsForC = dbMapToInternalPositions(dbPositionsForC, stringCount = 6, defaultFret = -1)
+                val fingersForC = dbMapToInternalPositions(dbFingersForC, stringCount = 6, defaultFret = 0)
                 if (chordName == "C") {
                     FretboardDiagramOnly(
                         modifier = Modifier.size(width = diagramWidth, height = diagramHeight),

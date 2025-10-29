@@ -74,29 +74,33 @@ fun FretboardDiagram(
             val density = LocalDensity.current
             val boxWpx = with(density) { boxW.toPx() }
             val boxHpx = with(density) { boxH.toPx() }
+            val leftInsetPx = with(density) { uiParams.leftInsetDp.toPx() }
+            val openOffsetPx = with(density) { uiParams.openMarkerOffsetDp.toPx() }
             val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
             val nutPx = if (firstFretIsNut) computedNutPx else 0f
             val fretCount = 5
             val stringCount = 6
-            val fretSpacingPx = (boxWpx - nutPx) / fretCount
-            val stringSpacingPx = boxHpx / (stringCount - 1)
+            // available width for frets = total width - leftInset - nut width
+            val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
+            val fretSpacingPx = if (fretCount > 0) availableWidth / fretCount else 0f
+            val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
 
             Canvas(modifier = Modifier.matchParentSize()) {
                 // background
                 drawRect(Color.White, size = size)
-                // nut or vertical frets
+                // nut or vertical frets (shifted by leftInset)
                 for (f in 0..fretCount) {
                     if (f == 0 && firstFretIsNut) {
-                        drawRect(Color.Black, topLeft = Offset(0f, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
+                        drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
                     } else {
-                        val x = nutPx + f * fretSpacingPx
+                        val x = leftInsetPx + nutPx + f * fretSpacingPx
                         drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
                     }
                 }
-                // horizontal strings
+                // horizontal strings (start after leftInset)
                 for (s in 0 until stringCount) {
                     val y = s * stringSpacingPx
-                    drawLine(Color.Gray, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
+                    drawLine(Color.Gray, start = Offset(leftInsetPx, y), end = Offset(size.width, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
                 }
 
                 // draw markers (circles + finger numbers) directly on Canvas for pixel-perfect positioning
@@ -104,7 +108,7 @@ fun FretboardDiagram(
                     val y = (stringCount - 1 - stringIdx) * stringSpacingPx
                     when {
                         fretNum > 0 -> {
-                            val x = nutPx + (fretNum - 0.5f) * fretSpacingPx
+                            val x = leftInsetPx + nutPx + (fretNum - 0.5f) * fretSpacingPx
                             // marker radius derived from UI params
                             val radius = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
                             drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
@@ -124,22 +128,22 @@ fun FretboardDiagram(
                             }
                         }
                         fretNum == 0 -> {
-                            val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
+                            // open string: draw outside left of nut (white fill + black stroke to be visible)
+                            val x = leftInsetPx - openOffsetPx
                             val radius = min(fretSpacingPx, stringSpacingPx) * 0.18f
-                            drawCircle(color = Color.White, center = Offset(x, y - stringSpacingPx * 0.4f), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
+                            // filled white circle
+                            drawCircle(color = Color.White, center = Offset(x, y), radius = radius)
+                            // black stroke outline
+                            drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
                         }
                         fretNum < 0 -> {
-                            val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
-                            drawContext.canvas.nativeCanvas.apply {
-                                val paint = android.graphics.Paint().apply {
-                                    color = android.graphics.Color.BLACK
-                                    textSize = min(fretSpacingPx, stringSpacingPx) * 0.9f
-                                    isFakeBoldText = true
-                                    textAlign = android.graphics.Paint.Align.CENTER
-                                }
-                                val baseline = y - stringSpacingPx * 0.2f
-                                drawText("X", x, baseline, paint)
-                            }
+                            // mute: draw an X symbol outside left of nut using two diagonal lines
+                            val x = leftInsetPx - openOffsetPx
+                            val size = min(fretSpacingPx, stringSpacingPx) * 0.18f
+                            val half = size / 2f
+                            val strokeW = with(density) { uiParams.horizontalLineWidthDp.toPx() }
+                            drawLine(Color.Black, start = Offset(x - half, y - half), end = Offset(x + half, y + half), strokeWidth = strokeW)
+                            drawLine(Color.Black, start = Offset(x - half, y + half), end = Offset(x + half, y - half), strokeWidth = strokeW)
                         }
                     }
                 }
@@ -153,8 +157,6 @@ fun FretboardDiagramOnly(
     modifier: Modifier = Modifier,
     uiParams: DiagramUiParams = DefaultDiagramUiParams,
     stringStrokeWidthDp: Dp? = null,
-    nutWidthFactor: Float = 0.02f,
-    nutWidthDp: Dp? = null,
     positions: List<Int>? = null,
     fingers: List<Int>? = null,
     firstFretIsNut: Boolean = true
@@ -164,26 +166,29 @@ fun FretboardDiagramOnly(
         val density = LocalDensity.current
         val boxWpx = with(density) { maxWidth.toPx() }
         val boxHpx = with(density) { maxHeight.toPx() }
+        val leftInsetPx = with(density) { uiParams.leftInsetDp.toPx() }
+        val openOffsetPx = with(density) { uiParams.openMarkerOffsetDp.toPx() }
         val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
         val nutPx = if (firstFretIsNut) computedNutPx else 0f
         val fretCount = 5
         val stringCount = 6
-        val fretSpacingPx = (boxWpx - nutPx) / fretCount
-        val stringSpacingPx = boxHpx / (stringCount - 1)
+        val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
+        val fretSpacingPx = if (fretCount > 0) availableWidth / fretCount else 0f
+        val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
 
         Canvas(modifier = Modifier.matchParentSize()) {
              drawRect(Color.White, size = size)
              for (f in 0..fretCount) {
-                 if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(0f, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
+                 if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
                  else {
-                     val x = nutPx + f * fretSpacingPx
+                     val x = leftInsetPx + nutPx + f * fretSpacingPx
                      drawLine(Color.Black, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
                  }
              }
-             for (s in 0 until stringCount) {
-                 val y = s * stringSpacingPx
-                 drawLine(Color.Black, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = stringStrokeWidthDp?.let { with(density) { it.toPx() } } ?: with(density) { uiParams.horizontalLineWidthDp.toPx() })
-             }
+              for (s in 0 until stringCount) {
+                  val y = s * stringSpacingPx
+                 drawLine(Color.Black, start = Offset(leftInsetPx, y), end = Offset(size.width, y), strokeWidth = stringStrokeWidthDp?.let { with(density) { it.toPx() } } ?: with(density) { uiParams.horizontalLineWidthDp.toPx() })
+              }
 
              // draw markers directly on canvas (positions indexed low->high strings: [6th..1st])
              positions?.let { posList ->
@@ -191,7 +196,7 @@ fun FretboardDiagramOnly(
                      val y = (stringCount - 1 - si) * stringSpacingPx
                      when {
                          fn > 0 -> {
-                             val x = nutPx + (fn - 0.5f) * fretSpacingPx
+                             val x = leftInsetPx + nutPx + (fn - 0.5f) * fretSpacingPx
                              val radius = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
                              drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
                              val finger = fingers?.getOrNull(si) ?: 0
@@ -209,22 +214,20 @@ fun FretboardDiagramOnly(
                              }
                          }
                          fn == 0 -> {
-                             val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
+                             val x = leftInsetPx - openOffsetPx
                              val radius = min(fretSpacingPx, stringSpacingPx) * 0.18f
-                             drawCircle(color = Color.White, center = Offset(x, y - stringSpacingPx * 0.4f), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
+                             // filled white circle
+                             drawCircle(color = Color.White, center = Offset(x, y), radius = radius)
+                             // black stroke outline
+                             drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
                          }
                          fn < 0 -> {
-                             val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
-                             drawContext.canvas.nativeCanvas.apply {
-                                 val paint = android.graphics.Paint().apply {
-                                     color = android.graphics.Color.BLACK
-                                     textSize = min(fretSpacingPx, stringSpacingPx) * 0.9f
-                                     isFakeBoldText = true
-                                     textAlign = android.graphics.Paint.Align.CENTER
-                                 }
-                                 val baseline = y - stringSpacingPx * 0.2f
-                                 drawText("X", x, baseline, paint)
-                             }
+                             val x = leftInsetPx - openOffsetPx
+                             val size = min(fretSpacingPx, stringSpacingPx) * 0.18f
+                             val half = size / 2f
+                             val strokeW = with(density) { uiParams.horizontalLineWidthDp.toPx() }
+                             drawLine(Color.Black, start = Offset(x - half, y - half), end = Offset(x + half, y + half), strokeWidth = strokeW)
+                             drawLine(Color.Black, start = Offset(x - half, y + half), end = Offset(x + half, y - half), strokeWidth = strokeW)
                          }
                      }
                  }
