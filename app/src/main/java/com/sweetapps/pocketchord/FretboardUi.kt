@@ -130,20 +130,22 @@ fun FretboardDiagram(
                         fretNum == 0 -> {
                             // open string: draw outside left of nut (white fill + black stroke to be visible)
                             val x = leftInsetPx - openOffsetPx
-                            val radius = min(fretSpacingPx, stringSpacingPx) * 0.18f
-                            // filled white circle
-                            drawCircle(color = Color.White, center = Offset(x, y), radius = radius)
-                            // black stroke outline
-                            drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
+                            val radius = min(fretSpacingPx, stringSpacingPx) * 0.22f
+                            // Material-like thin open circle: transparent center with thin stroke
+                            val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
+                            drawCircle(color = Color.Transparent, center = Offset(x, y), radius = radius)
+                            drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
                         }
                         fretNum < 0 -> {
                             // mute: draw an X symbol outside left of nut using two diagonal lines
                             val x = leftInsetPx - openOffsetPx
-                            val size = min(fretSpacingPx, stringSpacingPx) * 0.18f
+                            val size = min(fretSpacingPx, stringSpacingPx) * 0.22f
                             val half = size / 2f
-                            val strokeW = with(density) { uiParams.horizontalLineWidthDp.toPx() }
-                            drawLine(Color.Black, start = Offset(x - half, y - half), end = Offset(x + half, y + half), strokeWidth = strokeW)
-                            drawLine(Color.Black, start = Offset(x - half, y + half), end = Offset(x + half, y - half), strokeWidth = strokeW)
+                            val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
+                            // draw a thinner X (centered) to match Material icon proportions
+                            val inset = half * 0.15f // make lines extend more to edges so X looks larger
+                            drawLine(Color.Black, start = Offset(x - half + inset, y - half + inset), end = Offset(x + half - inset, y + half - inset), strokeWidth = strokeW)
+                            drawLine(Color.Black, start = Offset(x - half + inset, y + half - inset), end = Offset(x + half - inset, y - half + inset), strokeWidth = strokeW)
                         }
                     }
                 }
@@ -215,19 +217,20 @@ fun FretboardDiagramOnly(
                          }
                          fn == 0 -> {
                              val x = leftInsetPx - openOffsetPx
-                             val radius = min(fretSpacingPx, stringSpacingPx) * 0.18f
-                             // filled white circle
-                             drawCircle(color = Color.White, center = Offset(x, y), radius = radius)
-                             // black stroke outline
-                             drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
+                             val radius = min(fretSpacingPx, stringSpacingPx) * 0.22f
+                             // Material-like thin open circle: transparent center with thin stroke
+                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
+                             drawCircle(color = Color.Transparent, center = Offset(x, y), radius = radius)
+                             drawCircle(color = Color.Black, center = Offset(x, y), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
                          }
                          fn < 0 -> {
                              val x = leftInsetPx - openOffsetPx
-                             val size = min(fretSpacingPx, stringSpacingPx) * 0.18f
+                             val size = min(fretSpacingPx, stringSpacingPx) * uiParams.openMuteMarkerSizeFactor
                              val half = size / 2f
-                             val strokeW = with(density) { uiParams.horizontalLineWidthDp.toPx() }
-                             drawLine(Color.Black, start = Offset(x - half, y - half), end = Offset(x + half, y + half), strokeWidth = strokeW)
-                             drawLine(Color.Black, start = Offset(x - half, y + half), end = Offset(x + half, y - half), strokeWidth = strokeW)
+                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
+                             val inset = half * 0.12f
+                             drawLine(Color.Black, start = Offset(x - half + inset, y - half + inset), end = Offset(x + half - inset, y + half - inset), strokeWidth = strokeW)
+                             drawLine(Color.Black, start = Offset(x - half + inset, y + half - inset), end = Offset(x + half - inset, y - half + inset), strokeWidth = strokeW)
                          }
                      }
                  }

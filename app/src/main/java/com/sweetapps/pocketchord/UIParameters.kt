@@ -21,6 +21,15 @@ data class DiagramUiParams(
     val leftInsetDp: Dp = 8.dp,
     // how far (center) outside the nut to place open/mute markers
     val openMarkerOffsetDp: Dp = 8.dp,
+    val muteMarkerOffsetDp: Dp = 8.dp,
+    // stroke widths for open/mute markers (allows material-like thin outlines)
+    val openMarkerStrokeDp: Dp = 1.dp,
+    val muteMarkerStrokeDp: Dp = 1.6.dp,
+    // size factors used separately for open and mute markers
+    val openMarkerSizeFactor: Float = 0.28f,
+    val muteMarkerSizeFactor: Float = 0.28f,
+    // inset factor applied when drawing the mute 'X' (fraction of half-size)
+    val muteMarkerInsetFactor: Float = 0.12f,
     val verticalLineWidthDp: Dp = 2.dp, // stroke for vertical frets
     val horizontalLineWidthDp: Dp = 2.dp, // stroke for horizontal frets (strings)
     val stringStrokeWidthDp: Dp = 1.6.dp // fallback stroke for strings if separately exposed
