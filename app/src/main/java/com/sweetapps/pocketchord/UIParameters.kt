@@ -33,6 +33,10 @@ data class DiagramUiParams(
     val muteMarkerInsetFactor: Float = 0f,
     val verticalLineWidthDp: Dp = 1.dp, // stroke for vertical frets
     val horizontalLineWidthDp: Dp = 1.dp, // stroke for horizontal frets (strings)
+    // fraction of one fret spacing reserved for the final (last) fret's visible horizontal width.
+    // Default 1.0 keeps the previous behavior which effectively used (fretCount + 1) spacing divisor.
+    // Set to 0.5 to reserve only half a fret's width for the final fret, etc.
+    val lastFretVisibleFraction: Float = 0.3f,
 )
 
 val DefaultDiagramUiParams = DiagramUiParams()

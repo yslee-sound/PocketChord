@@ -84,9 +84,9 @@ fun FretboardDiagram(
             // available width for frets = total width - leftInset - nut width
             val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
             // compute fret spacing so 'fretCount' frets fit inside the available width
-            // dividing by (fretCount + 1) positions the last fret inside the canvas
-            val spacingDiv = if (fretCount > 0) (fretCount + 1) else 1
-            val fretSpacingPx = if (spacingDiv > 0) availableWidth / spacingDiv else 0f
+            // reserve `lastFretVisibleFraction` worth of one-fret spacing for the final fret's visible width
+            val spacingDiv = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
+            val fretSpacingPx = if (spacingDiv > 0f) availableWidth / spacingDiv else 0f
             val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
 
             Canvas(modifier = Modifier.matchParentSize()) {
@@ -192,8 +192,8 @@ fun FretboardDiagramOnly(
         // use provided fretCount
         val stringCount = 6
         val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
-        val spacingDivSmall = if (fretCount > 0) (fretCount + 1) else 1
-        val fretSpacingPx = if (spacingDivSmall > 0) availableWidth / spacingDivSmall else 0f
+        val spacingDivSmall = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
+        val fretSpacingPx = if (spacingDivSmall > 0f) availableWidth / spacingDivSmall else 0f
         val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
 
         Canvas(modifier = Modifier.matchParentSize()) {
