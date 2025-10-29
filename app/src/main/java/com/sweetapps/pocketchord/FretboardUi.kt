@@ -112,7 +112,10 @@ fun FretboardDiagram(
     chordName: String,
     positions: List<Int>, // 6개 줄의 각 프렛(0~4, -1은 미사용)
     bar: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    nutWidthFactor: Float = 0.06f,
+    nutWidthDp: Dp? = null,
+    firstFretIsNut: Boolean = true
 ) {
     Column(
         modifier = modifier
@@ -127,22 +130,35 @@ fun FretboardDiagram(
             color = Color(0xFF31455A),
             modifier = Modifier.padding(bottom = 12.dp)
         )
+        // nutWidthDp는 Composable 컨텍스트에서 Dp->px로 미리 변환(Canvas 내부에서 LocalDensity를 직접 사용하지 않기 위함)
+        val computedNutWidthDpPx = nutWidthDp?.let { with(LocalDensity.current) { it.toPx() } }
         Canvas(modifier = Modifier.size(width = 180.dp, height = 120.dp)) {
             val fretCount = 5
             val stringCount = 6
-            val fretSpacing = size.width / fretCount
+            // firstFretIsNut이 false면 nutWidth를 0으로 처리하여 첫 세로줄이 일반 프렛으로 동작
+            val nutWidthPx = if (firstFretIsNut) (computedNutWidthDpPx ?: (size.width * nutWidthFactor)) else 0f
+            val fretSpacing = (size.width - nutWidthPx) / fretCount
             val stringSpacing = size.height / (stringCount - 1)
             // 배경
             drawRect(Color.White, size = size)
             // 프렛(세로줄)
             for (fret in 0..fretCount) {
-                val x = fret * fretSpacing
-                drawLine(
-                    color = if (fret == 0) Color.Black else Color.Gray,
-                    start = Offset(x, 0f),
-                    end = Offset(x, size.height),
-                    strokeWidth = if (fret == 0) 8f else 2f
-                )
+                if (fret == 0 && firstFretIsNut) {
+                    // Nut: 왼쪽 끝에 채워진 사각형으로 그려 중복 stroke가 생기지 않도록 함
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset(0f, 0f),
+                        size = androidx.compose.ui.geometry.Size(nutWidthPx, size.height)
+                    )
+                } else {
+                    val x = nutWidthPx + fret * fretSpacing
+                    drawLine(
+                        color = Color.Gray,
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = 2f
+                    )
+                }
             }
             // 줄(가로줄)
             for (string in 0 until stringCount) {
@@ -186,9 +202,14 @@ fun FretboardDiagram(
 fun FretboardDiagramOnly(
     modifier: Modifier = Modifier,
     stringStrokeWidthDp: Dp? = null,
-    nutWidthFactor: Float = 0.06f
+    nutWidthFactor: Float = 0.06f,
+    nutWidthDp: Dp? = null
 ) {
+    // 기본: 첫번째 세로줄을 너트로 표시
+    val firstFretIsNut = true
     val strokePx = stringStrokeWidthDp?.let { with(LocalDensity.current) { it.toPx() } }
+    // nutWidthDp를 Composable 레벨에서 변환
+    val computedNutWidthDpPx = nutWidthDp?.let { with(LocalDensity.current) { it.toPx() } }
     Box(
         modifier = modifier
             .background(Color.White)
@@ -198,23 +219,22 @@ fun FretboardDiagramOnly(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val fretCount = 5
             val stringCount = 6
-            val nutWidth = size.width * nutWidthFactor
+            val nutWidth = if (firstFretIsNut) (computedNutWidthDpPx ?: (size.width * nutWidthFactor)) else 0f
             val fretSpacing = (size.width - nutWidth) / fretCount
             val stringSpacing = size.height / (stringCount - 1)
             // 배경
             drawRect(Color.White, size = size)
             // 프렛(세로줄)
             for (fret in 0..fretCount) {
-                val x = nutWidth + fret * fretSpacing
-                if (fret == 0) {
-                    // Nut(너트)
-                    drawLine(
+                if (fret == 0 && firstFretIsNut) {
+                    // Nut: 채운 사각형으로 그려 두꺼움이 중복되어 보이는 문제 해결
+                    drawRect(
                         color = Color.Black,
-                        start = Offset(0f, 0f),
-                        end = Offset(0f, size.height),
-                        strokeWidth = nutWidth
+                        topLeft = Offset(0f, 0f),
+                        size = androidx.compose.ui.geometry.Size(nutWidth, size.height)
                     )
                 } else {
+                    val x = nutWidth + fret * fretSpacing
                     // For vertical fret lines use a uniform thin stroke
                     drawLine(
                         color = Color.Black,
@@ -284,11 +304,4 @@ fun PreviewFretboardLarge() {
     }
 }
 
-@Preview(name = "CodeCard Preview", showBackground = true, widthDp = 360, heightDp = 240)
-@Composable
-fun PreviewCodeCard() {
-    val sample = FretDiagramData("C Sample", listOf(1, 2, 3, 0, 0))
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CodeCard(sample)
-    }
-}
+// CodeCard preview removed per request

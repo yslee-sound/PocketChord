@@ -237,34 +237,15 @@ fun SearchResultScreen() {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // 코드 카드 UI는 제거됨. 간단히 코드 이름과 다이어그램 링크(예시)를 나열합니다.
             codeCards.forEach { data ->
-                CodeCard(data)
-            }
-        }
-    }
-}
-
-@Composable
-fun CodeCard(data: FretDiagramData) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(220.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = data.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = Color(0xFF31455A),
-                modifier = Modifier.padding(12.dp)
-            )
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                // FretDiagram is moved to FretboardUi.kt
-                FretDiagram(data = data)
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = data.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // 간단한 소형 다이어그램을 우측에 표시
+                    FretDiagramImage()
+                }
             }
         }
     }
@@ -520,7 +501,11 @@ fun FretboardCard(
 @Composable
 fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
     val chordList = when (root) {
-        "C" -> listOf("C", "C6", "CM7")
+        // C 루트의 경우 테스트용 더미 항목 10개를 표시하도록 확장
+        "C" -> listOf(
+            "C", "C6", "CM7", "Cm", "C7",
+            "Cmaj7", "Cadd9", "C9", "C11", "C13"
+        )
         "D" -> listOf("D", "D6", "DM7")
         else -> listOf(root)
     }
