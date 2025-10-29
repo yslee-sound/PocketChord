@@ -199,8 +199,8 @@ fun SearchResultScreen() {
     val chordName = "Cmaj7"
     val tags = listOf("C", "Major 7", "b5")
     val codeCards = listOf(
-        FretDiagramData("TYARRRI", listOf(1, 3, 5, 7, 8)),
-        FretDiagramData("AOTTTOURAL", listOf(2, 4, 6, 8, 10))
+        FretDiagramData("TYARRRI", listOf(1, 3, 5, 7, 8, 0), fingers = listOf(0,2,3,0,1,0)),
+        FretDiagramData("AOTTTOURAL", listOf(2, 4, 6, 8, 10, 0), fingers = listOf(0,1,3,4,0,0))
     )
     Column(
         modifier = Modifier
@@ -374,7 +374,9 @@ fun SectionTitle(title: String) {
 }
 
 // 코드 다이어그램 데이터 예시
-data class FretDiagramData(val name: String, val positions: List<Int>)
+// positions: stringCount 길이, -1=뮤트, 0=open, >0=프렛번호
+// fingers: 동일 길이의 리스트, 0=표시안함, >0=핑거링 숫자
+data class FretDiagramData(val name: String, val positions: List<Int>, val fingers: List<Int>? = null)
 
 @Composable
 fun ChordListScreen(navController: NavHostController, root: String, onBack: () -> Unit = {}) {
@@ -450,7 +452,8 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
 @Composable
 fun FretboardCard(
     chordName: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    nutWidthFactor: Float = 0.06f // 노출: 카드 단위로 너트 폭을 조절 가능
 ) {
     Card(
         modifier = modifier
@@ -487,12 +490,25 @@ fun FretboardCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 // 우측 다이어그램: 카드 높이에 맞춰 크기가 결정됨
-                FretboardDiagramOnly(
-                    modifier = Modifier
-                        .size(width = diagramWidth, height = diagramHeight),
-                    stringStrokeWidthDp = 1.8.dp, // 모든 줄 동일 두께: 변경하려면 이 값만 바꾸세요
-                    nutWidthFactor = 0.06f
-                )
+                // C 코드(첫 항목)에 대해 표준 핑거링을 더미로 표시
+                val positionsForC = listOf(-1, 3, 2, 0, 1, 0)
+                val fingersForC = listOf(0, 3, 2, 0, 1, 0)
+                if (chordName == "C") {
+                    FretboardDiagramOnly(
+                        modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
+                        stringStrokeWidthDp = 1.8.dp,
+                        nutWidthFactor = nutWidthFactor,
+                        positions = positionsForC,
+                        fingers = fingersForC,
+                        firstFretIsNut = true
+                    )
+                } else {
+                    FretboardDiagramOnly(
+                        modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
+                        stringStrokeWidthDp = 1.8.dp,
+                        nutWidthFactor = nutWidthFactor
+                    )
+                }
              }
          }
      }

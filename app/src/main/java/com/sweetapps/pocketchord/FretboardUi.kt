@@ -17,181 +17,133 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.*
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Card
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.tooling.preview.Preview
+import kotlin.math.min
 
-// 다이어그램 관련 컴포저블을 이 파일에서 관리합니다.
-
-@Composable
-fun FretDiagram(data: FretDiagramData, stringStrokeWidthDp: Dp? = null) {
-    // 예시: 5x6 격자, 점 위치는 data.positions
-    Box(
-        modifier = Modifier
-            .size(160.dp)
-            .background(Color.Black, RoundedCornerShape(12.dp))
-    ) {
-        // Convert optional Dp to px using LocalDensity
-        val strokePx = stringStrokeWidthDp?.let { with(LocalDensity.current) { it.toPx() } }
-        val defaultStroke = 2f
-
-        // 수평(가로)선: 기존 레이아웃을 간단히 유지
-        for (i in 0..5) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(Color.Gray)
-                    .align(Alignment.TopStart)
-                    .offset(y = (i * 32).dp)
-            ) {}
-        }
-
-        // 수직(세로)선: Canvas로 그려 stroke 조절
-        for (i in 0..4) {
-            Canvas(modifier = Modifier
-                .fillMaxHeight()
-                .width(2.dp)
-                .align(Alignment.TopStart)
-                .offset(x = (i * 32).dp)) {
-                val stroke = strokePx?.coerceAtLeast(0.5f) ?: defaultStroke
-                drawLine(Color.Gray, Offset(size.width / 2f, 0f), Offset(size.width / 2f, size.height), strokeWidth = stroke)
-            }
-        }
-
-        // 점(파란색 원 + 숫자)
-        data.positions.forEachIndexed { idx, pos ->
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(Color(0xFF339CFF), shape = RoundedCornerShape(14.dp))
-                    .align(Alignment.TopStart)
-                    .offset(x = (pos * 24).dp, y = (idx * 24).dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = pos.toString(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
+// 다이어그램 관련 컴포저블 정리 파일
 
 @Composable
 fun FretDiagramImage() {
     Canvas(modifier = Modifier.size(100.dp)) {
-        // 프렛 선
+        // horizontal frets
         for (i in 0..4) {
             drawLine(Color.Black, start = Offset(0f, i * 20f), end = Offset(100f, i * 20f), strokeWidth = 2f)
         }
-        // 줄 선
+        // vertical strings
         for (i in 0..4) {
             drawLine(Color.Black, start = Offset(i * 25f, 0f), end = Offset(i * 25f, 80f), strokeWidth = 2f)
         }
-        // 검은 원(코드 포인트)
+        // sample dots
         drawCircle(Color.Black, radius = 7f, center = Offset(25f, 40f))
         drawCircle(Color.Black, radius = 7f, center = Offset(50f, 20f))
         drawCircle(Color.Black, radius = 7f, center = Offset(75f, 60f))
-        // 바(Bar) 표시
+        // nut
         drawRect(Color.Black, topLeft = Offset(0f, 0f), size = androidx.compose.ui.geometry.Size(15f, 80f))
-        // X 표시
-        drawLine(Color.Black, Offset(5f, 90f), Offset(20f, 105f), strokeWidth = 3f)
-        drawLine(Color.Black, Offset(20f, 90f), Offset(5f, 105f), strokeWidth = 3f)
     }
 }
 
 @Composable
 fun FretboardDiagram(
     chordName: String,
-    positions: List<Int>, // 6개 줄의 각 프렛(0~4, -1은 미사용)
-    bar: Boolean = false,
+    positions: List<Int>, // stringCount 길이: -1=mute, 0=open, n>0 fret number
+    fingers: List<Int>? = null, // same length, 0=hide
     modifier: Modifier = Modifier,
-    nutWidthFactor: Float = 0.06f,
-    nutWidthDp: Dp? = null,
-    firstFretIsNut: Boolean = true
+    uiParams: DiagramUiParams = DefaultDiagramUiParams,
+    firstFretIsNut: Boolean = true,
+    diagramWidth: Dp? = null,
+    diagramHeight: Dp? = null
 ) {
     Column(
         modifier = modifier
-            .background(Color.White, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .padding(8.dp),
+        horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = chordName,
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            color = Color(0xFF31455A),
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        // nutWidthDp는 Composable 컨텍스트에서 Dp->px로 미리 변환(Canvas 내부에서 LocalDensity를 직접 사용하지 않기 위함)
-        val computedNutWidthDpPx = nutWidthDp?.let { with(LocalDensity.current) { it.toPx() } }
-        Canvas(modifier = Modifier.size(width = 180.dp, height = 120.dp)) {
+        Text(chordName, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF31455A), modifier = Modifier.padding(bottom = 6.dp))
+
+        // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
+        // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
+        val defaultWidth = diagramWidth ?: 200.dp
+        val defaultHeight = diagramHeight ?: 120.dp
+        val boxModifier = Modifier.width(defaultWidth).height(defaultHeight).then(modifier) // caller modifier (if contains size) will override defaults
+        BoxWithConstraints(
+            modifier = boxModifier,
+            contentAlignment = Alignment.TopStart
+        ) {
+            val boxW = maxWidth
+            val boxH = maxHeight
+            val density = LocalDensity.current
+            val boxWpx = with(density) { boxW.toPx() }
+            val boxHpx = with(density) { boxH.toPx() }
+            val computedNutPx = (uiParams.nutWidthDp ?: nutWidthDp)?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
+            val nutPx = if (firstFretIsNut) computedNutPx else 0f
             val fretCount = 5
             val stringCount = 6
-            // firstFretIsNut이 false면 nutWidth를 0으로 처리하여 첫 세로줄이 일반 프렛으로 동작
-            val nutWidthPx = if (firstFretIsNut) (computedNutWidthDpPx ?: (size.width * nutWidthFactor)) else 0f
-            val fretSpacing = (size.width - nutWidthPx) / fretCount
-            val stringSpacing = size.height / (stringCount - 1)
-            // 배경
-            drawRect(Color.White, size = size)
-            // 프렛(세로줄)
-            for (fret in 0..fretCount) {
-                if (fret == 0 && firstFretIsNut) {
-                    // Nut: 왼쪽 끝에 채워진 사각형으로 그려 중복 stroke가 생기지 않도록 함
-                    drawRect(
-                        color = Color.Black,
-                        topLeft = Offset(0f, 0f),
-                        size = androidx.compose.ui.geometry.Size(nutWidthPx, size.height)
-                    )
-                } else {
-                    val x = nutWidthPx + fret * fretSpacing
-                    drawLine(
-                        color = Color.Gray,
-                        start = Offset(x, 0f),
-                        end = Offset(x, size.height),
-                        strokeWidth = 2f
-                    )
+            val fretSpacingPx = (boxWpx - nutPx) / fretCount
+            val stringSpacingPx = boxHpx / (stringCount - 1)
+
+            Canvas(modifier = Modifier.matchParentSize()) {
+                // background
+                drawRect(Color.White, size = size)
+                // nut or vertical frets
+                for (f in 0..fretCount) {
+                    if (f == 0 && firstFretIsNut) {
+                        drawRect(Color.Black, topLeft = Offset(0f, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
+                    } else {
+                        val x = nutPx + f * fretSpacingPx
+                        drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                    }
                 }
-            }
-            // 줄(가로줄)
-            for (string in 0 until stringCount) {
-                val y = string * stringSpacing
-                drawLine(
-                    color = Color.Gray,
-                    start = Offset(0f, y),
-                    end = Offset(size.width, y),
-                    strokeWidth = 2f
-                )
-            }
-            // 바코드(필요시)
-            if (bar) {
-                val barYStart = 0f
-                val barYEnd = size.height
-                val barX = fretSpacing / 2
-                drawRoundRect(
-                    color = Color.Black,
-                    topLeft = Offset(barX - 10f, barYStart),
-                    size = androidx.compose.ui.geometry.Size(20f, barYEnd),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(10f, 10f)
-                )
-            }
-            // 코드 포인트(검은 원)
-            positions.forEachIndexed { stringIdx, fretNum ->
-                if (fretNum > 0) {
-                    val x = fretNum * fretSpacing
-                    val y = stringIdx * stringSpacing
-                    drawCircle(
-                        color = Color.Black,
-                        radius = 12f,
-                        center = Offset(x, y)
-                    )
+                // horizontal strings
+                for (s in 0 until stringCount) {
+                    val y = s * stringSpacingPx
+                    drawLine(Color.Gray, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
+                }
+
+                // draw markers (circles + finger numbers) directly on Canvas for pixel-perfect positioning
+                positions.forEachIndexed { stringIdx, fretNum ->
+                    val y = (stringCount - 1 - stringIdx) * stringSpacingPx
+                    when {
+                        fretNum > 0 -> {
+                            val x = nutPx + (fretNum - 0.5f) * fretSpacingPx
+                            // marker radius derived from UI params
+                            val radius = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                            drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
+                            val finger = fingers?.getOrNull(stringIdx) ?: 0
+                            if (finger > 0) {
+                                // draw centered text using nativeCanvas
+                                drawContext.canvas.nativeCanvas.apply {
+                                    val paint = android.graphics.Paint().apply {
+                                        color = android.graphics.Color.WHITE
+                                        textSize = radius * uiParams.markerTextScale
+                                        isFakeBoldText = true
+                                        textAlign = android.graphics.Paint.Align.CENTER
+                                    }
+                                    val baseline = y + (paint.descent() - paint.ascent()) / 2 - paint.descent()
+                                    drawText(finger.toString(), x, baseline, paint)
+                                }
+                            }
+                        }
+                        fretNum == 0 -> {
+                            val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
+                            val radius = min(fretSpacingPx, stringSpacingPx) * 0.18f
+                            drawCircle(color = Color.White, center = Offset(x, y - stringSpacingPx * 0.4f), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
+                        }
+                        fretNum < 0 -> {
+                            val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
+                            drawContext.canvas.nativeCanvas.apply {
+                                val paint = android.graphics.Paint().apply {
+                                    color = android.graphics.Color.BLACK
+                                    textSize = min(fretSpacingPx, stringSpacingPx) * 0.9f
+                                    isFakeBoldText = true
+                                    textAlign = android.graphics.Paint.Align.CENTER
+                                }
+                                val baseline = y - stringSpacingPx * 0.2f
+                                drawText("X", x, baseline, paint)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -201,107 +153,99 @@ fun FretboardDiagram(
 @Composable
 fun FretboardDiagramOnly(
     modifier: Modifier = Modifier,
+    uiParams: DiagramUiParams = DefaultDiagramUiParams,
     stringStrokeWidthDp: Dp? = null,
-    nutWidthFactor: Float = 0.06f,
-    nutWidthDp: Dp? = null
+    nutWidthFactor: Float = 0.02f,
+    nutWidthDp: Dp? = null,
+    positions: List<Int>? = null,
+    fingers: List<Int>? = null,
+    firstFretIsNut: Boolean = true
 ) {
-    // 기본: 첫번째 세로줄을 너트로 표시
-    val firstFretIsNut = true
-    val strokePx = stringStrokeWidthDp?.let { with(LocalDensity.current) { it.toPx() } }
-    // nutWidthDp를 Composable 레벨에서 변환
-    val computedNutWidthDpPx = nutWidthDp?.let { with(LocalDensity.current) { it.toPx() } }
-    Box(
-        modifier = modifier
-            .background(Color.White)
-            .padding(0.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val fretCount = 5
-            val stringCount = 6
-            val nutWidth = if (firstFretIsNut) (computedNutWidthDpPx ?: (size.width * nutWidthFactor)) else 0f
-            val fretSpacing = (size.width - nutWidth) / fretCount
-            val stringSpacing = size.height / (stringCount - 1)
-            // 배경
-            drawRect(Color.White, size = size)
-            // 프렛(세로줄)
-            for (fret in 0..fretCount) {
-                if (fret == 0 && firstFretIsNut) {
-                    // Nut: 채운 사각형으로 그려 두꺼움이 중복되어 보이는 문제 해결
-                    drawRect(
-                        color = Color.Black,
-                        topLeft = Offset(0f, 0f),
-                        size = androidx.compose.ui.geometry.Size(nutWidth, size.height)
-                    )
-                } else {
-                    val x = nutWidth + fret * fretSpacing
-                    // For vertical fret lines use a uniform thin stroke
-                    drawLine(
-                        color = Color.Black,
-                        start = Offset(x, 0f),
-                        end = Offset(x, size.height),
-                        strokeWidth = 2.0f
-                    )
-                }
-            }
-            // 줄(가로줄) — 각 줄마다 개별 stroke 적용 가능
-            for (string in 0 until stringCount) {
-                val y = string * stringSpacing
-                val stroke = strokePx ?: 1.8f
-                drawLine(
-                    color = Color.Black,
-                    start = Offset(0f, y),
-                    end = Offset(size.width, y),
-                    strokeWidth = stroke
-                )
-            }
-        }
-    }
-}
+    // Small variant: fills given modifier size
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val density = LocalDensity.current
+        val boxWpx = with(density) { maxWidth.toPx() }
+        val boxHpx = with(density) { maxHeight.toPx() }
+        val computedNutPx = (uiParams.nutWidthDp ?: nutWidthDp)?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
+        val nutPx = if (firstFretIsNut) computedNutPx else 0f
+        val fretCount = 5
+        val stringCount = 6
+        val fretSpacingPx = (boxWpx - nutPx) / fretCount
+        val stringSpacingPx = boxHpx / (stringCount - 1)
 
-// `FretboardPreviewScreen` 함수는 사용자가 삭제 요청하여 제거했습니다.
-// 필요하면 언제든지 다시 추가하거나 앱 네비게이션 라우트로 연결할 수 있습니다.
+        Canvas(modifier = Modifier.matchParentSize()) {
+             drawRect(Color.White, size = size)
+             for (f in 0..fretCount) {
+                 if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(0f, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
+                 else {
+                     val x = nutPx + f * fretSpacingPx
+                     drawLine(Color.Black, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                 }
+             }
+             for (s in 0 until stringCount) {
+                 val y = s * stringSpacingPx
+                 drawLine(Color.Black, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = stringStrokeWidthDp?.let { with(density) { it.toPx() } } ?: with(density) { uiParams.horizontalLineWidthDp.toPx() })
+             }
 
-@Preview(name = "Fretboard Small", showBackground = true, widthDp = 320, heightDp = 200)
+             // draw markers directly on canvas (positions indexed low->high strings: [6th..1st])
+             positions?.let { posList ->
+                 posList.forEachIndexed { si, fn ->
+                     val y = (stringCount - 1 - si) * stringSpacingPx
+                     when {
+                         fn > 0 -> {
+                             val x = nutPx + (fn - 0.5f) * fretSpacingPx
+                             val radius = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                             drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
+                             val finger = fingers?.getOrNull(si) ?: 0
+                             if (finger > 0) {
+                                 drawContext.canvas.nativeCanvas.apply {
+                                     val paint = android.graphics.Paint().apply {
+                                         color = android.graphics.Color.WHITE
+                                         textSize = radius * uiParams.markerTextScale
+                                         isFakeBoldText = true
+                                         textAlign = android.graphics.Paint.Align.CENTER
+                                     }
+                                     val baseline = y + (paint.descent() - paint.ascent()) / 2 - paint.descent()
+                                     drawText(finger.toString(), x, baseline, paint)
+                                 }
+                             }
+                         }
+                         fn == 0 -> {
+                             val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
+                             val radius = min(fretSpacingPx, stringSpacingPx) * 0.18f
+                             drawCircle(color = Color.White, center = Offset(x, y - stringSpacingPx * 0.4f), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = with(density) { uiParams.horizontalLineWidthDp.toPx() }))
+                         }
+                         fn < 0 -> {
+                             val x = if (firstFretIsNut) (nutPx / 2f) else (0f + fretSpacingPx / 2f)
+                             drawContext.canvas.nativeCanvas.apply {
+                                 val paint = android.graphics.Paint().apply {
+                                     color = android.graphics.Color.BLACK
+                                     textSize = min(fretSpacingPx, stringSpacingPx) * 0.9f
+                                     isFakeBoldText = true
+                                     textAlign = android.graphics.Paint.Align.CENTER
+                                 }
+                                 val baseline = y - stringSpacingPx * 0.2f
+                                 drawText("X", x, baseline, paint)
+                             }
+                         }
+                     }
+                 }
+             }
+         }
+     }
+ }
+
+@Preview(name = "Fretboard Card Preview (single)", showBackground = true, widthDp = 360, heightDp = 240)
 @Composable
-fun PreviewFretboardSmall() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        FretboardDiagramOnly(
+fun PreviewFretboardCard_Single() {
+    // Show a single FretboardCard with the same height used in ChordDetailScreen
+    Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopCenter) {
+        FretboardCard(
+            chordName = "C",
             modifier = Modifier
-                .width(220.dp)
-                .height(120.dp),
-            stringStrokeWidthDp = 1.0.dp,
-            nutWidthFactor = 0.05f
-        )
-    }
-}
-
-@Preview(name = "Fretboard Medium", showBackground = true, widthDp = 360, heightDp = 260)
-@Composable
-fun PreviewFretboardMedium() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        FretboardDiagramOnly(
-            modifier = Modifier
-                .width(260.dp)
+                .fillMaxWidth()
                 .height(160.dp),
-            stringStrokeWidthDp = 1.6.dp,
-            nutWidthFactor = 0.06f
+            nutWidthFactor = 0.06f // adjust this value to test nut width in preview
         )
     }
 }
-
-@Preview(name = "Fretboard Large", showBackground = true, widthDp = 412, heightDp = 320)
-@Composable
-fun PreviewFretboardLarge() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        FretboardDiagramOnly(
-            modifier = Modifier
-                .width(320.dp)
-                .height(200.dp),
-            stringStrokeWidthDp = 2.4.dp,
-            nutWidthFactor = 0.07f
-        )
-    }
-}
-
-// CodeCard preview removed per request
