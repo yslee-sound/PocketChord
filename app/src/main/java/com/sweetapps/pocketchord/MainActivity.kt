@@ -453,7 +453,7 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
 fun FretboardCard(
     chordName: String,
     modifier: Modifier = Modifier,
-    nutWidthFactor: Float = 0.06f // 노출: 카드 단위로 너트 폭을 조절 가능
+    uiParams: DiagramUiParams = DefaultDiagramUiParams // centralized UI params
 ) {
     Card(
         modifier = modifier
@@ -496,8 +496,8 @@ fun FretboardCard(
                 if (chordName == "C") {
                     FretboardDiagramOnly(
                         modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
+                        uiParams = uiParams,
                         stringStrokeWidthDp = 1.8.dp,
-                        nutWidthFactor = nutWidthFactor,
                         positions = positionsForC,
                         fingers = fingersForC,
                         firstFretIsNut = true
@@ -505,8 +505,8 @@ fun FretboardCard(
                 } else {
                     FretboardDiagramOnly(
                         modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
-                        stringStrokeWidthDp = 1.8.dp,
-                        nutWidthFactor = nutWidthFactor
+                        uiParams = uiParams,
+                        stringStrokeWidthDp = 1.8.dp
                     )
                 }
              }

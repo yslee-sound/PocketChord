@@ -15,8 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.tooling.preview.Preview
 import kotlin.math.min
@@ -76,7 +74,7 @@ fun FretboardDiagram(
             val density = LocalDensity.current
             val boxWpx = with(density) { boxW.toPx() }
             val boxHpx = with(density) { boxH.toPx() }
-            val computedNutPx = (uiParams.nutWidthDp ?: nutWidthDp)?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
+            val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
             val nutPx = if (firstFretIsNut) computedNutPx else 0f
             val fretCount = 5
             val stringCount = 6
@@ -166,7 +164,7 @@ fun FretboardDiagramOnly(
         val density = LocalDensity.current
         val boxWpx = with(density) { maxWidth.toPx() }
         val boxHpx = with(density) { maxHeight.toPx() }
-        val computedNutPx = (uiParams.nutWidthDp ?: nutWidthDp)?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
+        val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
         val nutPx = if (firstFretIsNut) computedNutPx else 0f
         val fretCount = 5
         val stringCount = 6
@@ -238,14 +236,14 @@ fun FretboardDiagramOnly(
 @Preview(name = "Fretboard Card Preview (single)", showBackground = true, widthDp = 360, heightDp = 240)
 @Composable
 fun PreviewFretboardCard_Single() {
-    // Show a single FretboardCard with the same height used in ChordDetailScreen
+    val previewParams = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f)
     Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopCenter) {
         FretboardCard(
             chordName = "C",
             modifier = Modifier
                 .fillMaxWidth()
                 .height(160.dp),
-            nutWidthFactor = 0.06f // adjust this value to test nut width in preview
+            uiParams = previewParams
         )
     }
 }
