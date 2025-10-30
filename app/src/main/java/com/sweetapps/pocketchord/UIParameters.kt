@@ -33,10 +33,16 @@ data class DiagramUiParams(
     val muteMarkerInsetFactor: Float = 0f,
     val verticalLineWidthDp: Dp = 1.dp, // stroke for vertical frets
     val horizontalLineWidthDp: Dp = 1.dp, // stroke for horizontal frets (strings)
+    // reserved vertical space below strings to render fret numbers/labels
+    val fretLabelAreaDp: Dp = 18.dp,
+    // label text size in sp
+    val fretLabelTextSp: Float = 12f,
     // fraction of one fret spacing reserved for the final (last) fret's visible horizontal width.
     // Default 1.0 keeps the previous behavior which effectively used (fretCount + 1) spacing divisor.
     // Set to 0.5 to reserve only half a fret's width for the final fret, etc.
     val lastFretVisibleFraction: Float = 0.3f,
+    // optional default card height (if set, used when a parent doesn't impose a finite height)
+    val cardHeightDp: Dp? = null,
 )
 
 val DefaultDiagramUiParams = DiagramUiParams()
@@ -52,7 +58,8 @@ fun Preview_UIParameters() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(160.dp),
-            uiParams = DefaultDiagramUiParams
+            uiParams = DefaultDiagramUiParams,
+            // no provider here — use default labeling rules (show frets 1..fretCount-1)
         )
     }
 }

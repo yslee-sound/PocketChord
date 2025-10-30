@@ -51,7 +51,9 @@ fun FretboardDiagram(
     firstFretIsNut: Boolean = true,
     diagramWidth: Dp? = null,
     diagramHeight: Dp? = null,
-    fretCount: Int = 4
+    fretCount: Int = 4,
+    // optional provider so callers (DB) can supply custom labels per fret index. Return null to skip.
+    fretLabelProvider: ((Int) -> String?)? = null
 ) {
     Column(
         modifier = modifier
@@ -75,6 +77,7 @@ fun FretboardDiagram(
             val density = LocalDensity.current
             val boxWpx = with(density) { boxW.toPx() }
             val boxHpx = with(density) { boxH.toPx() }
+            val labelAreaPx = with(density) { uiParams.fretLabelAreaDp.toPx() }
             val leftInsetPx = with(density) { uiParams.leftInsetDp.toPx() }
             val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
             val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
@@ -87,7 +90,9 @@ fun FretboardDiagram(
             // reserve `lastFretVisibleFraction` worth of one-fret spacing for the final fret's visible width
             val spacingDiv = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
             val fretSpacingPx = if (spacingDiv > 0f) availableWidth / spacingDiv else 0f
-            val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
+            // reserve vertical area at bottom for fret labels
+            val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
+            val stringSpacingPx = if (stringCount > 1) contentHeightPx / (stringCount - 1) else contentHeightPx
 
             Canvas(modifier = Modifier.matchParentSize()) {
                 // background
@@ -106,7 +111,7 @@ fun FretboardDiagram(
                         val x = xRaw.coerceAtMost(maxFretX)
                         // ensure fret is drawn only if it lies to the right of the nut area
                         if (x > leftInsetPx + nutPx + 0.5f) {
-                            drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                            drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, contentHeightPx), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
                         }
                     }
                 }
@@ -123,8 +128,10 @@ fun FretboardDiagram(
                     when {
                         fretNum > 0 -> {
                             val x = leftInsetPx + nutPx + (fretNum - 0.5f) * fretSpacingPx
-                            // marker radius derived from UI params
-                            val radius = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                            // marker radius derived from UI params with a minimum px size for visibility
+                            val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                            val minRadiusPx = with(density) { 6.dp.toPx() }
+                            val radius = kotlin.math.max(candidate, minRadiusPx)
                             drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
                             val finger = fingers?.getOrNull(stringIdx) ?: 0
                             if (finger > 0) {
@@ -164,8 +171,25 @@ fun FretboardDiagram(
                             drawLine(Color.Black, start = Offset(x - muteHalf + inset, y - muteHalf + inset), end = Offset(x + muteHalf - inset, y + muteHalf - inset), strokeWidth = strokeW)
                             drawLine(Color.Black, start = Offset(x - muteHalf + inset, y + muteHalf - inset), end = Offset(x + muteHalf - inset, y - muteHalf + inset), strokeWidth = strokeW)
                         }
-                     }
-                 }
+                    }
+                }
+                // Draw fret labels in reserved label area below contentHeightPx
+                val textSizePx = with(density) { uiParams.fretLabelTextSp.sp.toPx() }
+                // show numeric labels for frets 1..(fretCount-1) (exclude nut 0 and last)
+                for (f in 1 until fretCount) {
+                    val label = fretLabelProvider?.invoke(f) ?: f.toString()
+                    if (label.isEmpty()) continue
+                    val xLabel = (leftInsetPx + nutPx + f * fretSpacingPx).coerceAtMost(maxFretX)
+                    drawContext.canvas.nativeCanvas.apply {
+                        val paint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.BLACK
+                            textSize = textSizePx
+                            textAlign = android.graphics.Paint.Align.CENTER
+                        }
+                        val baseline = contentHeightPx + (labelAreaPx + (paint.descent() - paint.ascent())) / 2 - paint.descent()
+                        drawText(label, xLabel, baseline, paint)
+                    }
+                }
              }
          }
      }
@@ -178,7 +202,8 @@ fun FretboardDiagramOnly(
     positions: List<Int>? = null,
     fingers: List<Int>? = null,
     firstFretIsNut: Boolean = true,
-    fretCount: Int = 4
+    fretCount: Int = 4,
+    fretLabelProvider: ((Int) -> String?)? = null
 ) {
     // Small variant: fills given modifier size
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -191,10 +216,12 @@ fun FretboardDiagramOnly(
         val nutPx = if (firstFretIsNut) computedNutPx else 0f
         // use provided fretCount
         val stringCount = 6
+        val labelAreaPx = with(density) { uiParams.fretLabelAreaDp.toPx() }
         val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
         val spacingDivSmall = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
         val fretSpacingPx = if (spacingDivSmall > 0f) availableWidth / spacingDivSmall else 0f
-        val stringSpacingPx = if (stringCount > 1) boxHpx / (stringCount - 1) else boxHpx
+        val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
+        val stringSpacingPx = if (stringCount > 1) contentHeightPx / (stringCount - 1) else contentHeightPx
 
         Canvas(modifier = Modifier.matchParentSize()) {
              drawRect(Color.White, size = size)
@@ -202,11 +229,11 @@ fun FretboardDiagramOnly(
              val vStrokeHalfSmall = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
              val maxFretXSmall = size.width - vStrokeHalfSmall
              for (f in 0..fretCount) {
-                 if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
+                 if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, contentHeightPx))
                  else {
                      val xRaw = leftInsetPx + nutPx + f * fretSpacingPx
                      val x = xRaw.coerceAtMost(maxFretXSmall)
-                     if (x > leftInsetPx + nutPx + 0.5f) drawLine(Color.Black, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                     if (x > leftInsetPx + nutPx + 0.5f) drawLine(Color.Black, start = Offset(x, 0f), end = Offset(x, contentHeightPx), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
                  }
              }
 
@@ -215,17 +242,18 @@ fun FretboardDiagramOnly(
                  // always use the uiParams.horizontalLineWidthDp for string thickness
                  drawLine(Color.Black, start = Offset(leftInsetPx, y), end = Offset(size.width, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
               }
-
-             // draw markers directly on canvas (positions indexed low->high strings: [6th..1st])
+             // draw markers (circles + finger numbers) for the small variant as well
              positions?.let { posList ->
-                 posList.forEachIndexed { si, fn ->
-                     val y = (stringCount - 1 - si) * stringSpacingPx
+                 posList.forEachIndexed { stringIdx, fretNum ->
+                     val y = (stringCount - 1 - stringIdx) * stringSpacingPx
                      when {
-                         fn > 0 -> {
-                             val x = leftInsetPx + nutPx + (fn - 0.5f) * fretSpacingPx
-                             val radius = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                         fretNum > 0 -> {
+                             val x = leftInsetPx + nutPx + (fretNum - 0.5f) * fretSpacingPx
+                             val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                             val minRadiusPx = with(density) { 6.dp.toPx() }
+                             val radius = kotlin.math.max(candidate, minRadiusPx)
                              drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
-                             val finger = fingers?.getOrNull(si) ?: 0
+                             val finger = fingers?.getOrNull(stringIdx) ?: 0
                              if (finger > 0) {
                                  drawContext.canvas.nativeCanvas.apply {
                                      val paint = android.graphics.Paint().apply {
@@ -239,31 +267,45 @@ fun FretboardDiagramOnly(
                                  }
                              }
                          }
-                         fn == 0 -> {
-                            // open marker uses open-specific params
-                            val x = leftInsetPx - markerOffsetPx
-                            val minSpacing = min(fretSpacingPx, stringSpacingPx)
-                            val openRadius = minSpacing * uiParams.openMarkerSizeFactor
-                            val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
-                            drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
-                            drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
+                         fretNum == 0 -> {
+                             val x = leftInsetPx - markerOffsetPx
+                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
+                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
+                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
+                             drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
+                             drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
                          }
-                         fn < 0 -> {
-                            // mute marker derived from open radius to visually match sizes
-                            val minSpacing = min(fretSpacingPx, stringSpacingPx)
-                            val openFactor = uiParams.openMarkerSizeFactor.takeIf { it > 0f } ?: 0.0001f
-                            val openRadius = minSpacing * uiParams.openMarkerSizeFactor
-                            val muteScale = uiParams.muteMarkerSizeFactor / openFactor
-                            val muteHalf = openRadius * 0.70710677f * muteScale
-                            val x = leftInsetPx - markerOffsetPx
-                            val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
-                            val inset = muteHalf * uiParams.muteMarkerInsetFactor
-                            drawLine(Color.Black, start = Offset(x - muteHalf + inset, y - muteHalf + inset), end = Offset(x + muteHalf - inset, y + muteHalf - inset), strokeWidth = strokeW)
-                            drawLine(Color.Black, start = Offset(x - muteHalf + inset, y + muteHalf - inset), end = Offset(x + muteHalf - inset, y - muteHalf + inset), strokeWidth = strokeW)
+                         fretNum < 0 -> {
+                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
+                             val openFactor = uiParams.openMarkerSizeFactor.takeIf { it > 0f } ?: 0.0001f
+                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
+                             val muteScale = uiParams.muteMarkerSizeFactor / openFactor
+                             val muteHalf = openRadius * 0.70710677f * muteScale
+                             val x = leftInsetPx - markerOffsetPx
+                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
+                             val inset = muteHalf * uiParams.muteMarkerInsetFactor
+                             drawLine(Color.Black, start = Offset(x - muteHalf + inset, y - muteHalf + inset), end = Offset(x + muteHalf - inset, y + muteHalf - inset), strokeWidth = strokeW)
+                             drawLine(Color.Black, start = Offset(x - muteHalf + inset, y + muteHalf - inset), end = Offset(x + muteHalf - inset, y - muteHalf + inset), strokeWidth = strokeW)
                          }
                      }
                  }
              }
+             // draw fret labels in label area (frets 1..fretCount-1)
+              val textSizePxSmall = with(density) { uiParams.fretLabelTextSp.sp.toPx() }
+              for (f in 1 until fretCount) {
+                  val label = fretLabelProvider?.invoke(f) ?: f.toString()
+                  if (label.isEmpty()) continue
+                  val xLabel = (leftInsetPx + nutPx + f * fretSpacingPx).coerceAtMost(maxFretXSmall)
+                  drawContext.canvas.nativeCanvas.apply {
+                      val paint = android.graphics.Paint().apply {
+                          color = android.graphics.Color.BLACK
+                          textSize = textSizePxSmall
+                          textAlign = android.graphics.Paint.Align.CENTER
+                      }
+                      val baseline = contentHeightPx + (labelAreaPx + (paint.descent() - paint.ascent())) / 2 - paint.descent()
+                      drawText(label, xLabel, baseline, paint)
+                  }
+              }
          }
      }
  }
@@ -271,14 +313,35 @@ fun FretboardDiagramOnly(
 @Preview(name = "Fretboard Card Preview (single)", showBackground = true, widthDp = 360, heightDp = 240)
 @Composable
 fun PreviewFretboardCard_Single() {
-    val previewParams = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f)
+    val previewParams = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f, fretLabelAreaDp = 26.dp, fretLabelTextSp = 14f)
     Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopCenter) {
         FretboardCard(
             chordName = "C",
             modifier = Modifier
                 .fillMaxWidth()
                 .height(160.dp),
-            uiParams = previewParams
+            uiParams = previewParams,
+            fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
+        )
+    }
+}
+
+@Preview(name = "Fret Labels Debug", showBackground = true, widthDp = 420, heightDp = 200)
+@Composable
+fun Preview_FretLabels_Debug() {
+    val ui = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f, fretLabelAreaDp = 28.dp, fretLabelTextSp = 14f, lastFretVisibleFraction = 0.6f)
+    // positions: indexed 0..5 for strings top->bottom (internal format expected elsewhere)
+    val positions = listOf(0, 1, 0, 2, 3, -1)
+    val fingers = listOf(0, 1, 0, 2, 3, 0)
+    Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
+        FretboardDiagramOnly(
+            modifier = Modifier.size(width = 320.dp, height = 160.dp),
+            uiParams = ui,
+            positions = positions,
+            fingers = fingers,
+            firstFretIsNut = true,
+            fretCount = 4,
+            fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
         )
     }
 }

@@ -453,7 +453,8 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
 fun FretboardCard(
     chordName: String,
     modifier: Modifier = Modifier,
-    uiParams: DiagramUiParams = DefaultDiagramUiParams // centralized UI params
+    uiParams: DiagramUiParams = DefaultDiagramUiParams, // centralized UI params
+    fretLabelProvider: ((Int) -> String?)? = null
 ) {
     Card(
         modifier = modifier
@@ -466,7 +467,9 @@ fun FretboardCard(
         // 카드 높이에 따라 다이어그램 크기를 계산하려면 BoxWithConstraints를 사용
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val cardHeight = this.maxHeight
-            val effectiveCardHeight = if (cardHeight.isFinite) cardHeight else 140.dp
+            // prefer a caller-provided uiParams.cardHeightDp when the parent does not impose a finite maxHeight
+            val defaultCardHeight = uiParams.cardHeightDp ?: 140.dp
+            val effectiveCardHeight = if (cardHeight.isFinite) cardHeight else defaultCardHeight
             val diagramHeight = (effectiveCardHeight - 20.dp).coerceAtLeast(72.dp)
             val diagramWidth = (diagramHeight * (140f / 96f)).coerceAtMost(220.dp)
 
@@ -516,7 +519,8 @@ fun FretboardCard(
                         uiParams = uiParams,
                         positions = positionsForC,
                         fingers = fingersForC,
-                        firstFretIsNut = true
+                        firstFretIsNut = true,
+                        fretLabelProvider = fretLabelProvider
                     )
                 } else {
                     FretboardDiagramOnly(
