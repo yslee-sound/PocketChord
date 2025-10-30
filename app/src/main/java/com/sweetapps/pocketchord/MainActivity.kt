@@ -29,11 +29,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.unit.isFinite
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import android.graphics.Color as AndroidColor
+import androidx.core.view.WindowCompat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,7 +45,7 @@ class MainActivity : ComponentActivity() {
         try {
             controller.isAppearanceLightNavigationBars = true
             window.navigationBarColor = AndroidColor.WHITE
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // ignore on older platforms where this may not be supported
         }
         setContent {
@@ -78,12 +75,12 @@ class MainActivity : ComponentActivity() {
                         composable("chord_list/{root}") { backStackEntry ->
                             val root = backStackEntry.arguments?.getString("root") ?: "C"
                             Log.d("NavDebug", "Entered route: chord_list/" + root)
-                            ChordListScreen(navController, root = root) { navController.popBackStack() }
+                            ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                         }
                         composable("chord_detail/{root}") { backStackEntry ->
                             val root = backStackEntry.arguments?.getString("root") ?: "C"
                             Log.d("NavDebug", "Entered route: chord_detail/" + root)
-                            ChordDetailScreen(root = root) { navController.popBackStack() }
+                            ChordDetailScreen(root = root, onBack = { navController.popBackStack() })
                         }
                      }
                  }
@@ -398,7 +395,12 @@ fun SectionTitle(title: String) {
 data class FretDiagramData(val name: String, val positions: List<Int>, val fingers: List<Int>? = null)
 
 @Composable
-fun ChordListScreen(navController: NavHostController, root: String, onBack: () -> Unit = {}) {
+fun ChordListScreen(
+    navController: NavHostController,
+    root: String,
+    onBack: () -> Unit = {},
+    uiParams: DiagramUiParams = DefaultDiagramUiParams
+) {
     val chordList = when (root) {
         "C" -> listOf("C", "C6", "CM7", "Cm", "C7", "Cadd9", "C9", "C11", "C13")
         "D" -> listOf("D", "D6", "DM7")
@@ -409,7 +411,7 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
         .fillMaxSize()
         .background(Color.White)
     ) {
-        // Top app bar
+        // Top app bar with back button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -417,10 +419,14 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
                 .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = { onBack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color(0xFF31455A))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             Text(text = "$root 코드", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A))
         }
         // visual separation between top title and content — darker gray for better contrast
-        Divider(color = Color(0xFFBDBDBD), thickness = 1.dp)
+        HorizontalDivider(color = Color(0xFFBDBDBD), thickness = 1.dp)
 
         // Filter chips (horizontal scroll)
         val filters = listOf("Major", "Minor", "Dominant", "Augmented")
@@ -445,7 +451,12 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
         Spacer(modifier = Modifier.height(8.dp))
 
         // List of chords
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
+        // Increase spacing so only ~3 items appear on typical phone screens while keeping item sizes unchanged.
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(56.dp)
+        ) {
             items(chordList) { chordName ->
                 // Plain list row (no outer card). Left: orange square showing chord name.
                 // Right: fret diagram shown without border/background.
@@ -454,15 +465,15 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                         .clickable { navController.navigate("chord_detail/${chordName}") },
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(88.dp)
+                            .size(uiParams.nameBoxSizeDp)
                             .background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 28.sp)
+                        Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = uiParams.nameBoxFontSp.sp)
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -473,7 +484,7 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
                         .height(88.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
-                        FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = DefaultDiagramUiParams)
+                        FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
                     }
                 }
             }
@@ -504,8 +515,6 @@ fun FretboardCard(
             // Use uiParams.cardHeightDp as authoritative when provided so Preview and runtime compute identically
             val effectiveCardHeight = uiParams.cardHeightDp ?: if (measuredCardHeight.isFinite) measuredCardHeight else defaultCardHeight
             val diagramHeight = (effectiveCardHeight - 20.dp).coerceAtLeast(72.dp)
-            val computedWidth = (diagramHeight * (140f / 96f))
-            val diagramWidth = uiParams.diagramMaxWidthDp?.let { computedWidth.coerceAtMost(it) } ?: computedWidth
 
             // 카드 내부 상단에 여백을 위한 Spacer 추가
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -515,8 +524,8 @@ fun FretboardCard(
                         .fillMaxWidth()
                         .height(effectiveCardHeight)
                         .padding(start = 8.dp, top = 8.dp, end = 0.dp, bottom = 8.dp),
-                     verticalAlignment = Alignment.CenterVertically
-                 ) {
+                     verticalAlignment = Alignment.Top
+                  ) {
                     // collect sample DB-style positions & fingers
                     val dbPositionsForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to -1)
                     val dbFingersForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to 0)
@@ -529,7 +538,7 @@ fun FretboardCard(
                     val reserved = textAreaWidth + gapBetween
 
                     // compute desired (diagram) width from height-based calculation and configured max
-                    val heightBasedWidth = computedWidth
+                    val heightBasedWidth = measuredCardHeight * (140f / 96f)
                     val desiredWidth = uiParams.diagramMaxWidthDp?.let { mw -> if (heightBasedWidth > mw) mw else heightBasedWidth } ?: heightBasedWidth
 
                     // total inner width that contains text + gap + diagram + right inset
@@ -537,7 +546,7 @@ fun FretboardCard(
 
                     // Align the fixed-width inner row to the card's end so the trailing inset becomes the gap to the card edge
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                        Row(modifier = Modifier.width(innerTotal).height(effectiveCardHeight), verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.width(innerTotal).height(effectiveCardHeight), verticalAlignment = Alignment.Top) {
                             // chord name (fixed width)
                             Text(text = chordName, fontWeight = FontWeight.Bold, fontSize = 26.sp, color = Color.Black, modifier = Modifier.width(textAreaWidth).padding(start = 4.dp))
                             Spacer(modifier = Modifier.width(gapBetween))
@@ -575,9 +584,7 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
         .fillMaxSize()
         .background(Color.White)
     ) {
-        // Top app bar area (fixed). In preview/inspection mode we skip statusBarsPadding to avoid
-        // leaving a blank gap when system UI is hidden; at runtime we keep the padding so content
-        // doesn't overlap the system status bar.
+        // Top app bar area (fixed) with back button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -585,10 +592,14 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
                 .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = { onBack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color(0xFF31455A))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A))
         }
         // visual separation between top title and content
-        Divider(color = Color(0xFFBDBDBD), thickness = 1.dp)
+        HorizontalDivider(color = Color(0xFFBDBDBD), thickness = 1.dp)
 
         // Content: list of cards. Use Modifier.weight(1f) so this area consumes remaining height between
         // the top app bar and the Activity's bottom navigation bar provided by outer Scaffold.

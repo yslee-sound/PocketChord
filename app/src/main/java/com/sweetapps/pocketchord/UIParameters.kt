@@ -8,6 +8,10 @@ import androidx.compose.ui.unit.dp
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 import androidx.navigation.compose.rememberNavController
 
+// Single source-of-truth for name-box sizing so changing these updates both app and previews
+val DEFAULT_NAME_BOX_SIZE_DP: Dp = 88.dp
+val DEFAULT_NAME_BOX_FONT_SP: Float = 28f
+
 /**
  * Diagram UI parameters to centralize visual tuning for fret diagrams.
  * Adjust defaults here to affect all diagrams that consume these params.
@@ -51,11 +55,19 @@ data class DiagramUiParams(
     val lastFretVisibleFraction: Float = 0.3f,
     // optional default card height (if set, used when a parent doesn't impose a finite height)
     val cardHeightDp: Dp? = null,
+    // size (width/height) of the orange name box shown in chord lists
+    val nameBoxSizeDp: Dp = DEFAULT_NAME_BOX_SIZE_DP,
+    // font size (in sp) used for the chord name inside the name box
+    val nameBoxFontSp: Float = DEFAULT_NAME_BOX_FONT_SP,
 )
 
 // Set an app-wide default maximum diagram width so changing this value updates Preview and devices
 // Set default max width to 280.dp per user's request
-val DefaultDiagramUiParams = DiagramUiParams(cardHeightDp = 200.dp, diagramRightInsetDp = 16.dp, diagramMaxWidthDp = 300.dp)
+val DefaultDiagramUiParams = DiagramUiParams(
+    cardHeightDp = 200.dp,
+    diagramRightInsetDp = 16.dp,
+    diagramMaxWidthDp = 300.dp
+)
 
 // Note: Keep only the Pixel 7 Pro preview so project preview list is minimal and matches the AVD used by the user.
 @Preview(
@@ -83,6 +95,7 @@ fun Preview_UIParameters_Pixel7Pro() {
 fun Preview_ChordList_Pixel7() {
     PocketChordTheme {
         val navController = rememberNavController()
-        ChordListScreen(navController = navController, root = "C") {}
+        // Explicitly pass uiParams so Preview picks up changes reliably.
+        ChordListScreen(navController = navController, root = "C", uiParams = DefaultDiagramUiParams)
     }
 }
