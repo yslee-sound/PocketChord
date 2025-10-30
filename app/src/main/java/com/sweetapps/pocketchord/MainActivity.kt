@@ -413,14 +413,14 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
                 .background(Color.White)
-                .padding(12.dp),
+                .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Back button removed per design: code list should not show a back button.
-            Text(text = "$root 코드", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 4.dp))
+            Text(text = "$root 코드", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A))
         }
+        // visual separation between top title and content — darker gray for better contrast
+        Divider(color = Color(0xFFBDBDBD), thickness = 1.dp)
 
         // Filter chips (horizontal scroll)
         val filters = listOf("Major", "Minor", "Dominant", "Augmented")
@@ -447,40 +447,33 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
         // List of chords
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
             items(chordList) { chordName ->
-                Card(
+                // Plain list row (no outer card). Left: orange square showing chord name.
+                // Right: fret diagram shown without border/background.
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                         .clickable { navController.navigate("chord_detail/${chordName}") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .size(88.dp)
+                            .background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Left orange square with chord name
-                        Box(
-                            modifier = Modifier
-                                .size(88.dp)
-                                .background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 28.sp)
-                        }
+                        Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 28.sp)
+                    }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                        // Right: fret diagram
-                        Box(modifier = Modifier
-                            .weight(1f)
-                            .height(88.dp)
-                        ) {
-                            // Use the smaller diagram variant to fit list rows
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = DefaultDiagramUiParams)
-                        }
+                    // Diagram area: no card, just the diagram content
+                    Box(modifier = Modifier
+                        .weight(1f)
+                        .height(88.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = DefaultDiagramUiParams)
                     }
                 }
             }
@@ -585,18 +578,17 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
         // Top app bar area (fixed). In preview/inspection mode we skip statusBarsPadding to avoid
         // leaving a blank gap when system UI is hidden; at runtime we keep the padding so content
         // doesn't overlap the system status bar.
-        val inPreview = LocalInspectionMode.current
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (inPreview) Modifier else Modifier.statusBarsPadding())
                 .background(Color.White)
-                .padding(8.dp),
+                .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Back button removed per design: code detail should not show a back button.
-            Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 4.dp))
+            Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A))
         }
+        // visual separation between top title and content
+        Divider(color = Color(0xFFBDBDBD), thickness = 1.dp)
 
         // Content: list of cards. Use Modifier.weight(1f) so this area consumes remaining height between
         // the top app bar and the Activity's bottom navigation bar provided by outer Scaffold.
