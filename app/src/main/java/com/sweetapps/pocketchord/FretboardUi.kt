@@ -310,32 +310,35 @@ fun FretboardDiagramOnly(
      }
  }
 
-@Preview(name = "Fretboard Card Preview (single)", showBackground = true, widthDp = 360, heightDp = 240)
+@Preview(name = "Fretboard Card Preview (single)", showBackground = true, widthDp = 420, heightDp = 360)
 @Composable
 fun PreviewFretboardCard_Single() {
     val previewParams = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f, fretLabelAreaDp = 26.dp, fretLabelTextSp = 14f)
+    val cardH = DefaultDiagramUiParams.cardHeightDp ?: 160.dp
     Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopCenter) {
         FretboardCard(
             chordName = "C",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp),
+                .height(cardH),
             uiParams = previewParams,
             fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
         )
     }
 }
 
-@Preview(name = "Fret Labels Debug", showBackground = true, widthDp = 420, heightDp = 200)
+@Preview(name = "Fret Labels Debug", showBackground = true, widthDp = 420, heightDp = 360)
 @Composable
 fun Preview_FretLabels_Debug() {
     val ui = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f, fretLabelAreaDp = 28.dp, fretLabelTextSp = 14f, lastFretVisibleFraction = 0.6f)
     // positions: indexed 0..5 for strings top->bottom (internal format expected elsewhere)
     val positions = listOf(0, 1, 0, 2, 3, -1)
     val fingers = listOf(0, 1, 0, 2, 3, 0)
+    val cardH = DefaultDiagramUiParams.cardHeightDp ?: 160.dp
+    val diagramW = (cardH * (140f / 96f)).coerceAtMost(320.dp)
     Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
         FretboardDiagramOnly(
-            modifier = Modifier.size(width = 320.dp, height = 160.dp),
+            modifier = Modifier.size(width = diagramW, height = cardH),
             uiParams = ui,
             positions = positions,
             fingers = fingers,

@@ -561,8 +561,8 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
         },
         containerColor = Color(0xFFEFF3F5)
     ) { innerPadding ->
-        // 카드 크기를 첨부 이미지와 비슷하게 고정하여 배열을 맞춤
-        val singleCardDp = 160.dp // 카드 높이를 고정(스크롤로 여러 항목 확인 가능)
+        // 카드 크기를 첨부 이미지와 비슷하게 고정하되, DefaultDiagramUiParams.cardHeightDp 가 설정되어 있으면 사용
+        val singleCardDp = DefaultDiagramUiParams.cardHeightDp ?: 160.dp // 카드 높이를 기본값 또는 전역 파라미터로 결정
 
         LazyColumn(
             modifier = Modifier

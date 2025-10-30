@@ -45,21 +45,22 @@ data class DiagramUiParams(
     val cardHeightDp: Dp? = null,
 )
 
-val DefaultDiagramUiParams = DiagramUiParams()
+val DefaultDiagramUiParams = DiagramUiParams(cardHeightDp = 200.dp)
 
 // Note: This preview uses FretboardDiagramOnly from FretboardUi.kt to visually show uiParams
-@Preview(name = "UIParams Preview", showBackground = true, widthDp = 360, heightDp = 200)
+@Preview(name = "UIParams Preview", showBackground = true, widthDp = 360, heightDp = 320)
 @Composable
 fun Preview_UIParameters() {
     // Use the canonical defaults so Preview always reflects the current default parameters
+    val uiParams = DefaultDiagramUiParams
+    val cardH = uiParams.cardHeightDp ?: 160.dp
     Box(modifier = Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.TopCenter) {
         FretboardCard(
             chordName = "C",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp),
-            uiParams = DefaultDiagramUiParams,
-            // no provider here — use default labeling rules (show frets 1..fretCount-1)
+                .height(cardH),
+            uiParams = uiParams
         )
     }
 }
