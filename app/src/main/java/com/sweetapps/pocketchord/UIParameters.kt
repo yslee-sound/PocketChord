@@ -12,6 +12,13 @@ import androidx.navigation.compose.rememberNavController
 val DEFAULT_NAME_BOX_SIZE_DP: Dp = 60.dp
 // default proportional scale used to derive font size from the name box size (boxPx * scale -> fontSp)
 val DEFAULT_NAME_BOX_FONT_SCALE: Float = 0.35f //0.45
+// Single control for diagram base size: change this one constant to adjust diagram max width and default height used across app & previews
+val DEFAULT_DIAGRAM_BASE_DP: Dp = 500.dp
+// derive a sensible default diagram width and height from the single base value so changing one number is enough
+val DEFAULT_DIAGRAM_MAX_WIDTH_DP: Dp = DEFAULT_DIAGRAM_BASE_DP
+val DEFAULT_DIAGRAM_HEIGHT_DP: Dp = (DEFAULT_DIAGRAM_BASE_DP * 0.32f) // ~96.dp when base is 300.dp
+// minimum diagram height when deriving from card height
+val DEFAULT_DIAGRAM_MIN_HEIGHT_DP: Dp = 72.dp
 
 // Anchor option to position the diagram inside its container. Left = diagram sits to left, Right = to right.
 enum class DiagramAnchor { Left, Right }
@@ -59,6 +66,10 @@ data class DiagramUiParams(
     val lastFretVisibleFraction: Float = 0.3f,
     // optional default card height (if set, used when a parent doesn't impose a finite height)
     val cardHeightDp: Dp? = null,
+    // optional default/fixed diagram height (if set, diagram will use this height instead of being derived from card height)
+    val diagramHeightDp: Dp? = DEFAULT_DIAGRAM_HEIGHT_DP,
+    // minimum diagram height to enforce when deriving from card height
+    val diagramMinHeightDp: Dp = DEFAULT_DIAGRAM_MIN_HEIGHT_DP,
     // size (width/height) of the orange name box shown in chord lists
     val nameBoxSizeDp: Dp = DEFAULT_NAME_BOX_SIZE_DP,
     // proportional scale used to compute font size from nameBoxSizeDp at runtime
@@ -72,7 +83,8 @@ data class DiagramUiParams(
 val DefaultDiagramUiParams = DiagramUiParams(
     cardHeightDp = 200.dp,
     diagramRightInsetDp = 16.dp,
-    diagramMaxWidthDp = 300.dp
+    diagramMaxWidthDp = DEFAULT_DIAGRAM_MAX_WIDTH_DP,
+    diagramHeightDp = DEFAULT_DIAGRAM_HEIGHT_DP
 )
 
 // Note: Keep only the Pixel 7 Pro preview so project preview list is minimal and matches the AVD used by the user.

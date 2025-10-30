@@ -463,7 +463,8 @@ fun ChordListScreen(
                 // Right: fret diagram shown without border/background.
                 // Use a Row where name box and diagram are independent: spacer keeps diagram fixed width
                 val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
-                val itemHeight = maxOf(uiParams.nameBoxSizeDp, 88.dp)
+                val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
+                val itemHeight = maxOf(uiParams.nameBoxSizeDp, diagramHeightForList)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -473,7 +474,7 @@ fun ChordListScreen(
                     verticalAlignment = Alignment.Top
                 ) {
                     if (uiParams.diagramAnchor == DiagramAnchor.Left) {
-                        Box(modifier = Modifier.width(desiredDiagramWidth).height(88.dp)) {
+                        Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
                             FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
                         }
                         Spacer(modifier = Modifier.width(16.dp))
@@ -489,7 +490,7 @@ fun ChordListScreen(
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(16.dp))
-                        Box(modifier = Modifier.width(desiredDiagramWidth).height(88.dp)) {
+                        Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
                             FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
                         }
                     }
@@ -521,7 +522,8 @@ fun FretboardCard(
             val defaultCardHeight = 140.dp
             // Use uiParams.cardHeightDp as authoritative when provided so Preview and runtime compute identically
             val effectiveCardHeight = uiParams.cardHeightDp ?: if (measuredCardHeight.isFinite) measuredCardHeight else defaultCardHeight
-            val diagramHeight = (effectiveCardHeight - 20.dp).coerceAtLeast(72.dp)
+            // allow fixed diagram height via uiParams; otherwise derive from card height but respect min height
+            val diagramHeight = uiParams.diagramHeightDp ?: (effectiveCardHeight - 20.dp).coerceAtLeast(uiParams.diagramMinHeightDp)
 
             // 카드 내부 상단에 여백을 위한 Spacer 추가
             Column(modifier = Modifier.fillMaxWidth()) {
