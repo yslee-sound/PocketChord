@@ -31,6 +31,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.unit.isFinite
 import android.graphics.Color as AndroidColor
 import androidx.core.view.WindowCompat
+import androidx.compose.ui.platform.LocalDensity
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -460,31 +461,37 @@ fun ChordListScreen(
             items(chordList) { chordName ->
                 // Plain list row (no outer card). Left: orange square showing chord name.
                 // Right: fret diagram shown without border/background.
+                // Use a Row where name box and diagram are independent: spacer keeps diagram fixed width
+                val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
+                val itemHeight = maxOf(uiParams.nameBoxSizeDp, 88.dp)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(itemHeight)
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                         .clickable { navController.navigate("chord_detail/${chordName}") },
                     verticalAlignment = Alignment.Top
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(uiParams.nameBoxSizeDp)
-                            .background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = uiParams.nameBoxFontSp.sp)
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    // Diagram area: no card, just the diagram content
-                    Box(modifier = Modifier
-                        .weight(1f)
-                        .height(88.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                    if (uiParams.diagramAnchor == DiagramAnchor.Left) {
+                        Box(modifier = Modifier.width(desiredDiagramWidth).height(88.dp)) {
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                            val chordFontSize = with(LocalDensity.current) { (uiParams.nameBoxSizeDp.toPx() * uiParams.nameBoxFontScale).toSp() }
+                            Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                    } else {
+                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                            val chordFontSize = with(LocalDensity.current) { (uiParams.nameBoxSizeDp.toPx() * uiParams.nameBoxFontScale).toSp() }
+                            Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Box(modifier = Modifier.width(desiredDiagramWidth).height(88.dp)) {
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                        }
                     }
                 }
             }

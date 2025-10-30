@@ -9,8 +9,12 @@ import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 import androidx.navigation.compose.rememberNavController
 
 // Single source-of-truth for name-box sizing so changing these updates both app and previews
-val DEFAULT_NAME_BOX_SIZE_DP: Dp = 88.dp
-val DEFAULT_NAME_BOX_FONT_SP: Float = 28f
+val DEFAULT_NAME_BOX_SIZE_DP: Dp = 60.dp
+// default proportional scale used to derive font size from the name box size (boxPx * scale -> fontSp)
+val DEFAULT_NAME_BOX_FONT_SCALE: Float = 0.35f //0.45
+
+// Anchor option to position the diagram inside its container. Left = diagram sits to left, Right = to right.
+enum class DiagramAnchor { Left, Right }
 
 /**
  * Diagram UI parameters to centralize visual tuning for fret diagrams.
@@ -57,8 +61,10 @@ data class DiagramUiParams(
     val cardHeightDp: Dp? = null,
     // size (width/height) of the orange name box shown in chord lists
     val nameBoxSizeDp: Dp = DEFAULT_NAME_BOX_SIZE_DP,
-    // font size (in sp) used for the chord name inside the name box
-    val nameBoxFontSp: Float = DEFAULT_NAME_BOX_FONT_SP,
+    // proportional scale used to compute font size from nameBoxSizeDp at runtime
+    val nameBoxFontScale: Float = DEFAULT_NAME_BOX_FONT_SCALE,
+    // anchor to position the diagram inside its available container. Use DefaultDiagramUiParams to set app-wide default.
+    val diagramAnchor: DiagramAnchor = DiagramAnchor.Right,
 )
 
 // Set an app-wide default maximum diagram width so changing this value updates Preview and devices
