@@ -462,6 +462,12 @@ fun ChordListScreen(
                 // Plain list row (no outer card). Left: orange square showing chord name.
                 // Right: fret diagram shown without border/background.
                 // Use a Row where name box and diagram are independent: spacer keeps diagram fixed width
+                // sample DB-style positions & fingers for C chord; convert to internal positions when needed
+                val dbPositionsForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to -1)
+                val dbFingersForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to 0)
+                val positionsForC = dbMapToInternalPositions(dbPositionsForC, stringCount = 6, defaultFret = -1)
+                val fingersForC = dbMapToInternalPositions(dbFingersForC, stringCount = 6, defaultFret = 0)
+
                 val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
                 val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
                 val itemHeight = maxOf(uiParams.nameBoxSizeDp, diagramHeightForList)
@@ -475,7 +481,11 @@ fun ChordListScreen(
                 ) {
                     if (uiParams.diagramAnchor == DiagramAnchor.Left) {
                         Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                            if (chordName == "C") {
+                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true)
+                            } else {
+                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                            }
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
@@ -491,7 +501,11 @@ fun ChordListScreen(
                         Spacer(modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                            if (chordName == "C") {
+                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true)
+                            } else {
+                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                            }
                         }
                     }
                 }

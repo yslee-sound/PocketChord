@@ -54,7 +54,7 @@ data class DiagramUiParams(
     val fretLabelTextSp: Float = 12f,
     // global shift applied to the whole diagram drawing area (positive -> right, negative -> left)
     // use this when you want to move the whole diagram within its container independent of leftInsetDp
-    val diagramShiftDp: Dp = 0.dp,
+    val diagramShiftDp: Dp = 30.dp,
     // right inset: space to reserve on the right side of the card/container so diagram doesn't touch the edge
     val diagramRightInsetDp: Dp = 0.dp,
     // optional maximum width to cap the diagram's width. If null, no explicit cap is applied.
