@@ -466,72 +466,76 @@ fun FretboardCard(
     ) {
         // 카드 높이에 따라 다이어그램 크기를 계산하려면 BoxWithConstraints를 사용
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            // BoxWithConstraints 범위에서 카드/다이어그램 크기 계산
             val cardHeight = this.maxHeight
-            // prefer a caller-provided uiParams.cardHeightDp when the parent does not impose a finite maxHeight
             val defaultCardHeight = uiParams.cardHeightDp ?: 140.dp
             val effectiveCardHeight = if (cardHeight.isFinite) cardHeight else defaultCardHeight
             val diagramHeight = (effectiveCardHeight - 20.dp).coerceAtLeast(72.dp)
             val diagramWidth = (diagramHeight * (140f / 96f)).coerceAtMost(220.dp)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(effectiveCardHeight)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = chordName,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 26.sp, // 좌측 텍스트 더 크게
-                    color = Color.Black,
+            // 카드 내부 상단에 여백을 위한 Spacer 추가
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Spacer(modifier = Modifier.height(5.dp))
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 8.dp)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // 우측 다이어그램: 카드 높이에 맞춰 크기가 결정됨
-                // C 코드(첫 항목)에 대해 표준 핑거링을 더미로 표시
-                // Define chord data in DB-style (1 = topmost string)
-                val dbPositionsForC = mapOf(
-                    1 to 0,  // string 1 (top) -> open
-                    2 to 1,  // string 2 -> fret 1
-                    3 to 0,  // string 3 -> open
-                    4 to 2,  // string 4 -> fret 2
-                    5 to 3,  // string 5 -> fret 3
-                    6 to -1  // string 6 -> mute
-                )
-                val dbFingersForC = mapOf(
-                    1 to 0,
-                    2 to 1,
-                    3 to 0,
-                    4 to 2,
-                    5 to 3,
-                    6 to 0
-                )
-                val positionsForC = dbMapToInternalPositions(dbPositionsForC, stringCount = 6, defaultFret = -1)
-                val fingersForC = dbMapToInternalPositions(dbFingersForC, stringCount = 6, defaultFret = 0)
-                if (chordName == "C") {
-                    FretboardDiagramOnly(
-                        modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
-                        uiParams = uiParams,
-                        positions = positionsForC,
-                        fingers = fingersForC,
-                        firstFretIsNut = true,
-                        fretLabelProvider = fretLabelProvider
+                        .fillMaxWidth()
+                        .height(effectiveCardHeight)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = chordName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 26.sp, // 좌측 텍스트 더 크게
+                        color = Color.Black,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 8.dp)
                     )
-                } else {
-                    FretboardDiagramOnly(
-                        modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
-                        uiParams = uiParams
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // 우측 다이어그램: 카드 높이에 맞춰 크기가 결정됨
+                    // C 코드(첫 항목)에 대해 표준 핑거링을 더미로 표시
+                    // Define chord data in DB-style (1 = topmost string)
+                    val dbPositionsForC = mapOf(
+                        1 to 0,  // string 1 (top) -> open
+                        2 to 1,  // string 2 -> fret 1
+                        3 to 0,  // string 3 -> open
+                        4 to 2,  // string 4 -> fret 2
+                        5 to 3,  // string 5 -> fret 3
+                        6 to -1  // string 6 -> mute
                     )
+                    val dbFingersForC = mapOf(
+                        1 to 0,
+                        2 to 1,
+                        3 to 0,
+                        4 to 2,
+                        5 to 3,
+                        6 to 0
+                    )
+                    val positionsForC = dbMapToInternalPositions(dbPositionsForC, stringCount = 6, defaultFret = -1)
+                    val fingersForC = dbMapToInternalPositions(dbFingersForC, stringCount = 6, defaultFret = 0)
+                    if (chordName == "C") {
+                        FretboardDiagramOnly(
+                            modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
+                            uiParams = uiParams,
+                            positions = positionsForC,
+                            fingers = fingersForC,
+                            firstFretIsNut = true,
+                            fretLabelProvider = fretLabelProvider
+                        )
+                    } else {
+                        FretboardDiagramOnly(
+                            modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
+                            uiParams = uiParams
+                        )
+                    }
                 }
-             }
-         }
-     }
- }
+            }
+        }
+    }
+}
 
 @Composable
 fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
