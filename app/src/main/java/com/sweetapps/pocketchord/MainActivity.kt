@@ -1,6 +1,7 @@
 package com.sweetapps.pocketchord
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -55,29 +56,40 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 Scaffold(
                     bottomBar = { BottomNavigationBar(navController) },
-                    containerColor = Color(0xFFEFF3F5)
+                    containerColor = Color.White
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = "home",
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable("home") { MainScreen(navController) }
-                        composable("search") { SearchResultScreen() }
-                        composable("search_chord") { SearchChordScreen() }
+                        composable("home") {
+                            Log.d("NavDebug", "Entered route: home")
+                            MainScreen(navController)
+                        }
+                        composable("search") {
+                            Log.d("NavDebug", "Entered route: search")
+                            SearchResultScreen()
+                        }
+                        composable("search_chord") {
+                            Log.d("NavDebug", "Entered route: search_chord")
+                            SearchChordScreen()
+                        }
                         composable("chord_list/{root}") { backStackEntry ->
                             val root = backStackEntry.arguments?.getString("root") ?: "C"
+                            Log.d("NavDebug", "Entered route: chord_list/" + root)
                             ChordListScreen(navController, root = root) { navController.popBackStack() }
                         }
                         composable("chord_detail/{root}") { backStackEntry ->
                             val root = backStackEntry.arguments?.getString("root") ?: "C"
+                            Log.d("NavDebug", "Entered route: chord_detail/" + root)
                             ChordDetailScreen(root = root) { navController.popBackStack() }
                         }
-                    }
-                }
-            }
-        }
-    }
+                     }
+                 }
+             }
+         }
+     }
 }
 
 @Composable
@@ -138,11 +150,9 @@ fun ChordGrid(navController: NavHostController) {
                         chord = chord,
                         modifier = Modifier.weight(1f).clickable {
                             val root = chord.substringBefore("-")
-                            if (root == "C") {
-                                navController.navigate("chord_detail/C")
-                            } else {
-                                navController.navigate("chord_list/$root")
-                            }
+                            val route = "chord_list/$root"
+                            Log.d("NavDebug", "Click: navigating to $route from grid (chord=$chord)")
+                            navController.navigate(route)
                         }
                     )
                 }
@@ -215,7 +225,7 @@ fun SearchResultScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFEFF3F5))
+            .background(Color.White)
             .padding(horizontal = 16.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
@@ -273,7 +283,7 @@ fun SearchChordScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF7FAFC))
+            .background(Color.White)
     ) {
         // 상단 바
         Row(
@@ -390,66 +400,86 @@ data class FretDiagramData(val name: String, val positions: List<Int>, val finge
 @Composable
 fun ChordListScreen(navController: NavHostController, root: String, onBack: () -> Unit = {}) {
     val chordList = when (root) {
-        "C" -> listOf("C", "CM7", "Cm7", "C6")
-        "D" -> listOf("D", "DM7", "Dm7", "D6")
+        "C" -> listOf("C", "C6", "CM7", "Cm", "C7", "Cadd9", "C9", "C11", "C13")
+        "D" -> listOf("D", "D6", "DM7")
         else -> listOf(root)
     }
-    Scaffold(
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black)
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
-                }
-            }
-        },
-        containerColor = Color.Black
-    ) { innerPadding ->
-        LazyColumn(
+
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .background(Color.White)
+    ) {
+        // Top app bar
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color.Black),
-            contentPadding = PaddingValues(vertical = 2.dp, horizontal = 0.dp) // 여백을 더 줄임
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .background(Color.White)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // Back button removed per design: code list should not show a back button.
+            Text(text = "$root 코드", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 4.dp))
+        }
+
+        // Filter chips (horizontal scroll)
+        val filters = listOf("Major", "Minor", "Dominant", "Augmented")
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp)
+        ) {
+            filters.forEach { f ->
+                AssistChip(
+                    onClick = {},
+                    label = { Text(f) },
+                    colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFFF1F3F4)),
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = "총 ${chordList.size}개", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp))
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // List of chords
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
             items(chordList) { chordName ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp, horizontal = 8.dp) // 카드 위아래 여백을 더 줄임
-                        .clickable {
-                            if (root == "C" && chordName == "C") {
-                                navController.navigate("chord_detail/C")
-                            }
-                        },
-                    shape = RoundedCornerShape(4.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFDCE6F7))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .clickable { navController.navigate("chord_detail/${chordName}") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(6.dp), // 카드 내부 여백을 더 줄임
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = chordName,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp, // 폰트 크기를 약간 줄임
-                            color = Color.Black,
-                            modifier = Modifier.width(50.dp) // 텍스트 영역을 더 줄임
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        // Left orange square with chord name
                         Box(
                             modifier = Modifier
-                                .background(Color.White)
-                                .padding(4.dp)
+                                .size(88.dp)
+                                .background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            FretDiagramImage()
+                            Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 28.sp)
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        // Right: fret diagram
+                        Box(modifier = Modifier
+                            .weight(1f)
+                            .height(88.dp)
+                        ) {
+                            // Use the smaller diagram variant to fit list rows
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = DefaultDiagramUiParams)
                         }
                     }
                 }
@@ -550,7 +580,7 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
     // provides the bottom navigation bar so we don't add another Scaffold here.
     Column(modifier = Modifier
         .fillMaxSize()
-        .background(Color(0xFFEFF3F5))
+        .background(Color.White)
     ) {
         // Top app bar area (fixed). In preview/inspection mode we skip statusBarsPadding to avoid
         // leaving a blank gap when system UI is hidden; at runtime we keep the padding so content
@@ -564,10 +594,8 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
-            }
-            Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 8.dp))
+            // Back button removed per design: code detail should not show a back button.
+            Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 4.dp))
         }
 
         // Content: list of cards. Use Modifier.weight(1f) so this area consumes remaining height between

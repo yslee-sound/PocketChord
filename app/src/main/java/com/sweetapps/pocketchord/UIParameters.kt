@@ -6,6 +6,7 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
+import androidx.navigation.compose.rememberNavController
 
 /**
  * Diagram UI parameters to centralize visual tuning for fret diagrams.
@@ -68,5 +69,20 @@ val DefaultDiagramUiParams = DiagramUiParams(cardHeightDp = 200.dp, diagramRight
 fun Preview_UIParameters_Pixel7Pro() {
     PocketChordTheme {
         ChordDetailScreen(root = "C") {}
+    }
+}
+
+@Preview(
+    name = "ChordList Preview (Pixel 7 Pro)",
+    showBackground = true,
+    device = Devices.PIXEL_7_PRO,
+    showSystemUi = true,
+    fontScale = 1f
+)
+@Composable
+fun Preview_ChordList_Pixel7() {
+    PocketChordTheme {
+        val navController = rememberNavController()
+        ChordListScreen(navController = navController, root = "C") {}
     }
 }
