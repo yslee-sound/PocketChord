@@ -1,12 +1,11 @@
 package com.sweetapps.pocketchord
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.*
+import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 
 /**
  * Diagram UI parameters to centralize visual tuning for fret diagrams.
@@ -18,7 +17,7 @@ data class DiagramUiParams(
     val markerRadiusFactor: Float = 0.40f, // fraction of min(fretSpacing, stringSpacing)
     val markerTextScale: Float = 1.5f, // multiplier for marker text size relative to radius
     // left inset: space from the canvas left edge to the nut's left edge
-    val leftInsetDp: Dp = 1.dp,
+    val leftInsetDp: Dp = 4.dp,
     // how far (center) outside the nut to place open/mute markers (single control for both)
     val markerOffsetDp: Dp = 14.dp,
     // stroke widths for open/mute markers (allows material-like thin outlines)
@@ -37,6 +36,14 @@ data class DiagramUiParams(
     val fretLabelAreaDp: Dp = 18.dp,
     // label text size in sp
     val fretLabelTextSp: Float = 12f,
+    // global shift applied to the whole diagram drawing area (positive -> right, negative -> left)
+    // use this when you want to move the whole diagram within its container independent of leftInsetDp
+    val diagramShiftDp: Dp = 0.dp,
+    // right inset: space to reserve on the right side of the card/container so diagram doesn't touch the edge
+    val diagramRightInsetDp: Dp = 0.dp,
+    // optional maximum width to cap the diagram's width. If null, no explicit cap is applied.
+    // Set to null by default so callers can opt-in; DefaultDiagramUiParams below provides a sane app-wide default.
+    val diagramMaxWidthDp: Dp? = null,
     // fraction of one fret spacing reserved for the final (last) fret's visible horizontal width.
     // Default 1.0 keeps the previous behavior which effectively used (fretCount + 1) spacing divisor.
     // Set to 0.5 to reserve only half a fret's width for the final fret, etc.
@@ -45,22 +52,21 @@ data class DiagramUiParams(
     val cardHeightDp: Dp? = null,
 )
 
-val DefaultDiagramUiParams = DiagramUiParams(cardHeightDp = 200.dp)
+// Set an app-wide default maximum diagram width so changing this value updates Preview and devices
+// Set default max width to 280.dp per user's request
+val DefaultDiagramUiParams = DiagramUiParams(cardHeightDp = 200.dp, diagramRightInsetDp = 16.dp, diagramMaxWidthDp = 300.dp)
 
-// Note: This preview uses FretboardDiagramOnly from FretboardUi.kt to visually show uiParams
-@Preview(name = "UIParams Preview", showBackground = true, widthDp = 360, heightDp = 320)
+// Note: Keep only the Pixel 7 Pro preview so project preview list is minimal and matches the AVD used by the user.
+@Preview(
+    name = "UIParams Preview (Pixel 7 Pro)",
+    showBackground = true,
+    device = Devices.PIXEL_7_PRO,
+    showSystemUi = true,
+    fontScale = 1f
+)
 @Composable
-fun Preview_UIParameters() {
-    // Use the canonical defaults so Preview always reflects the current default parameters
-    val uiParams = DefaultDiagramUiParams
-    val cardH = uiParams.cardHeightDp ?: 160.dp
-    Box(modifier = Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.TopCenter) {
-        FretboardCard(
-            chordName = "C",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(cardH),
-            uiParams = uiParams
-        )
+fun Preview_UIParameters_Pixel7Pro() {
+    PocketChordTheme {
+        ChordDetailScreen(root = "C") {}
     }
 }

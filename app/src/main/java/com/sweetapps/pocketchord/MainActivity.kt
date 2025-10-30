@@ -28,11 +28,28 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.unit.isFinite
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import android.graphics.Color as AndroidColor
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Ensure status bar background is white and icons are dark for readability at runtime
+        // Use WindowCompat/WindowInsetsControllerCompat for backward-compatible control
+        window.statusBarColor = AndroidColor.WHITE
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.isAppearanceLightStatusBars = true
+        // Optionally make navigation bar light as well
+        try {
+            controller.isAppearanceLightNavigationBars = true
+            window.navigationBarColor = AndroidColor.WHITE
+        } catch (e: Exception) {
+            // ignore on older platforms where this may not be supported
+        }
         setContent {
             PocketChordTheme {
                 val navController = rememberNavController()
@@ -451,19 +468,21 @@ fun FretboardCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 12.dp), // 카드 외부 여백 약간 증가
-        shape = RoundedCornerShape(18.dp), // 더 둥글게
+            .padding(vertical = 4.dp, horizontal = 4.dp), // 카드 외부 여백 약간 증가
+        shape = RoundedCornerShape(6.dp), // 더 둥글게
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         // 카드 높이에 따라 다이어그램 크기를 계산하려면 BoxWithConstraints를 사용
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             // BoxWithConstraints 범위에서 카드/다이어그램 크기 계산
-            val cardHeight = this.maxHeight
-            val defaultCardHeight = uiParams.cardHeightDp ?: 140.dp
-            val effectiveCardHeight = if (cardHeight.isFinite) cardHeight else defaultCardHeight
+            val measuredCardHeight = this.maxHeight
+            val defaultCardHeight = 140.dp
+            // Use uiParams.cardHeightDp as authoritative when provided so Preview and runtime compute identically
+            val effectiveCardHeight = uiParams.cardHeightDp ?: if (measuredCardHeight.isFinite) measuredCardHeight else defaultCardHeight
             val diagramHeight = (effectiveCardHeight - 20.dp).coerceAtLeast(72.dp)
-            val diagramWidth = (diagramHeight * (140f / 96f)).coerceAtMost(220.dp)
+            val computedWidth = (diagramHeight * (140f / 96f))
+            val diagramWidth = uiParams.diagramMaxWidthDp?.let { computedWidth.coerceAtMost(it) } ?: computedWidth
 
             // 카드 내부 상단에 여백을 위한 Spacer 추가
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -472,56 +491,42 @@ fun FretboardCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(effectiveCardHeight)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = chordName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp, // 좌측 텍스트 더 크게
-                        color = Color.Black,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 8.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // 우측 다이어그램: 카드 높이에 맞춰 크기가 결정됨
-                    // C 코드(첫 항목)에 대해 표준 핑거링을 더미로 표시
-                    // Define chord data in DB-style (1 = topmost string)
-                    val dbPositionsForC = mapOf(
-                        1 to 0,  // string 1 (top) -> open
-                        2 to 1,  // string 2 -> fret 1
-                        3 to 0,  // string 3 -> open
-                        4 to 2,  // string 4 -> fret 2
-                        5 to 3,  // string 5 -> fret 3
-                        6 to -1  // string 6 -> mute
-                    )
-                    val dbFingersForC = mapOf(
-                        1 to 0,
-                        2 to 1,
-                        3 to 0,
-                        4 to 2,
-                        5 to 3,
-                        6 to 0
-                    )
+                        .padding(start = 8.dp, top = 8.dp, end = 0.dp, bottom = 8.dp),
+                     verticalAlignment = Alignment.CenterVertically
+                 ) {
+                    // collect sample DB-style positions & fingers
+                    val dbPositionsForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to -1)
+                    val dbFingersForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to 0)
                     val positionsForC = dbMapToInternalPositions(dbPositionsForC, stringCount = 6, defaultFret = -1)
                     val fingersForC = dbMapToInternalPositions(dbFingersForC, stringCount = 6, defaultFret = 0)
-                    if (chordName == "C") {
-                        FretboardDiagramOnly(
-                            modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
-                            uiParams = uiParams,
-                            positions = positionsForC,
-                            fingers = fingersForC,
-                            firstFretIsNut = true,
-                            fretLabelProvider = fretLabelProvider
-                        )
-                    } else {
-                        FretboardDiagramOnly(
-                            modifier = Modifier.size(width = diagramWidth, height = diagramHeight),
-                            uiParams = uiParams
-                        )
+
+                    // reserved space used to compute total inner width (text area + gap). Do not include Row padding here.
+                    val textAreaWidth = 32.dp
+                    val gapBetween = 8.dp
+                    val reserved = textAreaWidth + gapBetween
+
+                    // compute desired (diagram) width from height-based calculation and configured max
+                    val heightBasedWidth = computedWidth
+                    val desiredWidth = uiParams.diagramMaxWidthDp?.let { mw -> if (heightBasedWidth > mw) mw else heightBasedWidth } ?: heightBasedWidth
+
+                    // total inner width that contains text + gap + diagram + right inset
+                    val innerTotal = reserved + desiredWidth + uiParams.diagramRightInsetDp
+
+                    // Align the fixed-width inner row to the card's end so the trailing inset becomes the gap to the card edge
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                        Row(modifier = Modifier.width(innerTotal).height(effectiveCardHeight), verticalAlignment = Alignment.CenterVertically) {
+                            // chord name (fixed width)
+                            Text(text = chordName, fontWeight = FontWeight.Bold, fontSize = 26.sp, color = Color.Black, modifier = Modifier.width(textAreaWidth).padding(start = 4.dp))
+                            Spacer(modifier = Modifier.width(gapBetween))
+                            Box(modifier = Modifier.width(desiredWidth).height(diagramHeight)) {
+                                if (chordName == "C") {
+                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true, fretLabelProvider = fretLabelProvider)
+                                } else {
+                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(uiParams.diagramRightInsetDp))
+                        }
                     }
                 }
             }
@@ -540,31 +545,40 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
         "D" -> listOf("D", "D6", "DM7")
         else -> listOf(root)
     }
-    Scaffold(
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
-                }
-                Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 8.dp))
+
+    // Overall column: fixed top app bar row, content fills remaining space. The Activity-level Scaffold
+    // provides the bottom navigation bar so we don't add another Scaffold here.
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .background(Color(0xFFEFF3F5))
+    ) {
+        // Top app bar area (fixed). In preview/inspection mode we skip statusBarsPadding to avoid
+        // leaving a blank gap when system UI is hidden; at runtime we keep the padding so content
+        // doesn't overlap the system status bar.
+        val inPreview = LocalInspectionMode.current
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (inPreview) Modifier else Modifier.statusBarsPadding())
+                .background(Color.White)
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
             }
-        },
-        containerColor = Color(0xFFEFF3F5)
-    ) { innerPadding ->
-        // 카드 크기를 첨부 이미지와 비슷하게 고정하되, DefaultDiagramUiParams.cardHeightDp 가 설정되어 있으면 사용
-        val singleCardDp = DefaultDiagramUiParams.cardHeightDp ?: 160.dp // 카드 높이를 기본값 또는 전역 파라미터로 결정
+            Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 8.dp))
+        }
+
+        // Content: list of cards. Use Modifier.weight(1f) so this area consumes remaining height between
+        // the top app bar and the Activity's bottom navigation bar provided by outer Scaffold.
+        val singleCardDp = DefaultDiagramUiParams.cardHeightDp ?: 160.dp
 
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(vertical = 12.dp) // 상하 여백을 조금 추가
+                .fillMaxWidth()
+                .weight(1f),
+            contentPadding = PaddingValues(vertical = 12.dp)
         ) {
             items(chordList) { chordName ->
                 FretboardCard(
@@ -572,9 +586,12 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(singleCardDp)
-                        .padding(vertical = 2.dp, horizontal = 8.dp) // 아이템 간격 최소화
+                        .padding(vertical = 2.dp, horizontal = 8.dp),
+                    uiParams = DefaultDiagramUiParams
                 )
             }
         }
     }
 }
+
+// Preview for FretboardCard moved to FretboardUi.kt to centralize diagram previews and avoid duplicates.

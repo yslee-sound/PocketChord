@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Devices
 import kotlin.math.min
 
 // 다이어그램 관련 컴포저블 정리 파일
@@ -66,7 +67,7 @@ fun FretboardDiagram(
 
         // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
         // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
-        val defaultWidth = diagramWidth ?: 200.dp
+        val defaultWidth = diagramWidth ?: uiParams.diagramMaxWidthDp ?: 200.dp
         val defaultHeight = diagramHeight ?: 120.dp
         val boxModifier = Modifier.width(defaultWidth).height(defaultHeight).then(modifier) // caller modifier (if contains size) will override defaults
         BoxWithConstraints(
@@ -79,14 +80,15 @@ fun FretboardDiagram(
             val boxWpx = with(density) { boxW.toPx() }
             val boxHpx = with(density) { boxH.toPx() }
             val labelAreaPx = with(density) { uiParams.fretLabelAreaDp.toPx() }
-            val leftInsetPx = with(density) { uiParams.leftInsetDp.toPx() }
+            val leftInsetPx = with(density) { (uiParams.leftInsetDp + uiParams.diagramShiftDp).toPx() }
             val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
             val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
             val nutPx = if (firstFretIsNut) computedNutPx else 0f
             // use provided fretCount
             val stringCount = 6
             // available width for frets = total width - leftInset - nut width
-            val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
+            val rightInsetPx = with(density) { uiParams.diagramRightInsetDp.toPx() }
+            val availableWidth = (boxWpx - leftInsetPx - nutPx - rightInsetPx).coerceAtLeast(0f)
             // compute fret spacing so 'fretCount' frets fit inside the available width
             // reserve `lastFretVisibleFraction` worth of one-fret spacing for the final fret's visible width
             val spacingDiv = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
@@ -99,9 +101,9 @@ fun FretboardDiagram(
                 // background
                 drawRect(Color.White, size = size)
                 // nut or vertical frets (shifted by leftInset)
-                // compute stroke half-width and a safe right-edge clamp
+                // compute stroke half-width and a safe right-edge clamp that respects right inset
                 val vStrokeHalf = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
-                val maxFretX = size.width - vStrokeHalf
+                val maxFretX = (size.width - rightInsetPx - vStrokeHalf).coerceAtLeast(leftInsetPx + nutPx)
                 // draw frets for f = 0..fretCount (inclusive) so we have nut + 'fretCount' frets visible
                 for (f in 0..fretCount) {
                     if (f == 0 && firstFretIsNut) {
@@ -117,10 +119,11 @@ fun FretboardDiagram(
                     }
                 }
 
-                // horizontal strings (start after leftInset)
+                // horizontal strings (start after leftInset) — end at size.width - rightInsetPx to respect inset
+                val stringLineEndX = (size.width - rightInsetPx).coerceAtLeast(leftInsetPx)
                 for (s in 0 until stringCount) {
                     val y = s * stringSpacingPx
-                    drawLine(Color.Gray, start = Offset(leftInsetPx, y), end = Offset(size.width, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
+                    drawLine(Color.Gray, start = Offset(leftInsetPx, y), end = Offset(stringLineEndX, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
                 }
 
                 // draw markers (circles + finger numbers) directly on Canvas for pixel-perfect positioning
@@ -211,14 +214,15 @@ fun FretboardDiagramOnly(
         val density = LocalDensity.current
         val boxWpx = with(density) { maxWidth.toPx() }
         val boxHpx = with(density) { maxHeight.toPx() }
-        val leftInsetPx = with(density) { uiParams.leftInsetDp.toPx() }
+        val leftInsetPx = with(density) { (uiParams.leftInsetDp + uiParams.diagramShiftDp).toPx() }
         val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
         val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
         val nutPx = if (firstFretIsNut) computedNutPx else 0f
         // use provided fretCount
         val stringCount = 6
         val labelAreaPx = with(density) { uiParams.fretLabelAreaDp.toPx() }
-        val availableWidth = (boxWpx - leftInsetPx - nutPx).coerceAtLeast(0f)
+        val rightInsetPxSmall = with(density) { uiParams.diagramRightInsetDp.toPx() }
+        val availableWidth = (boxWpx - leftInsetPx - nutPx - rightInsetPxSmall).coerceAtLeast(0f)
         val spacingDivSmall = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
         val fretSpacingPx = if (spacingDivSmall > 0f) availableWidth / spacingDivSmall else 0f
         val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
@@ -228,7 +232,7 @@ fun FretboardDiagramOnly(
              drawRect(Color.White, size = size)
              // draw nut + frets, but skip any fret line that would lie at/ beyond the canvas right edge
              val vStrokeHalfSmall = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
-             val maxFretXSmall = size.width - vStrokeHalfSmall
+             val maxFretXSmall = (size.width - rightInsetPxSmall - vStrokeHalfSmall).coerceAtLeast(leftInsetPx + nutPx)
              for (f in 0..fretCount) {
                  if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, contentHeightPx))
                  else {
@@ -238,10 +242,11 @@ fun FretboardDiagramOnly(
                  }
              }
 
+             val stringLineEndXSmall = (size.width - rightInsetPxSmall).coerceAtLeast(leftInsetPx)
              for (s in 0 until stringCount) {
                   val y = s * stringSpacingPx
                  // always use the uiParams.horizontalLineWidthDp for string thickness
-                 drawLine(Color.Black, start = Offset(leftInsetPx, y), end = Offset(size.width, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
+                 drawLine(Color.Black, start = Offset(leftInsetPx, y), end = Offset(stringLineEndXSmall, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
               }
              // draw markers (circles + finger numbers) for the small variant as well
              positions?.let { posList ->
@@ -311,19 +316,17 @@ fun FretboardDiagramOnly(
      }
  }
 
-@Preview(name = "Fretboard Card Preview (single)", showBackground = true, widthDp = 420, heightDp = 360)
+@Preview(name = "FretboardCard Preview (Pixel 7 Pro)", showBackground = true, widthDp = 900, heightDp = 360, device = Devices.PIXEL_7_PRO, showSystemUi = true, fontScale = 1f)
 @Composable
-fun PreviewFretboardCard_Single() {
-    val previewParams = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f, fretLabelAreaDp = 26.dp, fretLabelTextSp = 14f)
-    val cardH = DefaultDiagramUiParams.cardHeightDp ?: 160.dp
-    Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopCenter) {
-        FretboardCard(
-            chordName = "C",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(cardH),
-            uiParams = previewParams,
-            fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
-        )
-    }
+fun PreviewFretboardCard_MainActivity() {
+    // Use the global DefaultDiagramUiParams so Preview matches runtime parameters exactly
+    FretboardCard(
+        chordName = "C",
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(DefaultDiagramUiParams.cardHeightDp ?: 160.dp)
+            .padding(vertical = 4.dp, horizontal = 8.dp),
+        uiParams = DefaultDiagramUiParams,
+        fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
+    )
 }
