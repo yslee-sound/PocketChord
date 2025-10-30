@@ -41,12 +41,13 @@ fun FretDiagramImage() {
     }
 }
 
+@Suppress("unused")
 @Composable
 fun FretboardDiagram(
     chordName: String,
     positions: List<Int>, // stringCount 길이: -1=mute, 0=open, n>0 fret number
-    fingers: List<Int>? = null, // same length, 0=hide
     modifier: Modifier = Modifier,
+    fingers: List<Int>? = null, // same length, 0=hide
     uiParams: DiagramUiParams = DefaultDiagramUiParams,
     firstFretIsNut: Boolean = true,
     diagramWidth: Dp? = null,
@@ -92,7 +93,7 @@ fun FretboardDiagram(
             val fretSpacingPx = if (spacingDiv > 0f) availableWidth / spacingDiv else 0f
             // reserve vertical area at bottom for fret labels
             val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
-            val stringSpacingPx = if (stringCount > 1) contentHeightPx / (stringCount - 1) else contentHeightPx
+            val stringSpacingPx = contentHeightPx / (stringCount - 1)
 
             Canvas(modifier = Modifier.matchParentSize()) {
                 // background
@@ -157,7 +158,7 @@ fun FretboardDiagram(
                             drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
                             drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
                         }
-                        fretNum < 0 -> {
+                        else -> {
                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
                             // compute open radius and scale mute half-size so diagonal ~ open diameter
                             val openFactor = uiParams.openMarkerSizeFactor.takeIf { it > 0f } ?: 0.0001f
@@ -221,7 +222,7 @@ fun FretboardDiagramOnly(
         val spacingDivSmall = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
         val fretSpacingPx = if (spacingDivSmall > 0f) availableWidth / spacingDivSmall else 0f
         val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
-        val stringSpacingPx = if (stringCount > 1) contentHeightPx / (stringCount - 1) else contentHeightPx
+        val stringSpacingPx = contentHeightPx / (stringCount - 1)
 
         Canvas(modifier = Modifier.matchParentSize()) {
              drawRect(Color.White, size = size)
@@ -275,7 +276,7 @@ fun FretboardDiagramOnly(
                              drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
                              drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
                          }
-                         fretNum < 0 -> {
+                         else -> {
                              val minSpacing = min(fretSpacingPx, stringSpacingPx)
                              val openFactor = uiParams.openMarkerSizeFactor.takeIf { it > 0f } ?: 0.0001f
                              val openRadius = minSpacing * uiParams.openMarkerSizeFactor
@@ -322,28 +323,6 @@ fun PreviewFretboardCard_Single() {
                 .fillMaxWidth()
                 .height(cardH),
             uiParams = previewParams,
-            fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
-        )
-    }
-}
-
-@Preview(name = "Fret Labels Debug", showBackground = true, widthDp = 420, heightDp = 360)
-@Composable
-fun Preview_FretLabels_Debug() {
-    val ui = DefaultDiagramUiParams.copy(nutWidthFactor = 0.06f, fretLabelAreaDp = 28.dp, fretLabelTextSp = 14f, lastFretVisibleFraction = 0.6f)
-    // positions: indexed 0..5 for strings top->bottom (internal format expected elsewhere)
-    val positions = listOf(0, 1, 0, 2, 3, -1)
-    val fingers = listOf(0, 1, 0, 2, 3, 0)
-    val cardH = DefaultDiagramUiParams.cardHeightDp ?: 160.dp
-    val diagramW = (cardH * (140f / 96f)).coerceAtMost(320.dp)
-    Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
-        FretboardDiagramOnly(
-            modifier = Modifier.size(width = diagramW, height = cardH),
-            uiParams = ui,
-            positions = positions,
-            fingers = fingers,
-            firstFretIsNut = true,
-            fretCount = 4,
             fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
         )
     }

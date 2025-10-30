@@ -11,18 +11,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
@@ -30,8 +27,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.isFinite
 
 class MainActivity : ComponentActivity() {
@@ -116,29 +111,27 @@ fun ChordGrid(navController: NavHostController) {
         "G#-Ab", "A", "A#-Bb", "B"
     )
     Column {
-        for (row in 0 until 4) {
+        chords.chunked(3).forEach { rowList ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                for (col in 0 until 3) {
-                    val index = row * 3 + col
-                    if (index < chords.size) {
-                        val chord = chords[index]
-                        ChordButton(
-                            chord = chord,
-                            modifier = Modifier.weight(1f).clickable {
-                                val root = chord.substringBefore("-")
-                                if (root == "C") {
-                                    navController.navigate("chord_detail/C")
-                                } else {
-                                    navController.navigate("chord_list/$root")
-                                }
+                rowList.forEach { chord ->
+                    ChordButton(
+                        chord = chord,
+                        modifier = Modifier.weight(1f).clickable {
+                            val root = chord.substringBefore("-")
+                            if (root == "C") {
+                                navController.navigate("chord_detail/C")
+                            } else {
+                                navController.navigate("chord_list/$root")
                             }
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                        }
+                    )
+                }
+                // fill remaining columns with spacers if row has less than 3 items
+                if (rowList.size < 3) {
+                    repeat(3 - rowList.size) { Spacer(modifier = Modifier.weight(1f)) }
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -211,7 +204,7 @@ fun SearchResultScreen() {
         Spacer(modifier = Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.Filled.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "뒤로가기",
                 tint = Color(0xFF31455A),
                 modifier = Modifier.size(28.dp)
@@ -253,7 +246,6 @@ fun SearchResultScreen() {
 
 @Composable
 fun SearchChordScreen() {
-    val rootNotes = listOf("C", "D", "E", "F", "G", "A", "B")
     val types = listOf("Major", "minor", "dim", "aug")
     val tensions = listOf("7", "M7", "6", "sus4", "9", "11", "13")
     val options = listOf("add9", "b5", "#5", "b9")
@@ -272,7 +264,7 @@ fun SearchChordScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color(0xFF31455A))
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color(0xFF31455A))
             }
             Spacer(modifier = Modifier.weight(1f))
             Text("코드 검색", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF31455A))
@@ -395,7 +387,7 @@ fun ChordListScreen(navController: NavHostController, root: String, onBack: () -
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
                 }
             }
         },
@@ -558,7 +550,7 @@ fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color.Gray)
                 }
                 Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A), modifier = Modifier.padding(start = 8.dp))
             }
