@@ -47,7 +47,7 @@ fun FretboardDiagram(
     positions: List<Int>, // stringCount 길이: -1=mute, 0=open, n>0 fret number
     modifier: Modifier = Modifier,
     fingers: List<Int>? = null, // same length, 0=hide
-    uiParams: DiagramUiParams = DefaultDiagramUiParams,
+    uiParams: DiagramUiParams = defaultDiagramUiParams(),
     firstFretIsNut: Boolean = true,
     diagramWidth: Dp? = null,
     diagramHeight: Dp? = null,
@@ -59,11 +59,17 @@ fun FretboardDiagram(
     ,
     // when false, don't add the default outer padding so callers (list rows) can align top edges
     useCardPadding: Boolean = true
+    ,
+    // whether to draw the white rounded card background. Some list/preview displays omit it to match AVD.
+    drawBackground: Boolean = true
 ) {
     val baseModifier = if (useCardPadding) {
-        modifier.background(Color.White, RoundedCornerShape(12.dp)).padding(8.dp)
+        // add padding; draw background only when requested
+        if (drawBackground) modifier.background(Color.White, RoundedCornerShape(12.dp)).padding(8.dp)
+        else modifier.padding(8.dp)
     } else {
-        modifier.background(Color.White, RoundedCornerShape(12.dp))
+        if (drawBackground) modifier.background(Color.White, RoundedCornerShape(12.dp))
+        else modifier
     }
 
     Column(
@@ -77,7 +83,8 @@ fun FretboardDiagram(
         // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
         // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
         val defaultWidth = diagramWidth ?: uiParams.diagramMaxWidthDp ?: 200.dp
-        val defaultHeight = diagramHeight ?: 120.dp
+        // prefer explicit diagramHeight param, then uiParams.diagramHeightDp (derived from DEFAULT_DIAGRAM_BASE_DP), then fallback
+        val defaultHeight = diagramHeight ?: uiParams.diagramHeightDp ?: 120.dp
         val boxModifier = Modifier.width(defaultWidth).height(defaultHeight).then(modifier) // caller modifier (if contains size) will override defaults
         BoxWithConstraints(
             modifier = boxModifier,
@@ -120,8 +127,8 @@ fun FretboardDiagram(
             val stringSpacingPx = contentHeightPx / (stringCount - 1)
 
             Canvas(modifier = Modifier.matchParentSize()) {
-                // background
-                drawRect(Color.White, size = size)
+                // background (draw only when requested)
+                if (drawBackground) drawRect(Color.White, size = size)
                 // nut or vertical frets (shifted by leftInset)
                 // compute stroke half-width and a safe right-edge clamp that respects right inset
                 val vStrokeHalf = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
@@ -129,8 +136,8 @@ fun FretboardDiagram(
                 // draw frets for f = 0..fretCount (inclusive) so we have nut + 'fretCount' frets visible
                 for (f in 0..fretCount) {
                     if (f == 0 && firstFretIsNut) {
-                        // draw nut only when requested
-                        drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
+                        // draw nut only when requested; limit nut height to the strings area (contentHeightPx)
+                        drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, contentHeightPx))
                     } else {
                         val xRaw = leftInsetPx + nutPx + f * fretSpacingPx
                         // clamp into visible canvas so the final fret isn't dropped
@@ -307,7 +314,7 @@ fun FretboardDiagram(
     positions: List<Int>, // stringCount 길이: -1=mute, 0=open, n>0 fret number
     modifier: Modifier = Modifier,
     fingers: List<Int>? = null, // same length, 0=hide
-    uiParams: DiagramUiParams = DefaultDiagramUiParams,
+    uiParams: DiagramUiParams = defaultDiagramUiParams(),
     firstFretIsNut: Boolean = true,
     diagramWidth: Dp? = null,
     diagramHeight: Dp? = null,
@@ -320,17 +327,18 @@ fun FretboardDiagram(
     // same content as FretboardDiagram above, but without chord name
     // Pass the modifier through unchanged so callers control size/constraints.
     FretboardDiagram(
-        chordName = "",
-        positions = positions,
-        modifier = modifier,
-        fingers = fingers,
-        uiParams = uiParams,
-        firstFretIsNut = firstFretIsNut,
-        diagramWidth = diagramWidth,
-        diagramHeight = diagramHeight,
-        fretCount = fretCount,
-        invertStrings = invertStrings,
-        fretLabelProvider = fretLabelProvider,
-        useCardPadding = false
-    )
+         chordName = "",
+         positions = positions,
+         modifier = modifier,
+         fingers = fingers,
+         uiParams = uiParams,
+         firstFretIsNut = firstFretIsNut,
+         diagramWidth = diagramWidth,
+         diagramHeight = diagramHeight,
+         fretCount = fretCount,
+         invertStrings = invertStrings,
+         fretLabelProvider = fretLabelProvider,
+         useCardPadding = false,
+         drawBackground = false
+     )
 }

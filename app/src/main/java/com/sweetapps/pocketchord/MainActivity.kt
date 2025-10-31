@@ -431,7 +431,7 @@ fun ChordListScreen(
     navController: NavHostController,
     root: String,
     onBack: () -> Unit = {},
-    uiParams: DiagramUiParams = DefaultDiagramUiParams
+    uiParams: DiagramUiParams = defaultDiagramUiParams()
 ) {
     val context = LocalContext.current
     val db = com.sweetapps.pocketchord.data.AppDatabase.getInstance(context)
@@ -566,7 +566,7 @@ fun ChordListScreen(
 fun FretboardCard(
     chordName: String,
     modifier: Modifier = Modifier,
-    uiParams: DiagramUiParams = DefaultDiagramUiParams, // centralized UI params
+    uiParams: DiagramUiParams = defaultDiagramUiParams(), // centralized UI params
     fretLabelProvider: ((Int) -> String?)? = null
 ) {
     Card(

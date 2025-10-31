@@ -12,9 +12,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.sp
 
 // Single source-of-truth for name-box sizing so changing these updates both app and previews
-val DEFAULT_NAME_BOX_SIZE_DP: Dp = 80.dp
+val DEFAULT_NAME_BOX_SIZE_DP: Dp = 60.dp
 // default proportional scale used to derive font size from the name box size (boxPx * scale -> fontSp)
 val DEFAULT_NAME_BOX_FONT_SCALE: Float = 0.28f //0.45
 // Single control for diagram base size: change this one constant to adjust diagram max width and default height used across app & previews
@@ -91,14 +102,14 @@ data class DiagramUiParams(
     val diagramAnchor: DiagramAnchor = DiagramAnchor.Right,
 )
 
-// Set an app-wide default maximum diagram width so changing this value updates Preview and devices
-// Set default max width to 280.dp per user's request
-val DefaultDiagramUiParams = DiagramUiParams(
+// Provide a function to create the app-wide default DiagramUiParams. Using a function ensures
+// changes to the underlying DEFAULT_DIAGRAM_BASE_DP are re-evaluated in Previews and at runtime.
+fun defaultDiagramUiParams(): DiagramUiParams = DiagramUiParams(
     cardHeightDp = 200.dp,
     diagramRightInsetDp = 16.dp,
-    // Use a larger default max width and height so list diagrams appear closer to the original size
+    // Use a larger default max width and set default height derived from DEFAULT_DIAGRAM_BASE_DP
     diagramMaxWidthDp = 320.dp,
-    diagramHeightDp = 120.dp
+    diagramHeightDp = DEFAULT_DIAGRAM_HEIGHT_DP
 )
 
 // Note: Keep only the Pixel 7 Pro preview so project preview list is minimal and matches the AVD used by the user.
@@ -106,21 +117,47 @@ val DefaultDiagramUiParams = DiagramUiParams(
     name = "Fretboard Preview (Pixel 7 Pro)",
     showBackground = true,
     device = Devices.PIXEL_7_PRO,
-    showSystemUi = true,
+    // Render preview without system UI so it matches the app content area (status/navigation bars excluded)
+    showSystemUi = false,
     fontScale = 1f
 )
 @Composable
 fun Preview_Fretboard_Samples() {
     PocketChordTheme {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // sample C major (positions low->high): [-1,3,2,0,1,0]
-            FretboardDiagram(chordName = "C", positions = listOf(-1,3,2,0,1,0), fingers = listOf(0,1,2,0,3,0), uiParams = DefaultDiagramUiParams, firstFretIsNut = true)
-            Spacer(modifier = Modifier.height(12.dp))
-            // sample Cm starting at fret 3: [-1,3,5,5,4,3]
-            FretboardDiagram(chordName = "Cm", positions = listOf(-1,3,5,5,4,3), fingers = listOf(0,1,2,3,4,0), uiParams = DefaultDiagramUiParams, firstFretIsNut = false)
-            Spacer(modifier = Modifier.height(12.dp))
-            // sample C7
-            FretboardDiagram(chordName = "C7", positions = listOf(-1,3,2,3,1,0), fingers = listOf(0,1,2,4,3,0), uiParams = DefaultDiagramUiParams, firstFretIsNut = true)
+        // Recreate the list-row layout used in ChordListScreen so Preview matches runtime.
+        // Use top padding similar to runtime LazyColumn content (24.dp vertical content padding + item top margin)
+        Column(modifier = Modifier.padding(top = 24.dp, start = 12.dp, end = 12.dp)) {
+            val uiParams = defaultDiagramUiParams()
+            val samples = listOf(
+                Triple("C", listOf(-1,3,2,0,1,0), listOf(0,1,2,0,3,0)),
+                Triple("Cm", listOf(-1,3,5,5,4,3), listOf(0,1,2,3,4,0)),
+                Triple("C7", listOf(-1,3,2,3,1,0), listOf(0,1,2,4,3,0))
+            )
+            samples.forEach { (name, positions, fingers) ->
+                // compute diagram and item heights first (match runtime derivation), then derive width from height and cap by max width
+                val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
+                val itemHeight = maxOf(uiParams.nameBoxSizeDp, diagramHeightForList)
+                val heightBasedWidth = itemHeight * (140f / 96f)
+                val desiredDiagramWidth = uiParams.diagramMaxWidthDp?.let { mw -> if (heightBasedWidth > mw) mw else heightBasedWidth } ?: heightBasedWidth
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(itemHeight)
+                        .padding(horizontal = 0.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // name box (fixed size)
+                    Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
+                        Text(text = name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
+                        FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positions, fingers = fingers, firstFretIsNut = if (name == "Cm") false else true, invertStrings = false)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }
