@@ -128,10 +128,14 @@ fun Preview_Fretboard_Samples() {
         // Use top padding similar to runtime LazyColumn content (24.dp vertical content padding + item top margin)
         Column(modifier = Modifier.padding(top = 24.dp, start = 12.dp, end = 12.dp)) {
             val uiParams = defaultDiagramUiParams()
+            // Use seed-derived sample data so Preview matches the app's DB-driven diagrams
             val samples = listOf(
-                Triple("C", listOf(-1,3,2,0,1,0), listOf(0,1,2,0,3,0)),
-                Triple("Cm", listOf(-1,3,5,5,4,3), listOf(0,1,2,3,4,0)),
-                Triple("C7", listOf(-1,3,2,3,1,0), listOf(0,1,2,4,3,0))
+                // C: positions [-1,3,2,0,1,0], fingers [0,3,2,0,1,0]
+                Triple("C", listOf(-1,3,2,0,1,0), listOf(0,3,2,0,1,0)),
+                // Cm (seed): positions [-1,3,5,5,4,3], fingers [0,1,3,4,2,1]
+                Triple("Cm", listOf(-1,3,5,5,4,3), listOf(0,1,3,4,2,1)),
+                // C7: positions [-1,3,2,3,1,0], fingers [0,3,2,4,1,0]
+                Triple("C7", listOf(-1,3,2,3,1,0), listOf(0,3,2,4,1,0))
             )
             samples.forEach { (name, positions, fingers) ->
                 // compute diagram and item heights first (match runtime derivation), then derive width from height and cap by max width

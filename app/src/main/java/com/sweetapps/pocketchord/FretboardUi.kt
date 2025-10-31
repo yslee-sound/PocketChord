@@ -61,7 +61,7 @@ fun FretboardDiagram(
     useCardPadding: Boolean = true
     ,
     // whether to draw the white rounded card background. Some list/preview displays omit it to match AVD.
-    drawBackground: Boolean = true
+    drawBackground: Boolean = true,
 ) {
     val baseModifier = if (useCardPadding) {
         // add padding; draw background only when requested
@@ -243,16 +243,20 @@ fun FretboardDiagram(
                                     drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
                                     val finger = fingers?.getOrNull(stringIdx) ?: 0
                                     if (finger > 0) {
-                                        // draw centered text using nativeCanvas
+                                        // draw centered text using nativeCanvas; align baseline so the visual text center equals circle center y
                                         drawContext.canvas.nativeCanvas.apply {
                                             val paint = android.graphics.Paint().apply {
                                                 color = android.graphics.Color.WHITE
+                                                // text size based on marker radius (no artificial minimum to keep optical centering)
                                                 textSize = radius * uiParams.markerTextScale
                                                 isFakeBoldText = true
                                                 textAlign = android.graphics.Paint.Align.CENTER
                                             }
-                                            val baseline = y + (paint.descent() - paint.ascent()) / 2 - paint.descent()
-                                            drawText(finger.toString(), x, baseline, paint)
+                                            val txt = finger.toString()
+                                            // use integer font metrics for stable baseline across environments
+                                            val fmInt = paint.fontMetricsInt
+                                            val baseline = y - (fmInt.ascent + fmInt.descent) / 2f
+                                            drawText(txt, x, baseline, paint)
                                         }
                                     }
                                 }
@@ -323,7 +327,7 @@ fun FretboardDiagram(
     invertStrings: Boolean = false,
     // optional provider so callers (DB) can supply custom labels per fret index. Return null to skip.
     fretLabelProvider: ((Int) -> String?)? = null
-) {
+ ) {
     // same content as FretboardDiagram above, but without chord name
     // Pass the modifier through unchanged so callers control size/constraints.
     FretboardDiagram(
@@ -340,5 +344,5 @@ fun FretboardDiagram(
          fretLabelProvider = fretLabelProvider,
          useCardPadding = false,
          drawBackground = false
-     )
-}
+      )
+ }
