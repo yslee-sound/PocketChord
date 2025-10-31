@@ -150,8 +150,22 @@ fun FretboardDiagram(
                 }
 
                 // horizontal strings — align start with nut so strings and fret positions share the same origin
-                val stringStartX = leftInsetPx + nutPx
+                // If diagram starts past the nut (startFret>1), extend the visible string lines a bit to the left
+                // so users see string stubs to indicate the fretboard continues left. Also draw a thin
+                // vertical fret boundary at the first visible fret to visually mark the fret edge.
+                val extraLeftPx = if (startFret > 1) {
+                    // show up to ~40% of a fret spacing as a stub, but not more than available leftInset
+                    min(fretSpacingPx * 0.4f, leftInsetPx * 0.9f)
+                } else 0f
+                val stringStartX = (leftInsetPx + nutPx - extraLeftPx).coerceAtLeast(0f)
                 val stringLineEndX = (size.width - rightInsetPx).coerceAtLeast(stringStartX)
+                // draw a thin vertical marker at the first visible fret when not showing a nut
+                if (startFret > 1) {
+                    val fretX = leftInsetPx + nutPx
+                    val segTop = contentHeightPx * 0.05f
+                    val segBottom = contentHeightPx * 0.95f
+                    drawLine(Color.Gray, start = Offset(fretX, segTop), end = Offset(fretX, segBottom), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() } )
+                }
                 for (s in 0 until stringCount) {
                     val y = s * stringSpacingPx
                     drawLine(Color.Gray, start = Offset(stringStartX, y), end = Offset(stringLineEndX, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
@@ -305,6 +319,8 @@ fun FretboardDiagram(
                         drawText(label, xLabel, baseline, paint)
                     }
                 }
+
+                // No numeric badge: when startFret > 1 we show left string stubs and a thin fret boundary line only.
              }
          }
      }
