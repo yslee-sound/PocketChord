@@ -142,3 +142,60 @@ suspend fun importSeedFromAssets(context: Context, assetFileName: String = "chor
         result
     }
 }
+
+// Ensure chords for a specific root exist in the DB by reading `chords_seed_by_root.json` asset and inserting missing chords.
+suspend fun ensureChordsForRoot(context: Context, root: String, assetFileName: String = "chords_seed_by_root.json") {
+    withContext(Dispatchers.IO) {
+        try {
+            val db = AppDatabase.getInstance(context)
+            val dao = db.chordDao()
+            val existing = dao.getChordsByRootOnce(root)
+            if (existing.isNotEmpty()) return@withContext
+
+            // read per-root seed JSON format: { "C": [ {name, variants: [{positions:[], fingers:[], firstFretIsNut:true}] }, ... ], ... }
+            val json = context.assets.open(assetFileName).bufferedReader().use { it.readText() }
+            val rootObj = JSONObject(json)
+            if (!rootObj.has(root)) return@withContext
+            val arr = rootObj.getJSONArray(root)
+            db.withTransaction {
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val name = obj.optString("name")
+                    val type = obj.optString("type", null)
+                    val tags = mutableListOf<String>()
+                    if (obj.has("tags")) {
+                        val tarr = obj.optJSONArray("tags")
+                        if (tarr != null) for (ti in 0 until tarr.length()) tags.add(tarr.optString(ti))
+                    }
+                    val existingChord = dao.findChordByNameAndRoot(name, root)
+                    val chordId = existingChord?.id ?: dao.insertChord(ChordEntity(name = name, root = root, type = type, tagsCsv = if (tags.isEmpty()) null else tags.joinToString(",")))
+
+                    if (obj.has("variants")) {
+                        val varr = obj.getJSONArray("variants")
+                        for (vi in 0 until varr.length()) {
+                            val vobj = varr.getJSONObject(vi)
+                            val positions = mutableListOf<Int>()
+                            val parr = vobj.optJSONArray("positions")
+                            if (parr != null) for (pi in 0 until parr.length()) positions.add(parr.optInt(pi))
+                            val fingers = mutableListOf<Int>()
+                            val farr = vobj.optJSONArray("fingers")
+                            if (farr != null) for (fi in 0 until farr.length()) fingers.add(farr.optInt(fi))
+                            val positionsCsv = positions.joinToString(",")
+                            val fingersCsv = if (fingers.isEmpty()) null else fingers.joinToString(",")
+                            val firstNut = vobj.optBoolean("firstFretIsNut", true)
+                            val existingVariant = dao.findVariantByChordIdPositionsAndFingers(chordId, positionsCsv, fingersCsv)
+                            val shouldInsert = if (existingVariant == null) {
+                                if (fingersCsv == null) dao.findVariantByChordIdAndPositionsCsv(chordId, positionsCsv) == null else true
+                            } else false
+                            if (shouldInsert) {
+                                dao.insertVariant(VariantEntity(chordId = chordId, positionsCsv = positionsCsv, fingersCsv = fingersCsv, firstFretIsNut = firstNut))
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w("EnsureSeed", "Failed to ensure seed for root $root", t)
+        }
+    }
+}

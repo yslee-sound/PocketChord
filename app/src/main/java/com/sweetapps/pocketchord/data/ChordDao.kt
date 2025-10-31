@@ -9,6 +9,11 @@ interface ChordDao {
     @Query("SELECT * FROM chords WHERE root = :root ORDER BY name ASC")
     fun getChordsByRoot(root: String): Flow<List<ChordWithVariants>>
 
+    // one-shot suspend variant used by seed insertion logic
+    @Transaction
+    @Query("SELECT * FROM chords WHERE root = :root ORDER BY name ASC")
+    suspend fun getChordsByRootOnce(root: String): List<ChordWithVariants>
+
     @Query("SELECT * FROM chords WHERE name = :name AND root = :root LIMIT 1")
     suspend fun findChordByNameAndRoot(name: String, root: String): ChordEntity?
 

@@ -5,9 +5,11 @@ import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+@TypeConverters(Converters::class)
 @Database(entities = [ChordEntity::class, VariantEntity::class], version = 2)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun chordDao(): ChordDao
@@ -58,7 +60,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): AppDatabase {
             return Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, DB_NAME)
-                .addTypeConverter(Converters)
                 .addMigrations(MIGRATION_1_2)
                 .build()
         }

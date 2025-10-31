@@ -38,6 +38,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.isFinite
 
 class MainActivity : ComponentActivity() {
@@ -424,6 +425,17 @@ fun SectionTitle(title: String) {
 // fingers: 동일 길이의 리스트, 0=표시안함, >0=핑거링 숫자
 data class FretDiagramData(val name: String, val positions: List<Int>, val fingers: List<Int>? = null)
 
+// helper: parse CSV like "-1,3,2,0,1,0" into internal positions List<Int> index0=lowest string
+fun parseCsvToPositions(csv: String): List<Int> {
+    val parts = csv.split(",").mapNotNull { it.trim().toIntOrNull() }
+    // If CSV seems to be in DB order high->low (string 6..1), reverse so index0 = lowest string
+    return if (parts.size > 1) parts.reversed() else parts
+}
+
+fun formatPositionsForLabel(positions: List<Int>): String {
+    return positions.joinToString(" ") { if (it == -1) "x" else it.toString() }
+}
+
 @Composable
 fun ChordListScreen(
     navController: NavHostController,
@@ -431,16 +443,35 @@ fun ChordListScreen(
     onBack: () -> Unit = {},
     uiParams: DiagramUiParams = DefaultDiagramUiParams
 ) {
-    val chordList = when (root) {
-        "C" -> listOf("C", "C6", "CM7", "Cm", "C7", "Cadd9", "C9", "C11", "C13")
-        "D" -> listOf("D", "D6", "DM7")
-        else -> listOf(root)
+    val context = LocalContext.current
+    val db = com.sweetapps.pocketchord.data.AppDatabase.getInstance(context)
+    val chordFlow = db.chordDao().getChordsByRoot(root)
+    val chordWithVariants by chordFlow.collectAsState(initial = emptyList())
+    // selected variant for expanded view dialog
+    var isSeeding by remember { mutableStateOf(false) }
+
+    // ensure seed for this root on first composition if DB empty
+    LaunchedEffect(root) {
+        try {
+            isSeeding = true
+            com.sweetapps.pocketchord.data.ensureChordsForRoot(context, root)
+        } catch (t: Throwable) {
+            android.util.Log.w("ChordListScreen", "ensureChordsForRoot failed", t)
+        } finally {
+            isSeeding = false
+        }
     }
 
     Column(modifier = Modifier
         .fillMaxSize()
         .background(Color.White)
     ) {
+        if (isSeeding) {
+            // simple loader overlay
+            Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
         // Top app bar with back button
         Row(
             modifier = Modifier
@@ -476,26 +507,29 @@ fun ChordListScreen(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "총 ${chordList.size}개", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp))
+        Text(text = "총 ${chordWithVariants.size}개", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp))
 
         Spacer(modifier = Modifier.height(8.dp))
 
         // List of chords
         // Increase spacing so only ~3 items appear on typical phone screens while keeping item sizes unchanged.
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(DEFAULT_LIST_ITEM_SPACING_DP)
-        ) {
-            items(chordList) { chordName ->
+             modifier = Modifier.fillMaxSize(),
+             contentPadding = PaddingValues(vertical = 24.dp),
+             verticalArrangement = Arrangement.spacedBy(DEFAULT_LIST_ITEM_SPACING_DP)
+         ) {
+            items(chordWithVariants) { cwv ->
+                val chordName = cwv.chord.name
+                val firstVar = cwv.variants.firstOrNull()
+                // VariantEntity stores CSV strings for positions/fingers
+                val positions = firstVar?.positionsCsv?.let { parseCsvToPositions(it) } ?: List(6) { -1 }
+                val fingers = firstVar?.fingersCsv?.let { parseCsvToPositions(it) } ?: List(6) { 0 }
+
                 // Plain list row (no outer card). Left: orange square showing chord name.
                 // Right: fret diagram shown without border/background.
-                // Use a Row where name box and diagram are independent: spacer keeps diagram fixed width
-                // sample DB-style positions & fingers for C chord; convert to internal positions when needed
-                val dbPositionsForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to -1)
-                val dbFingersForC = mapOf(1 to 0, 2 to 1, 3 to 0, 4 to 2, 5 to 3, 6 to 0)
-                val positionsForC = dbMapToInternalPositions(dbPositionsForC, stringCount = 6, defaultFret = -1)
-                val fingersForC = dbMapToInternalPositions(dbFingersForC, stringCount = 6, defaultFret = 0)
+                // Use parsed positions/fingers lists (internal format: index0 = lowest string)
+                val internalPositions = positions
+                val internalFingers = fingers
 
                 val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
                 val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
@@ -509,11 +543,7 @@ fun ChordListScreen(
                 ) {
                     if (uiParams.diagramAnchor == DiagramAnchor.Left) {
                         Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            if (chordName == "C") {
-                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true)
-                            } else {
-                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
-                            }
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true)
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
@@ -529,11 +559,7 @@ fun ChordListScreen(
                         Spacer(modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            if (chordName == "C") {
-                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true)
-                            } else {
-                                FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
-                            }
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true)
                         }
                     }
                 }
