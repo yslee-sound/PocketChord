@@ -27,6 +27,10 @@ interface ChordDao {
     @Query("SELECT * FROM variants WHERE chordId = :chordId")
     suspend fun getVariantsByChordId(chordId: Long): List<VariantEntity>
 
+    // debug helper: return all variant rows
+    @Query("SELECT * FROM variants")
+    suspend fun getAllVariants(): List<VariantEntity>
+
     @Query("SELECT * FROM variants WHERE chordId = :chordId AND positionsCsv = :positionsCsv LIMIT 1")
     suspend fun findVariantByChordIdAndPositionsCsv(chordId: Long, positionsCsv: String): VariantEntity?
 

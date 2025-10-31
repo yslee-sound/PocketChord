@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
-import com.sweetapps.pocketchord.data.importSeedFromAssets
 import androidx.compose.foundation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -94,29 +93,7 @@ class MainActivity : ComponentActivity() {
              }
          }
 
-        // Seed database once on first app launch. Uses SharedPreferences to avoid duplicate runs.
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val prefs = getSharedPreferences("pocketchord_prefs", MODE_PRIVATE)
-                val seededKey = "seeded_v1"
-                val autoSeedKey = "auto_seed_enabled"
-                val alreadySeeded = prefs.getBoolean(seededKey, false)
-                val autoSeedEnabled = prefs.getBoolean(autoSeedKey, true)
-                if (!alreadySeeded && autoSeedEnabled) {
-                    val result = importSeedFromAssets(this@MainActivity, "chords_seed_template.json")
-                    if (result.errors.isEmpty()) {
-                        prefs.edit { putBoolean(seededKey, true) }
-                        Log.d("SeedImport", "Seed import completed: insertedChords=${result.insertedChords} insertedVariants=${result.insertedVariants}")
-                    } else {
-                        Log.e("SeedImport", "Seed import encountered errors: ${result.errors}")
-                    }
-                } else {
-                    Log.d("SeedImport", "Skipping import (alreadySeeded=$alreadySeeded, autoSeedEnabled=$autoSeedEnabled)")
-                }
-            } catch (e: Exception) {
-                Log.e("SeedImport", "Seed import failed", e)
-            }
-        }
+        // Template-based seeding disabled. Per-root seeding runs when user opens a root screen.
      }
 }
 
@@ -427,8 +404,23 @@ data class FretDiagramData(val name: String, val positions: List<Int>, val finge
 
 // helper: parse CSV like "-1,3,2,0,1,0" into internal positions List<Int> index0=lowest string
 fun parseCsvToPositions(csv: String): List<Int> {
-    // CSV in seeds is stored low->high (index0 = lowest string). Return as-is
-    return csv.split(",").mapNotNull { it.trim().toIntOrNull() }
+    // Parse CSV into ints keeping original order
+    val parts = csv.split(",").mapNotNull { it.trim().toIntOrNull() }
+    if (parts.size <= 1) return parts
+
+    // Heuristic: normalize to internal format where index0 = lowest (string 6)
+    // Seeds commonly store low->high (index0 = lowest). But some sources may be high->low.
+    // If the first element looks like a typical low-string marker (mute -1) and last isn't, assume low->high.
+    val first = parts.first()
+    val last = parts.last()
+    if (first == -1 && last != -1) return parts // likely already low->high
+    if (last == -1 && first != -1) return parts.reversed() // likely stored high->low
+
+    // Fallback: compare mute/open counts in halves
+    val half = parts.size / 2
+    val firstHalfMutes = parts.take(half).count { it == -1 }
+    val secondHalfMutes = parts.takeLast(half).count { it == -1 }
+    return if (firstHalfMutes > secondHalfMutes) parts.reversed() else parts
 }
 
 fun formatPositionsForLabel(positions: List<Int>): String {
@@ -676,18 +668,45 @@ fun SettingsScreen() {
         Button(onClick = {
             scope.launch(Dispatchers.IO) {
                 try {
-                    val result = importSeedFromAssets(context, "chords_seed_template.json")
-                    if (result.errors.isEmpty()) {
-                        prefs.edit { putBoolean("seeded_v1", true) }
+                    // Read per-root JSON keys and ensure each root is seeded
+                    val json = context.assets.open("chords_seed_by_root.json").bufferedReader().use { it.readText() }
+                    val obj = JSONObject(json)
+                    val keys = obj.keys()
+                    var seededCount = 0
+                    while (keys.hasNext()) {
+                        val root = keys.next()
+                        com.sweetapps.pocketchord.data.ensureChordsForRoot(context, root)
+                        seededCount++
                     }
-                    // update summary read-back on UI thread
-                    Log.d("SeedImport", "Force seed result: insertedChords=${result.insertedChords} insertedVariants=${result.insertedVariants} skipped=${result.skippedVariants}")
+                    prefs.edit { putBoolean("seeded_v1", true) }
+                    Log.d("SeedImport", "Per-root seed completed for $seededCount roots")
                 } catch (e: Exception) {
-                    Log.e("SeedImport", "Force seed failed", e)
+                    Log.e("SeedImport", "Force per-root seed failed", e)
                 }
             }
         }) {
-            Text("강제 시드 임포트 실행", color = Color.White)
+            Text("강제 per-root 시드 임포트 실행", color = Color.White)
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val db = com.sweetapps.pocketchord.data.AppDatabase.getInstance(context)
+                    val variants = db.chordDao().getAllVariants()
+                    val sb = StringBuilder()
+                    sb.append("id,chordId,positionsCsv,fingersCsv,firstFretIsNut\n")
+                    for (v in variants) {
+                        sb.append("${v.id},${v.chordId},\"${v.positionsCsv}\",\"${v.fingersCsv ?: ""}\",${v.firstFretIsNut}\n")
+                    }
+                    val fileName = "variants_dump.csv"
+                    context.openFileOutput(fileName, Context.MODE_PRIVATE).use { fos -> fos.write(sb.toString().toByteArray()) }
+                    Log.i("DBDump", "Wrote ${variants.size} variants to $fileName")
+                } catch (t: Throwable) {
+                    Log.e("DBDump", "Failed to dump variants", t)
+                }
+            }
+        }) {
+            Text("Dump DB variants to file", color = Color.White)
         }
     }
 }
