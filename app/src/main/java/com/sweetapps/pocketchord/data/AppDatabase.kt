@@ -10,7 +10,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @TypeConverters(Converters::class)
-@Database(entities = [ChordEntity::class, VariantEntity::class], version = 2)
+@Database(entities = [ChordEntity::class, VariantEntity::class], version = 3)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun chordDao(): ChordDao
 
@@ -54,13 +54,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 2 -> 3: add seedOrder column to chords table
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add nullable integer column seedOrder; default NULL
+                db.execSQL("ALTER TABLE chords ADD COLUMN seedOrder INTEGER")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase = instance ?: synchronized(this) {
             instance ?: buildDatabase(context).also { instance = it }
         }
 
         private fun buildDatabase(context: Context): AppDatabase {
             return Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, DB_NAME)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
         }
     }

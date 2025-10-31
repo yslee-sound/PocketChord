@@ -6,12 +6,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ChordDao {
     @Transaction
-    @Query("SELECT * FROM chords WHERE root = :root ORDER BY name ASC")
+    @Query("SELECT * FROM chords WHERE root = :root ORDER BY CASE WHEN seedOrder IS NULL THEN 1 ELSE 0 END, seedOrder ASC, name ASC")
     fun getChordsByRoot(root: String): Flow<List<ChordWithVariants>>
 
     // one-shot suspend variant used by seed insertion logic
     @Transaction
-    @Query("SELECT * FROM chords WHERE root = :root ORDER BY name ASC")
+    @Query("SELECT * FROM chords WHERE root = :root ORDER BY CASE WHEN seedOrder IS NULL THEN 1 ELSE 0 END, seedOrder ASC, name ASC")
     suspend fun getChordsByRootOnce(root: String): List<ChordWithVariants>
 
     @Query("SELECT * FROM chords WHERE name = :name AND root = :root LIMIT 1")

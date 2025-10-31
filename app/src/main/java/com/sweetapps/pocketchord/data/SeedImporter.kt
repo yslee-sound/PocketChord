@@ -40,7 +40,15 @@ suspend fun ensureChordsForRoot(context: Context, root: String, assetFileName: S
                         if (tarr != null) for (ti in 0 until tarr.length()) tags.add(tarr.optString(ti))
                     }
                     val existingChord = dao.findChordByNameAndRoot(name, root)
-                    val chordId = existingChord?.id ?: dao.insertChord(ChordEntity(name = name, root = root, type = type, tagsCsv = if (tags.isEmpty()) null else tags.joinToString(",")))
+                    val seedOrderValue = i
+                    val chordId = if (existingChord == null) {
+                        dao.insertChord(ChordEntity(name = name, root = root, type = type, tagsCsv = if (tags.isEmpty()) null else tags.joinToString(","), seedOrder = seedOrderValue))
+                    } else {
+                        // if seedOrder differs, update by replacing the chord entity while preserving id and other fields
+                        if (existingChord.seedOrder != seedOrderValue) {
+                            dao.insertChord(existingChord.copy(seedOrder = seedOrderValue))
+                        } else existingChord.id
+                    }
 
                     if (obj.has("variants")) {
                         val varr = obj.getJSONArray("variants")

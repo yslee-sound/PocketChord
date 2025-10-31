@@ -9,6 +9,9 @@ data class ChordEntity(
     val root: String,
     val type: String? = null,
     val tagsCsv: String? = null,
+    // seedOrder: small integer representing the order from chords_seed_by_root.json for that root.
+    // Lower values are shown earlier. Null means unspecified (will sort after specified orders).
+    val seedOrder: Int? = null,
     val favorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )

@@ -5,8 +5,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
 import androidx.compose.foundation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,6 +29,7 @@ import android.graphics.Color as AndroidColor
 import androidx.core.view.WindowCompat
 import androidx.core.content.edit
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -39,6 +38,7 @@ import androidx.navigation.compose.composable
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.isFinite
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -670,13 +670,15 @@ fun SettingsScreen() {
                 try {
                     // Read per-root JSON keys and ensure each root is seeded
                     val json = context.assets.open("chords_seed_by_root.json").bufferedReader().use { it.readText() }
-                    val obj = JSONObject(json)
-                    val keys = obj.keys()
+                    val obj = org.json.JSONObject(json)
+                    val names = obj.names()
                     var seededCount = 0
-                    while (keys.hasNext()) {
-                        val root = keys.next()
-                        com.sweetapps.pocketchord.data.ensureChordsForRoot(context, root)
-                        seededCount++
+                    if (names != null) {
+                        for (i in 0 until names.length()) {
+                            val root = names.getString(i)
+                            com.sweetapps.pocketchord.data.resetAndReseedRoot(context, root)
+                            seededCount++
+                        }
                     }
                     prefs.edit { putBoolean("seeded_v1", true) }
                     Log.d("SeedImport", "Per-root seed completed for $seededCount roots")
