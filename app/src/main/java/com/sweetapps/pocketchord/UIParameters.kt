@@ -7,11 +7,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.graphics.Color
 
 // Single source-of-truth for name-box sizing so changing these updates both app and previews
-val DEFAULT_NAME_BOX_SIZE_DP: Dp = 60.dp
+val DEFAULT_NAME_BOX_SIZE_DP: Dp = 80.dp
 // default proportional scale used to derive font size from the name box size (boxPx * scale -> fontSp)
-val DEFAULT_NAME_BOX_FONT_SCALE: Float = 0.35f //0.45
+val DEFAULT_NAME_BOX_FONT_SCALE: Float = 0.28f //0.45
 // Single control for diagram base size: change this one constant to adjust diagram max width and default height used across app & previews
 val DEFAULT_DIAGRAM_BASE_DP: Dp = 500.dp
 // derive a sensible default diagram width and height from the single base value so changing one number is enough
@@ -19,6 +20,15 @@ val DEFAULT_DIAGRAM_MAX_WIDTH_DP: Dp = DEFAULT_DIAGRAM_BASE_DP
 val DEFAULT_DIAGRAM_HEIGHT_DP: Dp = (DEFAULT_DIAGRAM_BASE_DP * 0.32f) // ~96.dp when base is 300.dp
 // minimum diagram height when deriving from card height
 val DEFAULT_DIAGRAM_MIN_HEIGHT_DP: Dp = 72.dp
+
+// 카드 위아래 간격
+val DEFAULT_LIST_ITEM_SPACING_DP: Dp = 20.dp //56
+
+// default card background color (use this to change all card backgrounds). Picked from user's attachment.
+val DEFAULT_CARD_BACKGROUND_COLOR = Color(0xFFFF0058)
+
+// default color used for the orange name box shown in chord lists. Set from user's attachment color.
+val DEFAULT_NAME_BOX_COLOR = DEFAULT_CARD_BACKGROUND_COLOR
 
 // Anchor option to position the diagram inside its container. Left = diagram sits to left, Right = to right.
 enum class DiagramAnchor { Left, Right }
@@ -98,7 +108,8 @@ val DefaultDiagramUiParams = DiagramUiParams(
 @Composable
 fun Preview_UIParameters_Pixel7Pro() {
     PocketChordTheme {
-        ChordDetailScreen(root = "C") {}
+        val navController = rememberNavController()
+        ChordListScreen(navController = navController, root = "C")
     }
 }
 

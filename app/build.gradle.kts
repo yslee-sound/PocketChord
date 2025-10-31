@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+apply(plugin = "kotlin-kapt")
+
 android {
     namespace = "com.sweetapps.pocketchord"
     compileSdk {
@@ -51,6 +53,13 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.navigation:navigation-compose:2.6.0")
+    // Room (explicit coordinates to ensure availability)
+    implementation("androidx.room:room-runtime:2.8.3")
+    implementation("androidx.room:room-ktx:2.8.3")
+    if (configurations.findByName("kapt") == null) configurations.create("kapt")
+    configurations.getByName("kapt").dependencies.add(project.dependencies.create("androidx.room:room-compiler:2.8.3"))
+    // Gson
+    implementation("com.google.code.gson:gson:2.13.2")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

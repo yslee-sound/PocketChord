@@ -78,11 +78,6 @@ class MainActivity : ComponentActivity() {
                             Log.d("NavDebug", "Entered route: chord_list/" + root)
                             ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                         }
-                        composable("chord_detail/{root}") { backStackEntry ->
-                            val root = backStackEntry.arguments?.getString("root") ?: "C"
-                            Log.d("NavDebug", "Entered route: chord_detail/" + root)
-                            ChordDetailScreen(root = root, onBack = { navController.popBackStack() })
-                        }
                      }
                  }
              }
@@ -456,7 +451,7 @@ fun ChordListScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(56.dp)
+            verticalArrangement = Arrangement.spacedBy(DEFAULT_LIST_ITEM_SPACING_DP)
         ) {
             items(chordList) { chordName ->
                 // Plain list row (no outer card). Left: orange square showing chord name.
@@ -475,8 +470,7 @@ fun ChordListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(itemHeight)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .clickable { navController.navigate("chord_detail/${chordName}") },
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.Top
                 ) {
                     if (uiParams.diagramAnchor == DiagramAnchor.Left) {
@@ -488,13 +482,13 @@ fun ChordListScreen(
                             }
                         }
                         Spacer(modifier = Modifier.width(16.dp))
-                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                             val chordFontSize = with(LocalDensity.current) { (uiParams.nameBoxSizeDp.toPx() * uiParams.nameBoxFontScale).toSp() }
                             Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
                         }
                         Spacer(modifier = Modifier.weight(1f))
                     } else {
-                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(Color(0xFFFF8C00), shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                             val chordFontSize = with(LocalDensity.current) { (uiParams.nameBoxSizeDp.toPx() * uiParams.nameBoxFontScale).toSp() }
                             Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
                         }
@@ -526,7 +520,7 @@ fun FretboardCard(
             .fillMaxWidth()
             .padding(vertical = 4.dp, horizontal = 4.dp), // 카드 외부 여백 약간 증가
         shape = RoundedCornerShape(6.dp), // 더 둥글게
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = DEFAULT_CARD_BACKGROUND_COLOR),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         // 카드 높이에 따라 다이어그램 크기를 계산하려면 BoxWithConstraints를 사용
@@ -588,64 +582,3 @@ fun FretboardCard(
         }
     }
 }
-
-@Composable
-fun ChordDetailScreen(root: String, onBack: () -> Unit = {}) {
-    val chordList = when (root) {
-        // C 루트의 경우 테스트용 더미 항목 10개를 표시하도록 확장
-        "C" -> listOf(
-            "C", "C6", "CM7", "Cm", "C7",
-            "Cmaj7", "Cadd9", "C9", "C11", "C13"
-        )
-        "D" -> listOf("D", "D6", "DM7")
-        else -> listOf(root)
-    }
-
-    // Overall column: fixed top app bar row, content fills remaining space. The Activity-level Scaffold
-    // provides the bottom navigation bar so we don't add another Scaffold here.
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .background(Color.White)
-    ) {
-        // Top app bar area (fixed) with back button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { onBack() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color(0xFF31455A))
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("${root} 코드 상세", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF31455A))
-        }
-        // visual separation between top title and content
-        HorizontalDivider(color = Color(0xFFBDBDBD), thickness = 1.dp)
-
-        // Content: list of cards. Use Modifier.weight(1f) so this area consumes remaining height between
-        // the top app bar and the Activity's bottom navigation bar provided by outer Scaffold.
-        val singleCardDp = DefaultDiagramUiParams.cardHeightDp ?: 160.dp
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(vertical = 12.dp)
-        ) {
-            items(chordList) { chordName ->
-                FretboardCard(
-                    chordName = chordName,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(singleCardDp)
-                        .padding(vertical = 2.dp, horizontal = 8.dp),
-                    uiParams = DefaultDiagramUiParams
-                )
-            }
-        }
-    }
-}
-
-// Preview for FretboardCard moved to FretboardUi.kt to centralize diagram previews and avoid duplicates.
