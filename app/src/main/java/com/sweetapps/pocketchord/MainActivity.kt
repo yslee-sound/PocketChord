@@ -38,7 +38,6 @@ import androidx.navigation.compose.composable
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.isFinite
-import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -551,11 +550,11 @@ fun ChordListScreen(
                             val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
                             Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
                         }
-                        Spacer(modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = true, invertStrings = false)
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
                         }
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -626,7 +625,10 @@ fun FretboardCard(
                                 if (chordName == "C") {
                                     FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true, fretLabelProvider = fretLabelProvider, invertStrings = false)
                                 } else {
-                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, invertStrings = false)
+                                    // default empty/mute positions for non-sample chords in preview
+                                    val defaultPositions = List(6) { -1 }
+                                    val defaultFingers = List(6) { 0 }
+                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = defaultPositions, fingers = defaultFingers, firstFretIsNut = true, invertStrings = false)
                                 }
                             }
                             Spacer(modifier = Modifier.width(uiParams.diagramRightInsetDp))

@@ -6,8 +6,12 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
-import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
 
 // Single source-of-truth for name-box sizing so changing these updates both app and previews
 val DEFAULT_NAME_BOX_SIZE_DP: Dp = 80.dp
@@ -15,8 +19,7 @@ val DEFAULT_NAME_BOX_SIZE_DP: Dp = 80.dp
 val DEFAULT_NAME_BOX_FONT_SCALE: Float = 0.28f //0.45
 // Single control for diagram base size: change this one constant to adjust diagram max width and default height used across app & previews
 val DEFAULT_DIAGRAM_BASE_DP: Dp = 500.dp
-// derive a sensible default diagram width and height from the single base value so changing one number is enough
-val DEFAULT_DIAGRAM_MAX_WIDTH_DP: Dp = DEFAULT_DIAGRAM_BASE_DP
+// derive a sensible default diagram height from the single base value so changing one number is enough
 val DEFAULT_DIAGRAM_HEIGHT_DP: Dp = (DEFAULT_DIAGRAM_BASE_DP * 0.32f) // ~96.dp when base is 300.dp
 // minimum diagram height when deriving from card height
 val DEFAULT_DIAGRAM_MIN_HEIGHT_DP: Dp = 72.dp
@@ -63,7 +66,7 @@ data class DiagramUiParams(
     // label text size in sp
     val fretLabelTextSp: Float = 12f,
     // global shift applied to the whole diagram drawing area (positive -> right, negative -> left)
-    // use this when you want to move the whole diagram within its container independent of leftInsetDp
+    // Restore original default shift so diagrams align as in initial design.
     val diagramShiftDp: Dp = 30.dp,
     // right inset: space to reserve on the right side of the card/container so diagram doesn't touch the edge
     val diagramRightInsetDp: Dp = 0.dp,
@@ -93,38 +96,31 @@ data class DiagramUiParams(
 val DefaultDiagramUiParams = DiagramUiParams(
     cardHeightDp = 200.dp,
     diagramRightInsetDp = 16.dp,
-    diagramMaxWidthDp = DEFAULT_DIAGRAM_MAX_WIDTH_DP,
-    diagramHeightDp = DEFAULT_DIAGRAM_HEIGHT_DP
+    // Use a larger default max width and height so list diagrams appear closer to the original size
+    diagramMaxWidthDp = 320.dp,
+    diagramHeightDp = 120.dp
 )
 
 // Note: Keep only the Pixel 7 Pro preview so project preview list is minimal and matches the AVD used by the user.
 @Preview(
-    name = "UIParams Preview (Pixel 7 Pro)",
+    name = "Fretboard Preview (Pixel 7 Pro)",
     showBackground = true,
     device = Devices.PIXEL_7_PRO,
     showSystemUi = true,
     fontScale = 1f
 )
 @Composable
-fun Preview_UIParameters_Pixel7Pro() {
+fun Preview_Fretboard_Samples() {
     PocketChordTheme {
-        val navController = rememberNavController()
-        ChordListScreen(navController = navController, root = "C")
-    }
-}
-
-@Preview(
-    name = "ChordList Preview (Pixel 7 Pro)",
-    showBackground = true,
-    device = Devices.PIXEL_7_PRO,
-    showSystemUi = true,
-    fontScale = 1f
-)
-@Composable
-fun Preview_ChordList_Pixel7() {
-    PocketChordTheme {
-        val navController = rememberNavController()
-        // Explicitly pass uiParams so Preview picks up changes reliably.
-        ChordListScreen(navController = navController, root = "C", uiParams = DefaultDiagramUiParams)
+        Column(modifier = Modifier.padding(16.dp)) {
+            // sample C major (positions low->high): [-1,3,2,0,1,0]
+            FretboardDiagram(chordName = "C", positions = listOf(-1,3,2,0,1,0), fingers = listOf(0,1,2,0,3,0), uiParams = DefaultDiagramUiParams, firstFretIsNut = true)
+            Spacer(modifier = Modifier.height(12.dp))
+            // sample Cm starting at fret 3: [-1,3,5,5,4,3]
+            FretboardDiagram(chordName = "Cm", positions = listOf(-1,3,5,5,4,3), fingers = listOf(0,1,2,3,4,0), uiParams = DefaultDiagramUiParams, firstFretIsNut = false)
+            Spacer(modifier = Modifier.height(12.dp))
+            // sample C7
+            FretboardDiagram(chordName = "C7", positions = listOf(-1,3,2,3,1,0), fingers = listOf(0,1,2,4,3,0), uiParams = DefaultDiagramUiParams, firstFretIsNut = true)
+        }
     }
 }

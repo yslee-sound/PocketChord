@@ -16,8 +16,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.Devices
 import kotlin.math.min
 
 // 다이어그램 관련 컴포저블 정리 파일
@@ -58,14 +56,23 @@ fun FretboardDiagram(
     invertStrings: Boolean = false,
     // optional provider so callers (DB) can supply custom labels per fret index. Return null to skip.
     fretLabelProvider: ((Int) -> String?)? = null
+    ,
+    // when false, don't add the default outer padding so callers (list rows) can align top edges
+    useCardPadding: Boolean = true
 ) {
+    val baseModifier = if (useCardPadding) {
+        modifier.background(Color.White, RoundedCornerShape(12.dp)).padding(8.dp)
+    } else {
+        modifier.background(Color.White, RoundedCornerShape(12.dp))
+    }
+
     Column(
-        modifier = modifier
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(8.dp),
+        modifier = baseModifier,
         horizontalAlignment = Alignment.Start
     ) {
-        Text(chordName, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF31455A), modifier = Modifier.padding(bottom = 6.dp))
+        if (chordName.isNotBlank()) {
+            Text(chordName, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF31455A), modifier = Modifier.padding(bottom = 6.dp))
+        }
 
         // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
         // Use BoxWithConstraints so we can draw grid in Canvas and overlay Compose markers (Text in colored Boxes)
@@ -85,11 +92,24 @@ fun FretboardDiagram(
             val leftInsetPx = with(density) { (uiParams.leftInsetDp + uiParams.diagramShiftDp).toPx() }
             val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
             val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
-            val nutPx = if (firstFretIsNut) computedNutPx else 0f
+            // compute startFret based on positive fret positions and firstFretIsNut flag
+            val positiveFrets = positions.filter { it > 0 }
+            val startFret = if (firstFretIsNut || positiveFrets.isEmpty() || (positiveFrets.minOrNull() ?: Int.MAX_VALUE) <= 1) {
+                1
+            } else {
+                var s = positiveFrets.minOrNull() ?: 1
+                val fMax = positiveFrets.maxOrNull() ?: s
+                if (fMax > s + fretCount - 1) s = fMax - fretCount + 1
+                if (s < 2) s = 2
+                s
+            }
+            // show nut only when startFret == 1 and caller expects a nut
+            val nutPx = if (startFret == 1 && firstFretIsNut) computedNutPx else 0f
             // use provided fretCount
             val stringCount = 6
             // available width for frets = total width - leftInset - nut width
             val rightInsetPx = with(density) { uiParams.diagramRightInsetDp.toPx() }
+            // IMPORTANT: subtract reservedNutPx (not nutPx) so spacing is stable regardless of whether the nut is drawn
             val availableWidth = (boxWpx - leftInsetPx - nutPx - rightInsetPx).coerceAtLeast(0f)
             // compute fret spacing so 'fretCount' frets fit inside the available width
             // reserve `lastFretVisibleFraction` worth of one-fret spacing for the final fret's visible width
@@ -109,6 +129,7 @@ fun FretboardDiagram(
                 // draw frets for f = 0..fretCount (inclusive) so we have nut + 'fretCount' frets visible
                 for (f in 0..fretCount) {
                     if (f == 0 && firstFretIsNut) {
+                        // draw nut only when requested
                         drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, size.height))
                     } else {
                         val xRaw = leftInsetPx + nutPx + f * fretSpacingPx
@@ -121,42 +142,112 @@ fun FretboardDiagram(
                     }
                 }
 
-                // horizontal strings (start after leftInset) — end at size.width - rightInsetPx to respect inset
-                val stringLineEndX = (size.width - rightInsetPx).coerceAtLeast(leftInsetPx)
+                // horizontal strings — align start with nut so strings and fret positions share the same origin
+                val stringStartX = leftInsetPx + nutPx
+                val stringLineEndX = (size.width - rightInsetPx).coerceAtLeast(stringStartX)
                 for (s in 0 until stringCount) {
                     val y = s * stringSpacingPx
-                    drawLine(Color.Gray, start = Offset(leftInsetPx, y), end = Offset(stringLineEndX, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
+                    drawLine(Color.Gray, start = Offset(stringStartX, y), end = Offset(stringLineEndX, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
                 }
 
-                // draw markers (circles + finger numbers) directly on Canvas for pixel-perfect positioning
-                positions.forEachIndexed { stringIdx, fretNum ->
-                    val y = if (invertStrings) {
-                        // treat index0 as top string
-                        stringIdx * stringSpacingPx
-                    } else {
-                        // treat index0 as lowest string
-                        (stringCount - 1 - stringIdx) * stringSpacingPx
+                // detect barres: contiguous runs of strings with same positive fret and same finger (>0)
+                data class Barre(val fret: Int, val finger: Int, val startIdx: Int, val endIdx: Int)
+                val barres = mutableListOf<Barre>()
+                run {
+                    // scan positions left-to-right by index to find contiguous runs
+                    var idx = 0
+                    while (idx < positions.size) {
+                        val f = positions[idx]
+                        val finger = fingers?.getOrNull(idx) ?: 0
+                        if (f > 0 && finger > 0) {
+                            var j = idx + 1
+                            while (j < positions.size && positions[j] == f && (fingers?.getOrNull(j) ?: 0) == finger) j++
+                            val len = j - idx
+                            if (len >= 2) {
+                                barres.add(Barre(fret = f, finger = finger, startIdx = idx, endIdx = j - 1))
+                            }
+                            idx = j
+                        } else {
+                            idx++
+                        }
                     }
-                    when {
+                }
+
+                // create a set of string indices that are part of any barre so we can skip drawing individual dots there
+                val stringsInBarre = barres.flatMap { it.startIdx..it.endIdx }.toSet()
+
+                // draw markers (circles + finger numbers) directly on Canvas for pixel-perfect positioning
+                // but first draw barres behind single-dot markers
+                barres.forEach { barre ->
+                    val rel = barre.fret - startFret
+                    if (rel in 0 until fretCount) {
+                        // determine vertical span for the barre (y coords depend on invertStrings)
+                        val startY = if (invertStrings) barre.startIdx * stringSpacingPx else (stringCount - 1 - barre.startIdx) * stringSpacingPx
+                        val endY = if (invertStrings) barre.endIdx * stringSpacingPx else (stringCount - 1 - barre.endIdx) * stringSpacingPx
+                        val topY = min(startY, endY)
+                        val bottomY = maxOf(startY, endY)
+                        val centerX = leftInsetPx + nutPx + (rel + 0.5f) * fretSpacingPx
+                        // barre rectangle dimensions
+                        val padding = with(density) { 4.dp.toPx() }
+                        val rectLeft = centerX - fretSpacingPx * 0.45f
+                        val rectRight = centerX + fretSpacingPx * 0.45f
+                        val rectTop = topY - padding
+                        val rectBottom = bottomY + padding
+                        val rectHeight = (rectBottom - rectTop).coerceAtLeast(with(density) { 8.dp.toPx() })
+                        val corner = rectHeight / 2f
+                        // draw rounded rect
+                        drawRoundRect(color = Color(0xFF339CFF), topLeft = Offset(rectLeft, rectTop), size = androidx.compose.ui.geometry.Size(rectRight - rectLeft, rectHeight), cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner, corner))
+                        // draw finger number centered on barre (use same visual as markers)
+                        drawContext.canvas.nativeCanvas.apply {
+                            val paint = android.graphics.Paint().apply {
+                                color = android.graphics.Color.WHITE
+                                textSize = (rectHeight * 0.6f).coerceAtMost(with(density) { 18.dp.toPx() })
+                                isFakeBoldText = true
+                                textAlign = android.graphics.Paint.Align.CENTER
+                            }
+                            val baseline = rectTop + rectHeight / 2f - (paint.descent() + paint.ascent()) / 2f
+                            drawText(barre.finger.toString(), centerX, baseline, paint)
+                        }
+                    }
+                }
+
+                positions.forEachIndexed { stringIdx, fretNum ->
+                     val y = if (invertStrings) {
+                         // treat index0 as top string
+                         stringIdx * stringSpacingPx
+                     } else {
+                         // treat index0 as lowest string
+                         (stringCount - 1 - stringIdx) * stringSpacingPx
+                     }
+                     when {
                         fretNum > 0 -> {
-                            val x = leftInsetPx + nutPx + (fretNum - 0.5f) * fretSpacingPx
-                            // marker radius derived from UI params with a minimum px size for visibility
-                            val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
-                            val minRadiusPx = with(density) { 6.dp.toPx() }
-                            val radius = kotlin.math.max(candidate, minRadiusPx)
-                            drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
-                            val finger = fingers?.getOrNull(stringIdx) ?: 0
-                            if (finger > 0) {
-                                // draw centered text using nativeCanvas
-                                drawContext.canvas.nativeCanvas.apply {
-                                    val paint = android.graphics.Paint().apply {
-                                        color = android.graphics.Color.WHITE
-                                        textSize = radius * uiParams.markerTextScale
-                                        isFakeBoldText = true
-                                        textAlign = android.graphics.Paint.Align.CENTER
+                            // skip drawing single-dot markers for strings that are part of a detected barre
+                            if (stringsInBarre.contains(stringIdx)) {
+                                // if this string is in a barre, skip individual marker
+                            } else {
+                                // draw only if this fret lies within the visible window [startFret, startFret + fretCount - 1]
+                                val rel = fretNum - startFret
+                                if (rel in 0 until fretCount) {
+                                    val x = leftInsetPx + nutPx + (rel + 0.5f) * fretSpacingPx
+                                    // marker radius derived from UI params with a minimum px size for visibility
+                                    val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                                    val minRadiusPx = with(density) { 6.dp.toPx() }
+                                    val radius = kotlin.math.max(candidate, minRadiusPx)
+                                    drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
+                                    val finger = fingers?.getOrNull(stringIdx) ?: 0
+                                    if (finger > 0) {
+                                        // draw centered text using nativeCanvas
+                                        drawContext.canvas.nativeCanvas.apply {
+                                            val paint = android.graphics.Paint().apply {
+                                                color = android.graphics.Color.WHITE
+                                                textSize = radius * uiParams.markerTextScale
+                                                isFakeBoldText = true
+                                                textAlign = android.graphics.Paint.Align.CENTER
+                                            }
+                                            val baseline = y + (paint.descent() - paint.ascent()) / 2 - paint.descent()
+                                            drawText(finger.toString(), x, baseline, paint)
+                                        }
                                     }
-                                    val baseline = y + (paint.descent() - paint.ascent()) / 2 - paint.descent()
-                                    drawText(finger.toString(), x, baseline, paint)
                                 }
                             }
                         }
@@ -187,9 +278,10 @@ fun FretboardDiagram(
                 }
                 // Draw fret labels in reserved label area below contentHeightPx
                 val textSizePx = with(density) { uiParams.fretLabelTextSp.sp.toPx() }
-                // show numeric labels for frets 1..(fretCount-1) (exclude nut 0 and last)
+                // show numeric labels for the visible frets (map canvas f index to absolute fret num)
                 for (f in 1 until fretCount) {
-                    val label = fretLabelProvider?.invoke(f) ?: f.toString()
+                    val absoluteFret = startFret + (f - 1)
+                    val label = fretLabelProvider?.invoke(absoluteFret) ?: absoluteFret.toString()
                     if (label.isEmpty()) continue
                     val xLabel = (leftInsetPx + nutPx + f * fretSpacingPx).coerceAtMost(maxFretX)
                     drawContext.canvas.nativeCanvas.apply {
@@ -207,135 +299,38 @@ fun FretboardDiagram(
      }
  }
 
-@Composable
-fun FretboardDiagramOnly(
+ // For the small variant we also need barre detection and skip single markers on barre strings
+ // We'll reuse the logic: detect barresSmall then draw barresSmall and skip single dots inside them
+ // (mirrors the large variant above)
+ @Composable
+ fun FretboardDiagramOnly(
+    positions: List<Int>, // stringCount 길이: -1=mute, 0=open, n>0 fret number
     modifier: Modifier = Modifier,
+    fingers: List<Int>? = null, // same length, 0=hide
     uiParams: DiagramUiParams = DefaultDiagramUiParams,
-    positions: List<Int>? = null,
-    fingers: List<Int>? = null,
     firstFretIsNut: Boolean = true,
+    diagramWidth: Dp? = null,
+    diagramHeight: Dp? = null,
     fretCount: Int = 4,
+    // when true, positions index 0 is treated as the top string (string 1), otherwise index 0 = lowest string
     invertStrings: Boolean = false,
+    // optional provider so callers (DB) can supply custom labels per fret index. Return null to skip.
     fretLabelProvider: ((Int) -> String?)? = null
 ) {
-    // Small variant: fills given modifier size
-    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
-        val density = LocalDensity.current
-        val boxWpx = with(density) { maxWidth.toPx() }
-        val boxHpx = with(density) { maxHeight.toPx() }
-        val leftInsetPx = with(density) { (uiParams.leftInsetDp + uiParams.diagramShiftDp).toPx() }
-        val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
-        val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
-        val nutPx = if (firstFretIsNut) computedNutPx else 0f
-        // use provided fretCount
-        val stringCount = 6
-        val labelAreaPx = with(density) { uiParams.fretLabelAreaDp.toPx() }
-        val rightInsetPxSmall = with(density) { uiParams.diagramRightInsetDp.toPx() }
-        val availableWidth = (boxWpx - leftInsetPx - nutPx - rightInsetPxSmall).coerceAtLeast(0f)
-        val spacingDivSmall = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
-        val fretSpacingPx = if (spacingDivSmall > 0f) availableWidth / spacingDivSmall else 0f
-        val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
-        val stringSpacingPx = contentHeightPx / (stringCount - 1)
-
-        Canvas(modifier = Modifier.matchParentSize()) {
-             drawRect(Color.White, size = size)
-             // draw nut + frets, but skip any fret line that would lie at/ beyond the canvas right edge
-             val vStrokeHalfSmall = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
-             val maxFretXSmall = (size.width - rightInsetPxSmall - vStrokeHalfSmall).coerceAtLeast(leftInsetPx + nutPx)
-             for (f in 0..fretCount) {
-                 if (f == 0 && firstFretIsNut) drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, contentHeightPx))
-                 else {
-                     val xRaw = leftInsetPx + nutPx + f * fretSpacingPx
-                     val x = xRaw.coerceAtMost(maxFretXSmall)
-                     if (x > leftInsetPx + nutPx + 0.5f) drawLine(Color.Black, start = Offset(x, 0f), end = Offset(x, contentHeightPx), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
-                 }
-             }
-
-             val stringLineEndXSmall = (size.width - rightInsetPxSmall).coerceAtLeast(leftInsetPx)
-             for (s in 0 until stringCount) {
-                  val y = s * stringSpacingPx
-                 // always use the uiParams.horizontalLineWidthDp for string thickness
-                 drawLine(Color.Black, start = Offset(leftInsetPx, y), end = Offset(stringLineEndXSmall, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
-              }
-             // draw markers (circles + finger numbers) for the small variant as well
-             positions?.let { posList ->
-                 posList.forEachIndexed { stringIdx, fretNum ->
-                     val y = if (invertStrings) stringIdx * stringSpacingPx else (stringCount - 1 - stringIdx) * stringSpacingPx
-                     when {
-                         fretNum > 0 -> {
-                             val x = leftInsetPx + nutPx + (fretNum - 0.5f) * fretSpacingPx
-                             val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
-                             val minRadiusPx = with(density) { 6.dp.toPx() }
-                             val radius = kotlin.math.max(candidate, minRadiusPx)
-                             drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
-                             val finger = fingers?.getOrNull(stringIdx) ?: 0
-                             if (finger > 0) {
-                                 drawContext.canvas.nativeCanvas.apply {
-                                     val paint = android.graphics.Paint().apply {
-                                         color = android.graphics.Color.WHITE
-                                         textSize = radius * uiParams.markerTextScale
-                                         isFakeBoldText = true
-                                         textAlign = android.graphics.Paint.Align.CENTER
-                                     }
-                                     val baseline = y + (paint.descent() - paint.ascent()) / 2 - paint.descent()
-                                     drawText(finger.toString(), x, baseline, paint)
-                                 }
-                             }
-                         }
-                         fretNum == 0 -> {
-                             val x = leftInsetPx - markerOffsetPx
-                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
-                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
-                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
-                             drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
-                             drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
-                         }
-                         else -> {
-                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
-                             val openFactor = uiParams.openMarkerSizeFactor.takeIf { it > 0f } ?: 0.0001f
-                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
-                             val muteScale = uiParams.muteMarkerSizeFactor / openFactor
-                             val muteHalf = openRadius * 0.70710677f * muteScale
-                             val x = leftInsetPx - markerOffsetPx
-                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
-                             val inset = muteHalf * uiParams.muteMarkerInsetFactor
-                             drawLine(Color.Black, start = Offset(x - muteHalf + inset, y - muteHalf + inset), end = Offset(x + muteHalf - inset, y + muteHalf - inset), strokeWidth = strokeW)
-                             drawLine(Color.Black, start = Offset(x - muteHalf + inset, y + muteHalf - inset), end = Offset(x + muteHalf - inset, y - muteHalf + inset), strokeWidth = strokeW)
-                         }
-                     }
-                 }
-             }
-             // draw fret labels in label area (frets 1..fretCount-1)
-              val textSizePxSmall = with(density) { uiParams.fretLabelTextSp.sp.toPx() }
-              for (f in 1 until fretCount) {
-                  val label = fretLabelProvider?.invoke(f) ?: f.toString()
-                  if (label.isEmpty()) continue
-                  val xLabel = (leftInsetPx + nutPx + f * fretSpacingPx).coerceAtMost(maxFretXSmall)
-                  drawContext.canvas.nativeCanvas.apply {
-                      val paint = android.graphics.Paint().apply {
-                          color = android.graphics.Color.BLACK
-                          textSize = textSizePxSmall
-                          textAlign = android.graphics.Paint.Align.CENTER
-                      }
-                      val baseline = contentHeightPx + (labelAreaPx + (paint.descent() - paint.ascent())) / 2 - paint.descent()
-                      drawText(label, xLabel, baseline, paint)
-                  }
-              }
-         }
-     }
- }
-
-@Preview(name = "FretboardCard Preview (Pixel 7 Pro)", showBackground = true, widthDp = 900, heightDp = 360, device = Devices.PIXEL_7_PRO, showSystemUi = true, fontScale = 1f)
-@Composable
-fun PreviewFretboardCard_MainActivity() {
-    // Use the global DefaultDiagramUiParams so Preview matches runtime parameters exactly
-    FretboardCard(
-        chordName = "C",
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(DefaultDiagramUiParams.cardHeightDp ?: 160.dp)
-            .padding(vertical = 4.dp, horizontal = 8.dp),
-        uiParams = DefaultDiagramUiParams,
-        fretLabelProvider = { idx -> if (idx == 1 || idx == 4) null else idx.toString() }
+    // same content as FretboardDiagram above, but without chord name
+    // Pass the modifier through unchanged so callers control size/constraints.
+    FretboardDiagram(
+        chordName = "",
+        positions = positions,
+        modifier = modifier,
+        fingers = fingers,
+        uiParams = uiParams,
+        firstFretIsNut = firstFretIsNut,
+        diagramWidth = diagramWidth,
+        diagramHeight = diagramHeight,
+        fretCount = fretCount,
+        invertStrings = invertStrings,
+        fretLabelProvider = fretLabelProvider,
+        useCardPadding = false
     )
 }
