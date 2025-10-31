@@ -54,6 +54,8 @@ fun FretboardDiagram(
     diagramWidth: Dp? = null,
     diagramHeight: Dp? = null,
     fretCount: Int = 4,
+    // when true, positions index 0 is treated as the top string (string 1), otherwise index 0 = lowest string
+    invertStrings: Boolean = false,
     // optional provider so callers (DB) can supply custom labels per fret index. Return null to skip.
     fretLabelProvider: ((Int) -> String?)? = null
 ) {
@@ -128,7 +130,13 @@ fun FretboardDiagram(
 
                 // draw markers (circles + finger numbers) directly on Canvas for pixel-perfect positioning
                 positions.forEachIndexed { stringIdx, fretNum ->
-                    val y = (stringCount - 1 - stringIdx) * stringSpacingPx
+                    val y = if (invertStrings) {
+                        // treat index0 as top string
+                        stringIdx * stringSpacingPx
+                    } else {
+                        // treat index0 as lowest string
+                        (stringCount - 1 - stringIdx) * stringSpacingPx
+                    }
                     when {
                         fretNum > 0 -> {
                             val x = leftInsetPx + nutPx + (fretNum - 0.5f) * fretSpacingPx
@@ -207,6 +215,7 @@ fun FretboardDiagramOnly(
     fingers: List<Int>? = null,
     firstFretIsNut: Boolean = true,
     fretCount: Int = 4,
+    invertStrings: Boolean = false,
     fretLabelProvider: ((Int) -> String?)? = null
 ) {
     // Small variant: fills given modifier size
@@ -251,7 +260,7 @@ fun FretboardDiagramOnly(
              // draw markers (circles + finger numbers) for the small variant as well
              positions?.let { posList ->
                  posList.forEachIndexed { stringIdx, fretNum ->
-                     val y = (stringCount - 1 - stringIdx) * stringSpacingPx
+                     val y = if (invertStrings) stringIdx * stringSpacingPx else (stringCount - 1 - stringIdx) * stringSpacingPx
                      when {
                          fretNum > 0 -> {
                              val x = leftInsetPx + nutPx + (fretNum - 0.5f) * fretSpacingPx

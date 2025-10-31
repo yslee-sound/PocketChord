@@ -427,9 +427,8 @@ data class FretDiagramData(val name: String, val positions: List<Int>, val finge
 
 // helper: parse CSV like "-1,3,2,0,1,0" into internal positions List<Int> index0=lowest string
 fun parseCsvToPositions(csv: String): List<Int> {
-    val parts = csv.split(",").mapNotNull { it.trim().toIntOrNull() }
-    // If CSV seems to be in DB order high->low (string 6..1), reverse so index0 = lowest string
-    return if (parts.size > 1) parts.reversed() else parts
+    // CSV in seeds is stored low->high (index0 = lowest string). Return as-is
+    return csv.split(",").mapNotNull { it.trim().toIntOrNull() }
 }
 
 fun formatPositionsForLabel(positions: List<Int>): String {
@@ -524,8 +523,12 @@ fun ChordListScreen(
                 // VariantEntity stores CSV strings for positions/fingers
                 val positions = firstVar?.positionsCsv?.let { parseCsvToPositions(it) } ?: List(6) { -1 }
                 val fingers = firstVar?.fingersCsv?.let { parseCsvToPositions(it) } ?: List(6) { 0 }
+                // debug: log CSV and parsed lists to verify ordering
+                try {
+                    Log.d("ChordDiag", "chord=$chordName csvPositions=${firstVar?.positionsCsv} parsedPositions=$positions csvFingers=${firstVar?.fingersCsv} parsedFingers=$fingers")
+                } catch (_: Exception) {}
 
-                // Plain list row (no outer card). Left: orange square showing chord name.
+                 // Plain list row (no outer card). Left: orange square showing chord name.
                 // Right: fret diagram shown without border/background.
                 // Use parsed positions/fingers lists (internal format: index0 = lowest string)
                 val internalPositions = positions
@@ -543,7 +546,7 @@ fun ChordListScreen(
                 ) {
                     if (uiParams.diagramAnchor == DiagramAnchor.Left) {
                         Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true)
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
@@ -559,7 +562,7 @@ fun ChordListScreen(
                         Spacer(modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true)
+                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = true, invertStrings = false)
                         }
                     }
                 }
@@ -629,9 +632,9 @@ fun FretboardCard(
                             Spacer(modifier = Modifier.width(gapBetween))
                             Box(modifier = Modifier.width(desiredWidth).height(diagramHeight)) {
                                 if (chordName == "C") {
-                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true, fretLabelProvider = fretLabelProvider)
+                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positionsForC, fingers = fingersForC, firstFretIsNut = true, fretLabelProvider = fretLabelProvider, invertStrings = false)
                                 } else {
-                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams)
+                                    FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, invertStrings = false)
                                 }
                             }
                             Spacer(modifier = Modifier.width(uiParams.diagramRightInsetDp))
@@ -679,12 +682,12 @@ fun SettingsScreen() {
                     }
                     // update summary read-back on UI thread
                     Log.d("SeedImport", "Force seed result: insertedChords=${result.insertedChords} insertedVariants=${result.insertedVariants} skipped=${result.skippedVariants}")
-                } catch (t: Throwable) {
-                    Log.e("SeedImport", "Forced seed failed", t)
+                } catch (e: Exception) {
+                    Log.e("SeedImport", "Force seed failed", e)
                 }
             }
         }) {
-            Text("강제 재시드")
+            Text("강제 시드 임포트 실행", color = Color.White)
         }
     }
 }
