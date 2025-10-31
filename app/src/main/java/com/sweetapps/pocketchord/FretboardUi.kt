@@ -99,6 +99,8 @@ fun FretboardDiagram(
             val leftInsetPx = with(density) { (uiParams.leftInsetDp + uiParams.diagramShiftDp).toPx() }
             val markerOffsetPx = with(density) { uiParams.markerOffsetDp.toPx() }
             val computedNutPx = uiParams.nutWidthDp?.let { with(density) { it.toPx() } } ?: (boxWpx * uiParams.nutWidthFactor)
+            // reserve nut width for spacing even if we don't draw the nut, so diagrams align left
+            val reservedNutPx = computedNutPx
             // compute startFret based on positive fret positions and firstFretIsNut flag
             val positiveFrets = positions.filter { it > 0 }
             val startFret = if (firstFretIsNut || positiveFrets.isEmpty() || (positiveFrets.minOrNull() ?: Int.MAX_VALUE) <= 1) {
@@ -117,59 +119,81 @@ fun FretboardDiagram(
             // available width for frets = total width - leftInset - nut width
             val rightInsetPx = with(density) { uiParams.diagramRightInsetDp.toPx() }
             // IMPORTANT: subtract reservedNutPx (not nutPx) so spacing is stable regardless of whether the nut is drawn
-            val availableWidth = (boxWpx - leftInsetPx - nutPx - rightInsetPx).coerceAtLeast(0f)
+            val availableWidth = (boxWpx - leftInsetPx - reservedNutPx - rightInsetPx).coerceAtLeast(0f)
             // compute fret spacing so 'fretCount' frets fit inside the available width
-            // reserve `lastFretVisibleFraction` worth of one-fret spacing for the final fret's visible width
-            val spacingDiv = if (fretCount > 0) (fretCount + uiParams.lastFretVisibleFraction) else 1f
-            val fretSpacingPx = if (spacingDiv > 0f) availableWidth / spacingDiv else 0f
-            // reserve vertical area at bottom for fret labels
-            val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
-            val stringSpacingPx = contentHeightPx / (stringCount - 1)
+            // 기본: 오른쪽은 lastFretVisibleFraction 적용, 왼쪽은 startFret>1일 때 firstFretVisibleFraction 적용
+            // 단, 두 값이 동일하고(startFret>1) 왼쪽 캔버스 여백(cap)에 의해 좌측이 잘리는 경우
+            // 좌/우 모두 동일한 유효 fraction으로 재계산하여 양 끝 길이를 같게 맞춘다.
+            val leftReq = if (startFret > 1) uiParams.firstFretVisibleFraction else 0f
+            val rightReq = uiParams.lastFretVisibleFraction
+            val enforceEqualEnds = startFret > 1 && kotlin.math.abs(leftReq - rightReq) < 1e-4f
+            var effLeftFraction = leftReq
+            var effRightFraction = rightReq
+            var spacingDiv: Float
+            var fretSpacingPx: Float
+            if (enforceEqualEnds) {
+                var eff = leftReq // desired equal fraction
+                repeat(2) {
+                    val div = (fretCount + eff + eff).coerceAtLeast(1f)
+                    val fs = availableWidth / div
+                    val cap = (leftInsetPx + reservedNutPx) / (if (fs > 0f) fs else 1f)
+                    eff = min(leftReq, min(rightReq, cap))
+                }
+                effLeftFraction = eff
+                effRightFraction = eff
+            }
+            // split into integer full segments and fractional remainders
+            val leftInt = kotlin.math.floor(effLeftFraction).toInt()
+            val rightInt = kotlin.math.floor(effRightFraction).toInt()
+            val leftFrac = effLeftFraction - leftInt
+            val rightFrac = effRightFraction - rightInt
+            spacingDiv = (fretCount + leftInt + rightInt + leftFrac + rightFrac).coerceAtLeast(1f)
+            fretSpacingPx = availableWidth / spacingDiv
+             // reserve vertical area at bottom for fret labels
+             val contentHeightPx = (boxHpx - labelAreaPx).coerceAtLeast(0f)
+             val stringSpacingPx = contentHeightPx / (stringCount - 1)
 
-            Canvas(modifier = Modifier.matchParentSize()) {
-                // background (draw only when requested)
-                if (drawBackground) drawRect(Color.White, size = size)
-                // nut or vertical frets (shifted by leftInset)
-                // compute stroke half-width and a safe right-edge clamp that respects right inset
-                val vStrokeHalf = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
-                val maxFretX = (size.width - rightInsetPx - vStrokeHalf).coerceAtLeast(leftInsetPx + nutPx)
-                // draw frets for f = 0..fretCount (inclusive) so we have nut + 'fretCount' frets visible
-                for (f in 0..fretCount) {
-                    if (f == 0 && firstFretIsNut) {
-                        // draw nut only when requested; limit nut height to the strings area (contentHeightPx)
-                        drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, contentHeightPx))
-                    } else {
-                        val xRaw = leftInsetPx + nutPx + f * fretSpacingPx
-                        // clamp into visible canvas so the final fret isn't dropped
-                        val x = xRaw.coerceAtMost(maxFretX)
-                        // ensure fret is drawn only if it lies to the right of the nut area
-                        if (x > leftInsetPx + nutPx + 0.5f) {
-                            drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, contentHeightPx), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
-                        }
-                    }
-                }
+             Canvas(modifier = Modifier.matchParentSize()) {
+                  // background (draw only when requested)
+                  if (drawBackground) drawRect(Color.White, size = size)
+                  // nut or vertical frets (shifted by leftInset)
+                  // compute stroke half-width and a safe right-edge clamp that respects right inset
+                  val vStrokeHalf = with(density) { uiParams.verticalLineWidthDp.toPx() } / 2f
+                 // compute left stub in px for consistent origin across strings and vertical frets
+                 val extraLeftPx = if (startFret > 1) {
+                     val desired = (leftInt.toFloat() + leftFrac) * fretSpacingPx
+                     if (enforceEqualEnds) desired else min(desired, leftInsetPx * 0.9f)
+                 } else 0f
+                 val leftBoundX = (leftInsetPx + reservedNutPx - extraLeftPx).coerceAtLeast(0f)
+                 val maxFretX = (size.width - rightInsetPx - vStrokeHalf).coerceAtLeast(leftBoundX)
+                  // draw frets for f = 0..fretCount (inclusive) so we have nut + 'fretCount' frets visible
+                 for (f in 0..fretCount + rightInt) {
+                      if (f == 0) {
+                          if (firstFretIsNut && startFret == 1) {
+                              // draw nut only when requested; limit nut height to the strings area (contentHeightPx)
+                              drawRect(Color.Black, topLeft = Offset(leftInsetPx, 0f), size = androidx.compose.ui.geometry.Size(nutPx, contentHeightPx))
+                          } else {
+                              // start at the same x-origin as other frets so thickness/height matches
+                             val x = leftBoundX
+                              drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, contentHeightPx), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                          }
+                      } else {
+                         val x = (leftBoundX + f * fretSpacingPx).coerceAtMost(maxFretX)
+                          drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, contentHeightPx), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
+                      }
+                  }
 
-                // horizontal strings — align start with nut so strings and fret positions share the same origin
-                // If diagram starts past the nut (startFret>1), extend the visible string lines a bit to the left
-                // so users see string stubs to indicate the fretboard continues left. Also draw a thin
-                // vertical fret boundary at the first visible fret to visually mark the fret edge.
-                val extraLeftPx = if (startFret > 1) {
-                    // show up to ~40% of a fret spacing as a stub, but not more than available leftInset
-                    min(fretSpacingPx * 0.4f, leftInsetPx * 0.9f)
-                } else 0f
-                val stringStartX = (leftInsetPx + nutPx - extraLeftPx).coerceAtLeast(0f)
-                val stringLineEndX = (size.width - rightInsetPx).coerceAtLeast(stringStartX)
-                // draw a thin vertical marker at the first visible fret when not showing a nut
-                if (startFret > 1) {
-                    val fretX = leftInsetPx + nutPx
-                    val segTop = contentHeightPx * 0.05f
-                    val segBottom = contentHeightPx * 0.95f
-                    drawLine(Color.Gray, start = Offset(fretX, segTop), end = Offset(fretX, segBottom), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() } )
-                }
-                for (s in 0 until stringCount) {
-                    val y = s * stringSpacingPx
-                    drawLine(Color.Gray, start = Offset(stringStartX, y), end = Offset(stringLineEndX, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
-                }
+                  // horizontal strings — align start with nut so strings and fret positions share the same origin
+                  // If diagram starts past the nut (startFret>1), extend the visible string lines a bit to the left
+                  // so users see string stubs to indicate the fretboard continues left. Also draw a thin
+                  // vertical fret boundary at the first visible fret to visually mark the fret edge.
+                 val stringStartX = leftBoundX
+                  val stringLineEndX = (size.width - rightInsetPx).coerceAtLeast(stringStartX)
+                  // No separate short marker here; f==0 above draws the full-height first visible fret.
+                  for (s in 0 until stringCount) {
+                      val y = s * stringSpacingPx
+                      drawLine(Color.Gray, start = Offset(stringStartX, y), end = Offset(stringLineEndX, y), strokeWidth = with(density) { uiParams.horizontalLineWidthDp.toPx() })
+                  }
 
                 // detect barres: contiguous runs of strings with same positive fret and same finger (>0)
                 data class Barre(val fret: Int, val finger: Int, val startIdx: Int, val endIdx: Int)
@@ -207,7 +231,7 @@ fun FretboardDiagram(
                         val endY = if (invertStrings) barre.endIdx * stringSpacingPx else (stringCount - 1 - barre.endIdx) * stringSpacingPx
                         val topY = min(startY, endY)
                         val bottomY = maxOf(startY, endY)
-                        val centerX = leftInsetPx + nutPx + (rel + 0.5f) * fretSpacingPx
+                        val centerX = leftBoundX + (rel + 0.5f) * fretSpacingPx
                         // barre rectangle dimensions
                         val padding = with(density) { 4.dp.toPx() }
                         val rectLeft = centerX - fretSpacingPx * 0.45f
@@ -233,14 +257,14 @@ fun FretboardDiagram(
                 }
 
                 positions.forEachIndexed { stringIdx, fretNum ->
-                     val y = if (invertStrings) {
-                         // treat index0 as top string
-                         stringIdx * stringSpacingPx
-                     } else {
-                         // treat index0 as lowest string
-                         (stringCount - 1 - stringIdx) * stringSpacingPx
-                     }
-                     when {
+                    val y = if (invertStrings) {
+                        // treat index0 as top string
+                        stringIdx * stringSpacingPx
+                    } else {
+                        // treat index0 as lowest string
+                        (stringCount - 1 - stringIdx) * stringSpacingPx
+                    }
+                    when {
                         fretNum > 0 -> {
                             // skip drawing single-dot markers for strings that are part of a detected barre
                             if (stringsInBarre.contains(stringIdx)) {
@@ -249,7 +273,7 @@ fun FretboardDiagram(
                                 // draw only if this fret lies within the visible window [startFret, startFret + fretCount - 1]
                                 val rel = fretNum - startFret
                                 if (rel in 0 until fretCount) {
-                                    val x = leftInsetPx + nutPx + (rel + 0.5f) * fretSpacingPx
+                                    val x = leftBoundX + (rel + 0.5f) * fretSpacingPx
                                     // marker radius derived from UI params with a minimum px size for visibility
                                     val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
                                     val minRadiusPx = with(density) { 6.dp.toPx() }
@@ -278,7 +302,7 @@ fun FretboardDiagram(
                         }
                         // Compute open marker radius first, then derive mute 'X' size so both visually match
                         fretNum == 0 -> {
-                            val x = leftInsetPx - markerOffsetPx
+                            val x = stringStartX - markerOffsetPx
                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
@@ -292,7 +316,7 @@ fun FretboardDiagram(
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val muteScale = uiParams.muteMarkerSizeFactor / openFactor
                             val muteHalf = openRadius * 0.70710677f * muteScale
-                            val x = leftInsetPx - markerOffsetPx
+                            val x = stringStartX - markerOffsetPx
                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
                             val inset = muteHalf * uiParams.muteMarkerInsetFactor
                             // draw lines from corners inside by inset to achieve balanced visual weight
@@ -304,21 +328,21 @@ fun FretboardDiagram(
                 // Draw fret labels in reserved label area below contentHeightPx
                 val textSizePx = with(density) { uiParams.fretLabelTextSp.sp.toPx() }
                 // show numeric labels for the visible frets (map canvas f index to absolute fret num)
-                for (f in 1 until fretCount) {
-                    val absoluteFret = startFret + (f - 1)
-                    val label = fretLabelProvider?.invoke(absoluteFret) ?: absoluteFret.toString()
-                    if (label.isEmpty()) continue
-                    val xLabel = (leftInsetPx + nutPx + f * fretSpacingPx).coerceAtMost(maxFretX)
-                    drawContext.canvas.nativeCanvas.apply {
-                        val paint = android.graphics.Paint().apply {
-                            color = android.graphics.Color.BLACK
-                            textSize = textSizePx
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
-                        val baseline = contentHeightPx + (labelAreaPx + (paint.descent() - paint.ascent())) / 2 - paint.descent()
-                        drawText(label, xLabel, baseline, paint)
-                    }
-                }
+                for (f in 1 until (fretCount + rightInt)) {
+                     val absoluteFret = startFret + (f - 1)
+                     val label = fretLabelProvider?.invoke(absoluteFret) ?: absoluteFret.toString()
+                     if (label.isEmpty()) continue
+                     val xLabel = (leftBoundX + f * fretSpacingPx).coerceAtMost(maxFretX)
+                     drawContext.canvas.nativeCanvas.apply {
+                         val paint = android.graphics.Paint().apply {
+                             color = android.graphics.Color.BLACK
+                             textSize = textSizePx
+                             textAlign = android.graphics.Paint.Align.CENTER
+                         }
+                         val baseline = contentHeightPx + (labelAreaPx + (paint.descent() - paint.ascent())) / 2 - paint.descent()
+                         drawText(label, xLabel, baseline, paint)
+                     }
+                 }
 
                 // No numeric badge: when startFret > 1 we show left string stubs and a thin fret boundary line only.
              }

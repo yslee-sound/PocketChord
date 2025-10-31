@@ -87,7 +87,11 @@ data class DiagramUiParams(
     // fraction of one fret spacing reserved for the final (last) fret's visible horizontal width.
     // Default 1.0 keeps the previous behavior which effectively used (fretCount + 1) spacing divisor.
     // Set to 0.5 to reserve only half a fret's width for the final fret, etc.
-    val lastFretVisibleFraction: Float = 0.3f,
+    val lastFretVisibleFraction: Float = 0.6f,
+    // fraction of one fret spacing to reserve/show of the first visible fret on the left when the diagram
+    // does not start at the nut (startFret > 1). This controls how much 'stub' of the leftmost fret is drawn.
+    // Use 0.3f to match the default right-side behavior; callers can adjust to show more or less.
+    val firstFretVisibleFraction: Float = 0.4f,
     // optional default card height (if set, used when a parent doesn't impose a finite height)
     val cardHeightDp: Dp? = null,
     // optional default/fixed diagram height (if set, diagram will use this height instead of being derived from card height)
