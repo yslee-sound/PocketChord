@@ -23,7 +23,8 @@ data class ChordEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("chordId")]
+    // make uniqueness consider both positions and fingers so variants with same positions but different fingers are allowed
+    indices = [Index(value = ["chordId", "positionsCsv", "fingersCsv"], unique = true), Index("chordId")]
 )
 data class VariantEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -43,4 +44,3 @@ data class ChordWithVariants(
     @Embedded val chord: ChordEntity,
     @Relation(parentColumn = "id", entityColumn = "chordId") val variants: List<VariantEntity>
 )
-

@@ -19,6 +19,15 @@ interface ChordDao {
     @Query("SELECT * FROM chords WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
     fun searchChords(query: String): Flow<List<ChordEntity>>
 
+    @Query("SELECT * FROM variants WHERE chordId = :chordId")
+    suspend fun getVariantsByChordId(chordId: Long): List<VariantEntity>
+
+    @Query("SELECT * FROM variants WHERE chordId = :chordId AND positionsCsv = :positionsCsv LIMIT 1")
+    suspend fun findVariantByChordIdAndPositionsCsv(chordId: Long, positionsCsv: String): VariantEntity?
+
+    @Query("SELECT * FROM variants WHERE chordId = :chordId AND positionsCsv = :positionsCsv AND COALESCE(fingersCsv, '') = COALESCE(:fingersCsv, '') LIMIT 1")
+    suspend fun findVariantByChordIdPositionsAndFingers(chordId: Long, positionsCsv: String, fingersCsv: String?): VariantEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChord(chord: ChordEntity): Long
 

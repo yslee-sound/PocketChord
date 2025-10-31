@@ -5,6 +5,9 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import com.sweetapps.pocketchord.data.importSeedFromAssets
 import androidx.compose.foundation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +19,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import android.content.pm.ApplicationInfo
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,15 +28,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.unit.isFinite
 import android.graphics.Color as AndroidColor
 import androidx.core.view.WindowCompat
-import androidx.compose.ui.platform.LocalDensity
+import androidx.core.content.edit
+import android.content.Context
+import kotlinx.coroutines.launch
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
+import androidx.compose.ui.unit.isFinite
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,10 +85,37 @@ class MainActivity : ComponentActivity() {
                             Log.d("NavDebug", "Entered route: chord_list/" + root)
                             ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                         }
+                        composable("settings") {
+                            SettingsScreen()
+                        }
                      }
                  }
              }
          }
+
+        // Seed database once on first app launch. Uses SharedPreferences to avoid duplicate runs.
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val prefs = getSharedPreferences("pocketchord_prefs", MODE_PRIVATE)
+                val seededKey = "seeded_v1"
+                val autoSeedKey = "auto_seed_enabled"
+                val alreadySeeded = prefs.getBoolean(seededKey, false)
+                val autoSeedEnabled = prefs.getBoolean(autoSeedKey, true)
+                if (!alreadySeeded && autoSeedEnabled) {
+                    val result = importSeedFromAssets(this@MainActivity, "chords_seed_template.json")
+                    if (result.errors.isEmpty()) {
+                        prefs.edit { putBoolean(seededKey, true) }
+                        Log.d("SeedImport", "Seed import completed: insertedChords=${result.insertedChords} insertedVariants=${result.insertedVariants}")
+                    } else {
+                        Log.e("SeedImport", "Seed import encountered errors: ${result.errors}")
+                    }
+                } else {
+                    Log.d("SeedImport", "Skipping import (alreadySeeded=$alreadySeeded, autoSeedEnabled=$autoSeedEnabled)")
+                }
+            } catch (e: Exception) {
+                Log.e("SeedImport", "Seed import failed", e)
+            }
+        }
      }
 }
 
@@ -202,7 +236,7 @@ fun BottomNavigationBar(navController: NavHostController) {
             icon = { Icon(Icons.Filled.Settings, contentDescription = "설정") },
             label = { Text("설정") },
             selected = false,
-            onClick = {}
+            onClick = { navController.navigate("settings") }
         )
     }
 }
@@ -483,13 +517,13 @@ fun ChordListScreen(
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                            val chordFontSize = with(LocalDensity.current) { (uiParams.nameBoxSizeDp.toPx() * uiParams.nameBoxFontScale).toSp() }
+                            val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
                             Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
                         }
                         Spacer(modifier = Modifier.weight(1f))
                     } else {
                         Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                            val chordFontSize = with(LocalDensity.current) { (uiParams.nameBoxSizeDp.toPx() * uiParams.nameBoxFontScale).toSp() }
+                            val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
                             Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
                         }
                         Spacer(modifier = Modifier.weight(1f))
@@ -579,6 +613,52 @@ fun FretboardCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = context.getSharedPreferences("pocketchord_prefs", Context.MODE_PRIVATE)
+    val initialAuto = prefs.getBoolean("auto_seed_enabled", true)
+    var autoSeed by remember { mutableStateOf(initialAuto) }
+    val summary = prefs.getString("last_seed_import_summary", "no summary") ?: "no summary"
+    val scope = rememberCoroutineScope()
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text(text = "디버그 설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(12.dp))
+        val isDebuggable = try { (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 } catch (_: Exception) { false }
+        if (!isDebuggable) {
+            Text("디버그 UI는 개발 빌드에서만 표시됩니다.")
+            return@Column
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(text = "자동 시드 임포트 사용", modifier = Modifier.weight(1f))
+            Switch(checked = autoSeed, onCheckedChange = {
+                autoSeed = it
+                prefs.edit { putBoolean("auto_seed_enabled", it) }
+            })
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "마지막 임포트 요약:")
+        Text(text = summary, fontSize = 14.sp, color = Color.Gray)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val result = importSeedFromAssets(context, "chords_seed_template.json")
+                    if (result.errors.isEmpty()) {
+                        prefs.edit { putBoolean("seeded_v1", true) }
+                    }
+                    // update summary read-back on UI thread
+                    Log.d("SeedImport", "Force seed result: insertedChords=${result.insertedChords} insertedVariants=${result.insertedVariants} skipped=${result.skippedVariants}")
+                } catch (t: Throwable) {
+                    Log.e("SeedImport", "Forced seed failed", t)
+                }
+            }
+        }) {
+            Text("강제 재시드")
         }
     }
 }
