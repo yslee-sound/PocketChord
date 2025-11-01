@@ -98,6 +98,8 @@ class MainActivity : ComponentActivity() {
                             Log.d("NavDebug", "Entered route: chord_list/$root (encoded=$encoded)")
                             ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                         }
+                        // More (더보기)
+                        composable("more") { MoreScreen() }
                         // Optional settings screen remains, but without any seeding controls
                         composable("settings") { BasicSettingsScreen() }
                      }
@@ -244,11 +246,12 @@ fun BottomNavigationBar(navController: NavHostController) {
             selected = currentRoute == "tuner",
             onClick = { navController.navigate("tuner") }
         )
+        // 변경: 즐겨찾기 → 더보기
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Star, contentDescription = "즐겨찾기") },
-            label = { Text("즐겨찾기") },
-            selected = currentRoute == "favorites", // 아직 미구현
-            onClick = { /* TODO: 즐겨찾기 구현 */ }
+            icon = { Icon(Icons.Filled.MoreHoriz, contentDescription = "더보기") },
+            label = { Text("더보기") },
+            selected = currentRoute == "more",
+            onClick = { navController.navigate("more") }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Settings, contentDescription = "설정") },
@@ -781,6 +784,21 @@ fun BasicSettingsScreen() {
         Text(text = "설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = "앱 업데이트 시 코드 데이터가 자동으로 동기화됩니다.")
+    }
+}
+
+// 간단한 더보기 화면
+@Composable
+fun MoreScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(16.dp)
+    ) {
+        Text(text = "더보기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF31455A))
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "추가 메뉴가 여기에 표시됩니다.")
     }
 }
 
