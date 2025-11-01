@@ -227,8 +227,8 @@ fun BottomNavigationBar(navController: NavHostController) {
 
     NavigationBar(containerColor = Color.Transparent) {
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Home, contentDescription = "홈") },
-            label = { Text("홈") },
+            icon = { Icon(Icons.Filled.MusicNote, contentDescription = "코드") },
+            label = { Text("코드") },
             selected = currentRoute == "home",
             onClick = { navController.navigate("home") }
         )

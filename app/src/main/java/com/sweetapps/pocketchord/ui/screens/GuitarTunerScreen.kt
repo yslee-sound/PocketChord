@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
@@ -136,7 +137,8 @@ fun GuitarTunerScreen() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header
@@ -292,8 +294,8 @@ private fun MinimalGauge(
     sweepDeg: Float = 180f,
     needleMaxDeg: Float = 60f,
     stroke: Float = 24f,
-    knobRadius: Float = 5.5f,
-    rotorSize: Dp = 34.dp,
+    knobRadius: Float = 6f,
+    rotorSize: Dp = 36.dp,
 ) {
     val needleAngle by animateFloatAsState(
         targetValue = ((cents.coerceIn(-maxCents, maxCents) / maxCents) * needleMaxDeg).toFloat(),
@@ -302,8 +304,9 @@ private fun MinimalGauge(
     )
     val displayAngle = if (isListening) needleAngle else 0f
 
-    val shaftColor = Color(0xFF7A7A72)
+    val shaftColor = Color(0xFF5F5F59)
     val hubColor = Color(0xFF8A8A80)
+    val centerTickColor = needleColor
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -321,57 +324,56 @@ private fun MinimalGauge(
                 size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
             )
 
-            // ticks: 중앙 제거, 좌/우 2개씩(±30°, ±15°), 12시 기준 회전
-            val tickAngles = listOf(-30f, -15f, 15f, 30f)
+            // ticks outside the arc
+            val arcOuter = radius + stroke / 2f
+            val tickBase = arcOuter + 6f // gap outside arc
+            val centerTickLen = 18f
+            val sideTickLen = 12f
+            val tickAngles = listOf(-30f, -15f, 0f, 15f, 30f)
             tickAngles.forEach { a ->
                 rotate(a, center) {
-                    val inner = radius * 0.82f
-                    val outer = inner + 12f
+                    val isCenter = a == 0f
+                    val startR = tickBase
+                    val endR = tickBase + if (isCenter) centerTickLen else sideTickLen
                     drawLine(
-                        color = tickColor,
-                        start = Offset(center.x, center.y - inner),
-                        end = Offset(center.x, center.y - outer),
-                        strokeWidth = 2.2f,
+                        color = if (isCenter) centerTickColor else tickColor,
+                        start = Offset(center.x, center.y - startR),
+                        end = Offset(center.x, center.y - endR),
+                        strokeWidth = if (isCenter) 3.2f else 2.2f,
                         cap = StrokeCap.Round
                     )
                 }
             }
 
-            // needle shaft (항상 표시, 12시 기준)
+            // needle shaft thicker
             rotate(displayAngle, center) {
                 val shaftEnd = radius * 0.83f
                 drawLine(
                     color = shaftColor,
                     start = center,
                     end = Offset(center.x, center.y - shaftEnd),
-                    strokeWidth = 7f,
+                    strokeWidth = 14f,
                     cap = StrokeCap.Round
                 )
             }
 
-            // top knob (12시 고정)
+            // top knob
             val top = Offset(center.x, center.y - radius)
             drawCircle(color = needleColor, radius = knobRadius, center = top)
 
-            // rotor (수평 고정)
-            val rotorW = rotorSize.toPx()
-            val bladeW = rotorW * 0.34f
-            val bladeH = rotorW * 0.22f
-            val hubR = 10f
-            val rotorY = center.y - radius * 0.02f
-            drawRoundRect(
+            // bottom foot as thick arc
+            val footR = radius * 0.26f
+            val footOffsetY = radius * 0.06f
+            drawArc(
                 color = needleColor,
-                topLeft = Offset(center.x - hubR - bladeW, rotorY - bladeH / 2f),
-                size = androidx.compose.ui.geometry.Size(bladeW, bladeH),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(bladeH / 2f, bladeH / 2f)
+                startAngle = 205f,
+                sweepAngle = 130f,
+                useCenter = false,
+                style = Stroke(width = 18f, cap = StrokeCap.Round),
+                topLeft = Offset(center.x - footR, center.y - footR + footOffsetY),
+                size = androidx.compose.ui.geometry.Size(footR * 2, footR * 2)
             )
-            drawRoundRect(
-                color = needleColor,
-                topLeft = Offset(center.x + hubR, rotorY - bladeH / 2f),
-                size = androidx.compose.ui.geometry.Size(bladeW, bladeH),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(bladeH / 2f, bladeH / 2f)
-            )
-            drawCircle(color = hubColor, radius = hubR, center = Offset(center.x, rotorY))
+            drawCircle(color = hubColor, radius = 10f, center = center)
         }
     }
 }
