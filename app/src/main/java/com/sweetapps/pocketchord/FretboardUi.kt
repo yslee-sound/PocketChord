@@ -374,13 +374,13 @@ fun FretboardDiagram(
                 }
                 // Draw fret labels in reserved label area below contentHeightPx
                 val textSizePx = with(density) { uiParams.fretLabelTextSp.sp.toPx() }
-                // show numeric labels for the visible frets (map canvas f index to absolute fret num)
+                // show numeric labels for interior frets; always hide the last vertical fret label
                 for (f in 1 until baseFrets + 1) {
                      val absoluteFret = startFret + (f - 1)
                      val label = fretLabelProvider?.invoke(absoluteFret) ?: absoluteFret.toString()
                      if (label.isEmpty()) continue
-                     // If the diagram starts at a fret (no nut) we omit the first and last fret numeric labels (per request)
-                     if (startFret > 1 && (f == 1 || f == baseFrets)) continue
+                     // Hide the last label in all formats so only interior fret numbers are shown.
+                     if (f == baseFrets) continue
                      // place label at the vertical fret line for this label (same as earlier behavior)
                      val xLabel = (leftBoundX + f * fretSpacingPx).coerceAtMost(maxFretX)
                       drawContext.canvas.nativeCanvas.apply {

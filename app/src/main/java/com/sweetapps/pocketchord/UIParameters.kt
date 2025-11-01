@@ -88,7 +88,7 @@ data class DiagramUiParams(
     // UNIFIED visible window controls
     // total number of frets to show across the entire diagram (integer + fractional part)
     // Example: 5.0f -> show exactly 5 frets; 4.5f -> show 4.5 frets in total.
-    val totalVisibleFrets: Float = 4.6f,
+    val totalVisibleFrets: Float = 4.5f,
     // how much of the left side fractional part to allocate to the left edge when the diagram starts at the nut
     // Typical charts show no left stub with a nut, so default is 0f.
     val leftFractionWhenNutStart: Float = 0f,
