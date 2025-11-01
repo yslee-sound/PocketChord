@@ -31,6 +31,9 @@ private fun yForSeedIndex(seedIdx: Int, stringSpacingPx: Float, invertStrings: B
 }
 // -----------------------------------------
 
+// 바레 명시 스펙 (씨드/DB와 연결): 줄 번호는 1(위)~6(아래)
+data class ExplicitBarre(val fret: Int, val finger: Int, val fromString: Int, val toString: Int)
+
 // 다이어그램 관련 컴포저블 정리 파일
 
 @Composable
@@ -67,6 +70,8 @@ fun FretboardDiagram(
     fretCount: Int = 4,
     // when true, positions index 0 is treated as the top string (string 1), otherwise index 0 = lowest string
     invertStrings: Boolean = false,
+    // explicit barre specification from seed/DB; when provided, overrides auto detection
+    explicitBarres: List<ExplicitBarre>? = null,
     // optional provider so callers (DB) can supply custom labels per fret index. Return null to skip.
     fretLabelProvider: ((Int) -> String?)? = null
     ,
@@ -257,6 +262,17 @@ fun FretboardDiagram(
                 // TODO: Thread VariantEntity.barresJson into this composable through a parameter and parse it here.
                 // Schema: [{"fret":3, "finger":1, "fromString":1, "toString":5}] with string numbers 1..6 (top=1).
                  val barres = if (uiParams.drawBarreAsRectangle) {
+                     // 1) use explicit barres when provided
+                     val explicitConverted: List<Barre>? = explicitBarres?.mapNotNull { b ->
+                         try {
+                             val startIdx = (6 - b.fromString).coerceIn(0, 5)
+                             val endIdx = (6 - b.toString).coerceIn(0, 5)
+                             Barre(b.fret, b.finger, startIdx, endIdx)
+                         } catch (_: Exception) { null }
+                     }
+                     if (!explicitConverted.isNullOrEmpty()) {
+                         explicitConverted
+                     } else {
                      // collect indices per (fret,finger)
                      val groups = mutableMapOf<Pair<Int,Int>, MutableList<Int>>()
                      for (i in positions.indices) {
@@ -291,6 +307,7 @@ fun FretboardDiagram(
                          }
                       }
                       list
+                     }
                   } else emptyList()
 
                 // Always draw single-dot markers; do not suppress markers under a barre rectangle
@@ -441,6 +458,8 @@ fun FretboardDiagram(
     fretCount: Int = 4,
     // when true, positions index 0 is treated as the top string (string 1), otherwise index 0 = lowest string
     invertStrings: Boolean = false,
+    // explicit barres from variant; when provided, overrides auto detection
+    explicitBarres: List<ExplicitBarre>? = null,
     // optional provider so callers (DB) can supply custom labels per fret index. Return null to skip.
     fretLabelProvider: ((Int) -> String?)? = null
  ) {
@@ -457,6 +476,7 @@ fun FretboardDiagram(
          diagramHeight = diagramHeight,
          fretCount = fretCount,
          invertStrings = invertStrings,
+         explicitBarres = explicitBarres,
          fretLabelProvider = fretLabelProvider,
          useCardPadding = false,
          drawBackground = false

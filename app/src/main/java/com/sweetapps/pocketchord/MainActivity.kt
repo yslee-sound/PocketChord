@@ -422,8 +422,25 @@ fun parseCsvToPositions(csv: String): List<Int> {
     return if (firstHalfMutes > secondHalfMutes) parts.reversed() else parts
 }
 
-fun formatPositionsForLabel(positions: List<Int>): String {
-    return positions.joinToString(" ") { if (it == -1) "x" else it.toString() }
+// helper: parse barresJson (seed/DB) into ExplicitBarre list
+fun parseBarresJson(json: String?): List<ExplicitBarre>? {
+    if (json.isNullOrBlank()) return null
+    return try {
+        val arr = org.json.JSONArray(json)
+        val list = mutableListOf<ExplicitBarre>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val fret = o.optInt("fret", 0)
+            val finger = o.optInt("finger", 0)
+            var fromS = o.optInt("fromString", 0)
+            var toS = o.optInt("toString", 0)
+            if (fret > 0 && finger > 0 && fromS in 1..6 && toS in 1..6) {
+                if (fromS > toS) { val tmp = fromS; fromS = toS; toS = tmp }
+                list.add(ExplicitBarre(fret, finger, fromS, toS))
+            }
+        }
+        if (list.isEmpty()) null else list
+    } catch (_: Throwable) { null }
 }
 
 // Build grouped sections for a given root according to requested order
@@ -576,7 +593,8 @@ fun ChordListScreen(
                      ) {
                          if (uiParams.diagramAnchor == DiagramAnchor.Left) {
                              Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
+                                 val explicitBarres = parseBarresJson(firstVar?.barresJson)
+                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false, explicitBarres = explicitBarres)
                              }
                              Spacer(modifier = Modifier.width(16.dp))
                              Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
@@ -591,7 +609,8 @@ fun ChordListScreen(
                              }
                              Spacer(modifier = Modifier.width(16.dp))
                              Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
+                                 val explicitBarres = parseBarresJson(firstVar?.barresJson)
+                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false, explicitBarres = explicitBarres)
                              }
                              Spacer(modifier = Modifier.weight(1f))
                          }
