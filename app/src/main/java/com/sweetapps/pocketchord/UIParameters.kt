@@ -88,13 +88,13 @@ data class DiagramUiParams(
     // UNIFIED visible window controls
     // total number of frets to show across the entire diagram (integer + fractional part)
     // Example: 5.0f -> show exactly 5 frets; 4.5f -> show 4.5 frets in total.
-    val totalVisibleFrets: Float = 5.0f,
+    val totalVisibleFrets: Float = 4.6f,
     // how much of the left side fractional part to allocate to the left edge when the diagram starts at the nut
     // Typical charts show no left stub with a nut, so default is 0f.
     val leftFractionWhenNutStart: Float = 0f,
     // how much of the left side fractional part to allocate to the left edge when the diagram starts at a fret (no nut)
     // Default 0.3f gives a small stub on the left and the remainder of the fractional part goes to the right.
-    val leftFractionWhenFretStart: Float = 0.4f,
+    val leftFractionWhenFretStart: Float = 0.2f,
 
     // Legacy knobs (kept for compatibility; ignored when totalVisibleFrets is used by drawing logic)
     // fraction to reserve/show of the first visible fret on the left when not starting at nut.
@@ -168,8 +168,6 @@ fun defaultDiagramUiParams(): DiagramUiParams = DiagramUiParams(
     // Use a larger default max width and set default height derived from DEFAULT_DIAGRAM_BASE_DP
     diagramMaxWidthDp = 320.dp,
     diagramHeightDp = DEFAULT_DIAGRAM_HEIGHT_DP,
-    // Explicitly ensure fret-start left fraction defaults for the app
-    leftFractionWhenFretStart = 0.4f,
     // keep legacy prefs aligned
     firstFretVisibleFraction = 0.4f,
     lastFretVisibleFraction = 0.6f

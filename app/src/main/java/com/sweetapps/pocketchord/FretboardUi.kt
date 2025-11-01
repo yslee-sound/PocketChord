@@ -194,16 +194,16 @@ fun FretboardDiagram(
                         drawLine(Color.Gray, start = Offset(x, 0f), end = Offset(x, contentHeightPx), strokeWidth = with(density) { uiParams.verticalLineWidthDp.toPx() })
                     }
                 }
-                // draw left fractional stub line (partial first fret) when diagram starts at a fret
-                if (startFret > 1 && leftFrac > 1e-6f) {
+                // draw left fractional stub line (partial first fret) only in debug overlay; spacing still respects leftFrac
+                if (uiParams.debugOverlay && startFret > 1 && leftFrac > 1e-6f) {
                     val stubXClamped = leftStubX.coerceAtLeast(leftInsetPx)
                     // Only draw if stub is distinct from the first full fret line
                     if (kotlin.math.abs(stubXClamped - leftBoundX) > 1f) {
                         drawLine(Color.LightGray, start = Offset(stubXClamped, 0f), end = Offset(stubXClamped, contentHeightPx), strokeWidth = with(density) { (uiParams.verticalLineWidthDp.toPx() * 0.8f).coerceAtLeast(0.5f) })
                     }
                 }
-                // draw an extra vertical boundary at the fractional right edge so partial last fret is visible
-                if (rightFrac > 1e-6f) {
+                // draw an extra vertical boundary at the fractional right edge only in debug overlay; spacing still respects rightFrac
+                if (uiParams.debugOverlay && rightFrac > 1e-6f) {
                     val rightEdgeX = leftBoundX + (baseFrets + rightFrac) * fretSpacingPx
                     val rightEdgeClamped = min(size.width - rightInsetPx, rightEdgeX)
                      // only draw if sufficiently different from the last full fret line
