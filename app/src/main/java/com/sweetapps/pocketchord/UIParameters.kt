@@ -84,14 +84,25 @@ data class DiagramUiParams(
     // optional maximum width to cap the diagram's width. If null, no explicit cap is applied.
     // Set to null by default so callers can opt-in; DefaultDiagramUiParams below provides a sane app-wide default.
     val diagramMaxWidthDp: Dp? = null,
-    // fraction of one fret spacing reserved for the final (last) fret's visible horizontal width.
-    // Default 1.0 keeps the previous behavior which effectively used (fretCount + 1) spacing divisor.
-    // Set to 0.5 to reserve only half a fret's width for the final fret, etc.
-    val lastFretVisibleFraction: Float = 0.6f,
-    // fraction of one fret spacing to reserve/show of the first visible fret on the left when the diagram
-    // does not start at the nut (startFret > 1). This controls how much 'stub' of the leftmost fret is drawn.
-    // Use 0.3f to match the default right-side behavior; callers can adjust to show more or less.
+
+    // UNIFIED visible window controls
+    // total number of frets to show across the entire diagram (integer + fractional part)
+    // Example: 5.0f -> show exactly 5 frets; 4.5f -> show 4.5 frets in total.
+    val totalVisibleFrets: Float = 5.0f,
+    // how much of the left side fractional part to allocate to the left edge when the diagram starts at the nut
+    // Typical charts show no left stub with a nut, so default is 0f.
+    val leftFractionWhenNutStart: Float = 0f,
+    // how much of the left side fractional part to allocate to the left edge when the diagram starts at a fret (no nut)
+    // Default 0.3f gives a small stub on the left and the remainder of the fractional part goes to the right.
+    val leftFractionWhenFretStart: Float = 0.4f,
+
+    // Legacy knobs (kept for compatibility; ignored when totalVisibleFrets is used by drawing logic)
+    // fraction to reserve/show of the first visible fret on the left when not starting at nut.
     val firstFretVisibleFraction: Float = 0.4f,
+    // fraction of one fret spacing reserved for the final (last) fret's visible horizontal width.
+    val lastFretVisibleFraction: Float = 0.6f,
+
+
     // optional default card height (if set, used when a parent doesn't impose a finite height)
     val cardHeightDp: Dp? = null,
     // optional default/fixed diagram height (if set, diagram will use this height instead of being derived from card height)
@@ -104,7 +115,50 @@ data class DiagramUiParams(
     val nameBoxFontScale: Float = DEFAULT_NAME_BOX_FONT_SCALE,
     // anchor to position the diagram inside its available container. Use DefaultDiagramUiParams to set app-wide default.
     val diagramAnchor: DiagramAnchor = DiagramAnchor.Right,
-)
+    // when true, show debug overlay text on the canvas (defaults false so previews are clean)
+    val debugOverlay: Boolean = false,
+ ) {
+    // Helper to split totalVisibleFrets into integer and left/right fractional parts according to start mode
+    data class VisibleWindow(val intFrets: Int, val leftFrac: Float, val rightFrac: Float, val total: Float)
+    fun visibleWindow(firstFretIsNut: Boolean): VisibleWindow {
+        val total = totalVisibleFrets.coerceAtLeast(0f)
+        val intPart = kotlin.math.floor(total).toInt()
+        val frac = total - intPart
+        if (frac > 0f) {
+            // Normal case: distribute the fractional part to the left (up to desired) and the remainder to the right
+            val desiredLeft = if (firstFretIsNut) leftFractionWhenNutStart else leftFractionWhenFretStart
+            val left = kotlin.math.min(frac, desiredLeft.coerceIn(0f, 1f))
+            val right = (frac - left).coerceIn(0f, 1f)
+            return VisibleWindow(intFrets = intPart, leftFrac = left, rightFrac = right, total = total)
+        } else {
+            // Edge case: total is an integer. For nut-start, keep no fractional edges by default.
+            if (firstFretIsNut) {
+                return VisibleWindow(intFrets = intPart, leftFrac = 0f, rightFrac = 0f, total = total)
+            }
+            // Fret-start: prefer explicit leftFractionWhenFretStart when configured (so integer totals like 5.0
+            // respect the user's left/right split). If not set, fall back to legacy first/last prefs.
+            val desiredLeft = leftFractionWhenFretStart.coerceIn(0f, 1f)
+            if (desiredLeft > 1e-6f) {
+                val left = desiredLeft
+                val right = (1f - left).coerceIn(0f, 1f)
+                val base = (intPart - 1).coerceAtLeast(0)
+                return VisibleWindow(intFrets = base, leftFrac = left, rightFrac = right, total = total)
+            }
+            // Fallback: use legacy prefs normalized
+            val lPref = firstFretVisibleFraction.coerceAtLeast(0f)
+            val rPref = lastFretVisibleFraction.coerceAtLeast(0f)
+            val sum = lPref + rPref
+            return if (sum <= 1e-6f) {
+                VisibleWindow(intFrets = intPart, leftFrac = 0f, rightFrac = 0f, total = total)
+            } else {
+                val left = (lPref / sum).coerceIn(0f, 1f)
+                val right = (rPref / sum).coerceIn(0f, 1f)
+                val base = (intPart - 1).coerceAtLeast(0)
+                VisibleWindow(intFrets = base, leftFrac = left, rightFrac = right, total = total)
+            }
+        }
+    }
+}
 
 // Provide a function to create the app-wide default DiagramUiParams. Using a function ensures
 // changes to the underlying DEFAULT_DIAGRAM_BASE_DP are re-evaluated in Previews and at runtime.
@@ -113,7 +167,12 @@ fun defaultDiagramUiParams(): DiagramUiParams = DiagramUiParams(
     diagramRightInsetDp = 16.dp,
     // Use a larger default max width and set default height derived from DEFAULT_DIAGRAM_BASE_DP
     diagramMaxWidthDp = 320.dp,
-    diagramHeightDp = DEFAULT_DIAGRAM_HEIGHT_DP
+    diagramHeightDp = DEFAULT_DIAGRAM_HEIGHT_DP,
+    // Explicitly ensure fret-start left fraction defaults for the app
+    leftFractionWhenFretStart = 0.4f,
+    // keep legacy prefs aligned
+    firstFretVisibleFraction = 0.4f,
+    lastFretVisibleFraction = 0.6f
 )
 
 // Note: Keep only the Pixel 7 Pro preview so project preview list is minimal and matches the AVD used by the user.
@@ -131,7 +190,7 @@ fun Preview_Fretboard_Samples() {
         // Recreate the list-row layout used in ChordListScreen so Preview matches runtime.
         // Use top padding similar to runtime LazyColumn content (24.dp vertical content padding + item top margin)
         Column(modifier = Modifier.padding(top = 24.dp, start = 12.dp, end = 12.dp)) {
-            val uiParams = defaultDiagramUiParams()
+            val uiParams = defaultDiagramUiParams().copy(debugOverlay = false)
             // Use seed-derived sample data so Preview matches the app's DB-driven diagrams
             val samples = listOf(
                 // C: positions [-1,3,2,0,1,0], fingers [0,3,2,0,1,0]
@@ -161,7 +220,9 @@ fun Preview_Fretboard_Samples() {
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                        FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = positions, fingers = fingers, firstFretIsNut = if (name == "Cm") false else true, invertStrings = false)
+                        // Enable debug overlay only for Cm in preview so we can inspect its layout
+                        val perSampleParams = uiParams.copy(debugOverlay = (name == "Cm"))
+                        FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = perSampleParams, positions = positions, fingers = fingers, firstFretIsNut = if (name == "Cm") false else true, invertStrings = false)
                     }
                     Spacer(modifier = Modifier.weight(1f))
                 }
