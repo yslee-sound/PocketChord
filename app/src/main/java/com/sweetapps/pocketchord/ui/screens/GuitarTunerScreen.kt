@@ -13,7 +13,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -141,47 +140,14 @@ fun GuitarTunerScreen() {
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header
+                // Header restored: icon + title
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.MusicNote, contentDescription = null, tint = textPrimary)
                     Spacer(Modifier.width(8.dp))
                     Text("기타 튜너", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                 }
-                Spacer(Modifier.height(6.dp))
-                Text("기타 줄을 선택하고 튜닝하세요", color = textSecondary, fontSize = 14.sp)
 
                 Spacer(Modifier.height(18.dp))
-
-                // String selection chips (single row; scroll if small width)
-                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-                    Text("기타 줄 선택", color = textPrimary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        val items = listOf("E2","A2","D3","G3","B3","E4")
-                        val freqs = listOf(82.41,110.0,146.83,196.0,246.94,329.63)
-                        val names = listOf("6번줄","5번줄","4번줄","3번줄","2번줄","1번줄")
-                        items.forEachIndexed { idx, n ->
-                            val gs = GuitarString(names[idx], freqs[idx], n)
-                            val selected = selectedString == gs
-                            TunerChip(
-                                label = n.takeWhile { it.isLetter() }.uppercase(),
-                                sub = n,
-                                selected = selected,
-                                onClick = { selectedString = gs },
-                                selectedColor = chipSelected,
-                                borderColor = chipBorder,
-                                textColor = textPrimary,
-                                secondaryTextColor = textSecondary
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
 
                 // Big note + freq
                 val bigNote = selectedString.note.takeWhile { it.isLetter() }.uppercase()

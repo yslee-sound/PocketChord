@@ -119,38 +119,79 @@ fun MainScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFF6F8FB))
             .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
         TopBar()
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = "코드를 선택하세요",
             fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF31455A)
+            fontWeight = FontWeight.ExtraBold,
+            color = Color(0xFF1F2D3D)
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         ChordGrid(navController)
     }
 }
 
 @Composable
 fun TopBar() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(id = android.R.drawable.ic_media_play), // 임시 아이콘
-            contentDescription = null,
-            tint = Color(0xFF31455A),
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "PocketChord",
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            color = Color(0xFF31455A)
-        )
+    // Branded card-like header similar to the mock
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Purple circular badge with play icon
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color(0xFF6F4EF6), shape = RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "PocketChord",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 20.sp,
+                color = Color(0xFF1F2D3D)
+            )
+        }
+    }
+}
+
+@Composable
+fun ChordButton(chord: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.aspectRatio(1f),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = chord,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                color = Color(0xFF2F3B52)
+            )
+        }
     }
 }
 
@@ -201,24 +242,6 @@ fun ChordGrid(navController: NavHostController) {
             }
             Spacer(modifier = Modifier.height(20.dp))
         }
-    }
-}
-
-@Composable
-fun ChordButton(chord: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .aspectRatio(1f)
-            .background(Color.White, RoundedCornerShape(20.dp))
-            .padding(8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = chord,
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            color = Color(0xFF31455A)
-        )
     }
 }
 
