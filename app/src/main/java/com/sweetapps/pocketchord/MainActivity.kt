@@ -61,10 +61,6 @@ import androidx.compose.ui.draw.scale
 // Ads
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.admanager.AdManagerAdRequest
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.AdListener
-import com.google.android.gms.ads.admanager.AdManagerAdView
 import com.google.android.gms.ads.AdSize
 import androidx.compose.ui.viewinterop.AndroidView
 
@@ -146,7 +142,7 @@ fun TopBannerAd() {
                 .fillMaxWidth()
                 .wrapContentHeight()
         )
-        Divider(color = Color(0x1A000000))
+        HorizontalDivider(color = Color(0x1A000000))
     }
 }
 
@@ -335,7 +331,7 @@ fun BottomNavigationBar(navController: NavHostController) {
             .background(Color.White)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
     ) {
-        Divider(color = Color(0x1A000000))
+        HorizontalDivider(color = Color(0x1A000000))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
