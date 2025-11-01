@@ -286,26 +286,55 @@ fun FretboardDiagram(
                      groups.forEach { (fk, idxList) ->
                          val (fret, finger) = fk
                          if (idxList.size < 2) return@forEach
-                         // sort and split into contiguous runs (index difference == 1). A mute or any other finger/fret in-between
-                         // will break contiguity because its index is not present in idxList.
-                         val sorted = idxList.sorted()
-                         var i = 0
-                         while (i < sorted.size) {
-                             val runStart = sorted[i]
-                             var runEnd = runStart
-                             var j = i + 1
-                             while (j < sorted.size && sorted[j] == runEnd + 1) {
-                                 // also break if we encounter a mute just in case (robustness)
-                                 if (positions[sorted[j]] == -1) break
-                                 runEnd = sorted[j]
-                                 j++
-                             }
-                             if (runEnd - runStart + 1 >= 2) {
-                                 list.add(Barre(fret = fret, finger = finger, startIdx = runStart, endIdx = runEnd))
-                             }
-                             i = j
+                         // New rule: start at the highest-numbered string where this (fret,finger) appears
+                         // (internal index: 0=6번줄, ... ,5=1번줄) and extend toward 1번줄 until just before a muted string.
+                         val sorted = idxList.sorted() // ascending: 0..5
+                         val startIdx = sorted.first()
+                         // find first mute index after startIdx, if any
+                         var stopIdxExclusive = positions.indexOfFirst { it == -1 }
+                         // if there's a mute but it is before startIdx, ignore it; we only care mutes after start
+                         if (stopIdxExclusive <= startIdx) stopIdxExclusive = -1
+                         val endIdx = if (stopIdxExclusive >= 0) (stopIdxExclusive - 1).coerceAtMost(5) else 5
+                         if (endIdx - startIdx + 1 >= 2) {
+                             list.add(Barre(fret = fret, finger = finger, startIdx = startIdx, endIdx = endIdx))
                          }
                       }
+                     // Fallback: if no barre found yet, detect by fret only (ignore finger) and choose dominant finger
+                     if (list.isEmpty()) {
+                         val byFret = mutableMapOf<Int, MutableList<Int>>()
+                         for (i in positions.indices) {
+                             val f = positions[i]
+                             if (f > 0) byFret.getOrPut(f) { mutableListOf() }.add(i)
+                         }
+                         byFret.forEach { (fret, idxs) ->
+                             if (idxs.size < 2) return@forEach
+                             val sorted = idxs.sorted()
+                             var i = 0
+                             while (i < sorted.size) {
+                                 var runStart = sorted[i]
+                                 var runEnd = runStart
+                                 var j = i + 1
+                                 while (j < sorted.size && sorted[j] == runEnd + 1) {
+                                     // stop run if a muted string appears between
+                                     if (positions[runEnd + 1] == -1) break
+                                     runEnd = sorted[j]
+                                     j++
+                                 }
+                                 val runLen = runEnd - runStart + 1
+                                 if (runLen >= 2) {
+                                     // pick majority finger on the run; default to 1 if none present
+                                     val fingerCounts = mutableMapOf<Int, Int>()
+                                     for (k in runStart..runEnd) {
+                                         val fn = fingers?.getOrNull(k) ?: 0
+                                         if (fn > 0) fingerCounts[fn] = (fingerCounts[fn] ?: 0) + 1
+                                     }
+                                     val chosenFinger = fingerCounts.maxByOrNull { it.value }?.key ?: 1
+                                     list.add(Barre(fret = fret, finger = chosenFinger, startIdx = runStart, endIdx = runEnd))
+                                 }
+                                 i = j
+                             }
+                         }
+                     }
                       list
                      }
                   } else emptyList()

@@ -543,7 +543,9 @@ fun ChordListScreen(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "총 ${chordWithVariants.size}개", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp))
+        // Show total number of diagram rows = total variant count
+        val totalVariants = chordWithVariants.sumOf { it.variants.size }
+        Text(text = "총 ${totalVariants}개", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp))
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -564,57 +566,71 @@ fun ChordListScreen(
                         modifier = Modifier.padding(start = 16.dp, bottom = 6.dp, top = 8.dp)
                     )
                 }
-                items(section.items, key = { it.chord.id }) { cwv ->
-                     val chordName = cwv.chord.name
-                     val firstVar = cwv.variants.firstOrNull()
-                     // VariantEntity stores CSV strings for positions/fingers
-                     val positions = firstVar?.positionsCsv?.let { parseCsvToPositions(it) } ?: List(6) { -1 }
-                     val fingers = firstVar?.fingersCsv?.let { parseCsvToPositions(it) } ?: List(6) { 0 }
-                     // debug: log CSV and parsed lists to verify ordering
-                     try {
-                         Log.d("ChordDiag", "chord=$chordName csvPositions=${firstVar?.positionsCsv} parsedPositions=$positions csvFingers=${firstVar?.fingersCsv} parsedFingers=$fingers")
-                     } catch (_: Exception) {}
+                // Show every variant as an individual row so chords with multiple shapes (e.g., C) appear multiple times
+                items(
+                    items = section.items.flatMap { cwv -> cwv.variants.map { v -> cwv to v } },
+                    key = { pair -> pair.second.id }
+                ) { pair ->
+                    val cwv = pair.first
+                    val variant = pair.second
+                    val chordName = cwv.chord.name
+                    val positions = variant.positionsCsv.let { parseCsvToPositions(it) }
+                    val fingers = variant.fingersCsv?.let { parseCsvToPositions(it) } ?: List(6) { 0 }
+                    // debug log
+                    try {
+                        Log.d("ChordDiag", "chord=$chordName csvPositions=${variant.positionsCsv} parsedPositions=$positions csvFingers=${variant.fingersCsv} parsedFingers=$fingers")
+                    } catch (_: Exception) {}
 
-                      // Plain list row (no outer card). Left: orange square showing chord name.
-                     // Right: fret diagram shown without border/background.
-                     // Use parsed positions/fingers lists (internal format: index0 = lowest string)
-                     val internalPositions = positions
-                     val internalFingers = fingers
-
-                     val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
-                     val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
-                     val itemHeight = maxOf(uiParams.nameBoxSizeDp, diagramHeightForList)
-                     Row(
-                         modifier = Modifier
-                             .fillMaxWidth()
-                             .height(itemHeight)
-                             .padding(horizontal = 12.dp, vertical = 8.dp),
-                         verticalAlignment = Alignment.Top
-                     ) {
-                         if (uiParams.diagramAnchor == DiagramAnchor.Left) {
-                             Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                                 val explicitBarres = parseBarresJson(firstVar?.barresJson)
-                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false, explicitBarres = explicitBarres)
-                             }
-                             Spacer(modifier = Modifier.width(16.dp))
-                             Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                                 val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
-                                 Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
-                             }
-                             Spacer(modifier = Modifier.weight(1f))
-                         } else {
-                             Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                                 val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
-                                 Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
-                             }
-                             Spacer(modifier = Modifier.width(16.dp))
-                             Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                                 val explicitBarres = parseBarresJson(firstVar?.barresJson)
-                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false, explicitBarres = explicitBarres)
-                             }
-                             Spacer(modifier = Modifier.weight(1f))
-                         }
-                     }
+                    val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
+                    val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
+                    val itemHeight = maxOf(uiParams.nameBoxSizeDp, diagramHeightForList)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(itemHeight)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        if (uiParams.diagramAnchor == DiagramAnchor.Left) {
+                            Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
+                                val explicitBarres = parseBarresJson(variant.barresJson)
+                                FretboardDiagramOnly(
+                                    modifier = Modifier.fillMaxSize(),
+                                    uiParams = uiParams,
+                                    positions = positions,
+                                    fingers = fingers,
+                                    firstFretIsNut = variant.firstFretIsNut,
+                                    invertStrings = false,
+                                    explicitBarres = explicitBarres
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                                val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
+                                Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                        } else {
+                            Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                                val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
+                                Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
+                                val explicitBarres = parseBarresJson(variant.barresJson)
+                                FretboardDiagramOnly(
+                                    modifier = Modifier.fillMaxSize(),
+                                    uiParams = uiParams,
+                                    positions = positions,
+                                    fingers = fingers,
+                                    firstFretIsNut = variant.firstFretIsNut,
+                                    invertStrings = false,
+                                    explicitBarres = explicitBarres
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
          }
