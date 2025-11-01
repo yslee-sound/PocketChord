@@ -426,6 +426,35 @@ fun formatPositionsForLabel(positions: List<Int>): String {
     return positions.joinToString(" ") { if (it == -1) "x" else it.toString() }
 }
 
+// Build grouped sections for a given root according to requested order
+private data class ChordSection(val title: String, val items: List<com.sweetapps.pocketchord.data.ChordWithVariants>)
+private fun buildChordSectionsForRoot(root: String, all: List<com.sweetapps.pocketchord.data.ChordWithVariants>): List<ChordSection> {
+    // Templates expressed for root C; replace leading 'C' with the actual root
+    val groups = listOf(
+        "Major" to listOf("C", "Cadd9", "CM7", "CM7(9)", "C6", "C6(9)"),
+        "minor" to listOf("Cm", "Cm7", "Cm7(9)", "Cm7(11)", "Cm6", "CmM7", "Cm7(b5)", "Cdim7"),
+        "7th" to listOf("C7", "C7(9)", "C7(13)", "C7(b5)", "Csus4", "C7sus4", "Caug", "C7aug")
+    )
+    fun toName(template: String): String = if (template.startsWith("C")) root + template.removePrefix("C") else template
+    val byName = all.associateBy { it.chord.name }
+    val used = mutableSetOf<Long>()
+    val sections = mutableListOf<ChordSection>()
+    for ((title, templates) in groups) {
+        val names = templates.map(::toName)
+        val items = names.mapNotNull { nm ->
+            val m = byName[nm]
+            if (m != null) {
+                used.add(m.chord.id); m
+            } else null
+        }
+        if (items.isNotEmpty()) sections.add(ChordSection(title, items))
+    }
+    // Remaining chords not covered above → 기타(이름순)
+    val others = all.filter { used.contains(it.chord.id).not() }.sortedBy { it.chord.name }
+    if (others.isNotEmpty()) sections.add(ChordSection("기타", others))
+    return sections
+}
+
 @Composable
 fun ChordListScreen(
     navController: NavHostController,
@@ -501,65 +530,76 @@ fun ChordListScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // List of chords
-        // Increase spacing so only ~3 items appear on typical phone screens while keeping item sizes unchanged.
+        // 섹션별 리스트
+        val sections = remember(chordWithVariants, root) { buildChordSectionsForRoot(root, chordWithVariants) }
         LazyColumn(
-             modifier = Modifier.fillMaxSize(),
-             contentPadding = PaddingValues(vertical = 24.dp),
-             verticalArrangement = Arrangement.spacedBy(DEFAULT_LIST_ITEM_SPACING_DP)
-         ) {
-            items(chordWithVariants) { cwv ->
-                val chordName = cwv.chord.name
-                val firstVar = cwv.variants.firstOrNull()
-                // VariantEntity stores CSV strings for positions/fingers
-                val positions = firstVar?.positionsCsv?.let { parseCsvToPositions(it) } ?: List(6) { -1 }
-                val fingers = firstVar?.fingersCsv?.let { parseCsvToPositions(it) } ?: List(6) { 0 }
-                // debug: log CSV and parsed lists to verify ordering
-                try {
-                    Log.d("ChordDiag", "chord=$chordName csvPositions=${firstVar?.positionsCsv} parsedPositions=$positions csvFingers=${firstVar?.fingersCsv} parsedFingers=$fingers")
-                } catch (_: Exception) {}
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(DEFAULT_LIST_ITEM_SPACING_DP)
+        ) {
+            sections.forEach { section ->
+                item(key = "header_${section.title}") {
+                    Text(
+                        text = section.title,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp,
+                        color = Color(0xFF31455A),
+                        modifier = Modifier.padding(start = 16.dp, bottom = 6.dp, top = 8.dp)
+                    )
+                }
+                items(section.items, key = { it.chord.id }) { cwv ->
+                     val chordName = cwv.chord.name
+                     val firstVar = cwv.variants.firstOrNull()
+                     // VariantEntity stores CSV strings for positions/fingers
+                     val positions = firstVar?.positionsCsv?.let { parseCsvToPositions(it) } ?: List(6) { -1 }
+                     val fingers = firstVar?.fingersCsv?.let { parseCsvToPositions(it) } ?: List(6) { 0 }
+                     // debug: log CSV and parsed lists to verify ordering
+                     try {
+                         Log.d("ChordDiag", "chord=$chordName csvPositions=${firstVar?.positionsCsv} parsedPositions=$positions csvFingers=${firstVar?.fingersCsv} parsedFingers=$fingers")
+                     } catch (_: Exception) {}
 
-                 // Plain list row (no outer card). Left: orange square showing chord name.
-                // Right: fret diagram shown without border/background.
-                // Use parsed positions/fingers lists (internal format: index0 = lowest string)
-                val internalPositions = positions
-                val internalFingers = fingers
+                      // Plain list row (no outer card). Left: orange square showing chord name.
+                     // Right: fret diagram shown without border/background.
+                     // Use parsed positions/fingers lists (internal format: index0 = lowest string)
+                     val internalPositions = positions
+                     val internalFingers = fingers
 
-                val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
-                val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
-                val itemHeight = maxOf(uiParams.nameBoxSizeDp, diagramHeightForList)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(itemHeight)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    if (uiParams.diagramAnchor == DiagramAnchor.Left) {
-                        Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                            val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
-                            Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                    } else {
-                        Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                            val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
-                            Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                            FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                     val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
+                     val diagramHeightForList = uiParams.diagramHeightDp ?: uiParams.diagramMinHeightDp
+                     val itemHeight = maxOf(uiParams.nameBoxSizeDp, diagramHeightForList)
+                     Row(
+                         modifier = Modifier
+                             .fillMaxWidth()
+                             .height(itemHeight)
+                             .padding(horizontal = 12.dp, vertical = 8.dp),
+                         verticalAlignment = Alignment.Top
+                     ) {
+                         if (uiParams.diagramAnchor == DiagramAnchor.Left) {
+                             Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
+                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
+                             }
+                             Spacer(modifier = Modifier.width(16.dp))
+                             Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                                 val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
+                                 Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
+                             }
+                             Spacer(modifier = Modifier.weight(1f))
+                         } else {
+                             Box(modifier = Modifier.size(uiParams.nameBoxSizeDp).background(DEFAULT_NAME_BOX_COLOR, shape = RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                                 val chordFontSize = (uiParams.nameBoxSizeDp.value * uiParams.nameBoxFontScale).sp
+                                 Text(text = chordName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = chordFontSize)
+                             }
+                             Spacer(modifier = Modifier.width(16.dp))
+                             Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
+                                 FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = uiParams, positions = internalPositions, fingers = internalFingers, firstFretIsNut = firstVar?.firstFretIsNut ?: true, invertStrings = false)
+                             }
+                             Spacer(modifier = Modifier.weight(1f))
+                         }
+                     }
                 }
             }
-        }
-    }
+         }
+     }
 }
 
 @Composable

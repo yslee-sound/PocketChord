@@ -63,12 +63,14 @@ suspend fun ensureChordsForRoot(context: Context, root: String, assetFileName: S
                             val positionsCsv = positions.joinToString(",")
                             val fingersCsv = if (fingers.isEmpty()) null else fingers.joinToString(",")
                             val firstNut = vobj.optBoolean("firstFretIsNut", true)
+                            // optional explicit barre definitions: array of {fret,finger,fromString,toString}
+                            val barresJson = if (vobj.has("barres")) vobj.optJSONArray("barres")?.toString() else null
                             val existingVariant = dao.findVariantByChordIdPositionsAndFingers(chordId, positionsCsv, fingersCsv)
                             val shouldInsert = if (existingVariant == null) {
                                 if (fingersCsv == null) dao.findVariantByChordIdAndPositionsCsv(chordId, positionsCsv) == null else true
                             } else false
                             if (shouldInsert) {
-                                dao.insertVariant(VariantEntity(chordId = chordId, positionsCsv = positionsCsv, fingersCsv = fingersCsv, firstFretIsNut = firstNut))
+                                dao.insertVariant(VariantEntity(chordId = chordId, positionsCsv = positionsCsv, fingersCsv = fingersCsv, firstFretIsNut = firstNut, barresJson = barresJson))
                             }
                         }
                     }

@@ -39,7 +39,9 @@ data class VariantEntity(
     val firstFretIsNut: Boolean = true,
     val capoFret: Int? = null,
     val difficulty: Int? = null,
-    val note: String? = null
+    val note: String? = null,
+    // Optional barre specification persisted as JSON string (same schema as in seed: array of {fret,finger,fromString,toString})
+    val barresJson: String? = null
 )
 
 // Relation wrapper used by Room to load a chord with all its variants

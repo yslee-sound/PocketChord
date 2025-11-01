@@ -10,13 +10,20 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @TypeConverters(Converters::class)
-@Database(entities = [ChordEntity::class, VariantEntity::class], version = 3)
+@Database(entities = [ChordEntity::class, VariantEntity::class], version = 4)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun chordDao(): ChordDao
 
     companion object {
         private const val DB_NAME = "pocket_chord.db"
         @Volatile private var instance: AppDatabase? = null
+
+        // Migration 3 -> 4: add barresJson column to variants
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE variants ADD COLUMN barresJson TEXT")
+            }
+        }
 
         // Migration 1 -> 2:
         // 1) normalize NULL fingersCsv to empty string
@@ -68,7 +75,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): AppDatabase {
             return Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, DB_NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
         }
     }

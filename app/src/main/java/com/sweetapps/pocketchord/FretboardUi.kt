@@ -250,38 +250,48 @@ fun FretboardDiagram(
                 // group by (fret,finger), start at the highest-numbered string (lowest index in our mapping),
                 // and extend toward string 1 (index increasing) until just before a muted string.
                 data class Barre(val fret: Int, val finger: Int, val startIdx: Int, val endIdx: Int)
-                val barres = if (uiParams.drawBarreAsRectangle) {
-                    // collect indices per (fret,finger)
-                    val groups = mutableMapOf<Pair<Int,Int>, MutableList<Int>>()
-                    for (i in positions.indices) {
-                        val f = positions[i]
-                        val finger = fingers?.getOrNull(i) ?: 0
-                        if (f > 0 && finger > 0) {
-                            groups.getOrPut(f to finger) { mutableListOf() }.add(i)
-                        }
-                    }
-                    val list = mutableListOf<Barre>()
-                    groups.forEach { (fk, idxList) ->
-                         val (fret, finger) = fk
-                        // draw barre only when at least two strings share the same (fret,finger)
-                        if (idxList.size < 2) return@forEach
-                         val start = idxList.minOrNull() ?: return@forEach
-                         // extend toward string 1 (index increasing) until just before a mute string
-                         var end = positions.size - 1
-                         var p = start + 1
-                         while (p < positions.size) {
-                            val valAt = positions[p]
-                            if (valAt == -1) { // stop before mute
-                                end = p - 1
-                                break
-                            }
-                            p++
+                 // Prefer explicit barres when provided in variant (passed via optional JSON on the VariantEntity). The
+                 // drawing composable doesn't have direct access to the entity, so callers can pass a provider later;
+                 // for now we keep a hook via positions/fingers embedded meta: none → fall back to auto-detect.
+                 // Auto-detect remains contiguous-run based.
+                // TODO: Thread VariantEntity.barresJson into this composable through a parameter and parse it here.
+                // Schema: [{"fret":3, "finger":1, "fromString":1, "toString":5}] with string numbers 1..6 (top=1).
+                 val barres = if (uiParams.drawBarreAsRectangle) {
+                     // collect indices per (fret,finger)
+                     val groups = mutableMapOf<Pair<Int,Int>, MutableList<Int>>()
+                     for (i in positions.indices) {
+                         val f = positions[i]
+                         val finger = fingers?.getOrNull(i) ?: 0
+                         if (f > 0 && finger > 0) {
+                             groups.getOrPut(f to finger) { mutableListOf() }.add(i)
                          }
-                         // if no mute found, end stays last string index
-                         if (end - start >= 1) list.add(Barre(fret = fret, finger = finger, startIdx = start, endIdx = end))
                      }
-                    list
-                } else emptyList()
+                     val list = mutableListOf<Barre>()
+                     groups.forEach { (fk, idxList) ->
+                         val (fret, finger) = fk
+                         if (idxList.size < 2) return@forEach
+                         // sort and split into contiguous runs (index difference == 1). A mute or any other finger/fret in-between
+                         // will break contiguity because its index is not present in idxList.
+                         val sorted = idxList.sorted()
+                         var i = 0
+                         while (i < sorted.size) {
+                             val runStart = sorted[i]
+                             var runEnd = runStart
+                             var j = i + 1
+                             while (j < sorted.size && sorted[j] == runEnd + 1) {
+                                 // also break if we encounter a mute just in case (robustness)
+                                 if (positions[sorted[j]] == -1) break
+                                 runEnd = sorted[j]
+                                 j++
+                             }
+                             if (runEnd - runStart + 1 >= 2) {
+                                 list.add(Barre(fret = fret, finger = finger, startIdx = runStart, endIdx = runEnd))
+                             }
+                             i = j
+                         }
+                      }
+                      list
+                  } else emptyList()
 
                 // Always draw single-dot markers; do not suppress markers under a barre rectangle
                 val stringsInBarre = emptySet<Int>()
