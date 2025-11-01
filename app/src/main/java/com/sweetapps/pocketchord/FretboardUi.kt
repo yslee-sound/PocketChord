@@ -18,6 +18,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.min
 
+// ---- String index consistency helpers ----
+// Seed positions are ordered [E6, A5, D4, G3, B2, E1] = 6→1.
+// Diagram은 위(1번줄)→아래(6번줄)로 그리므로, y좌표 계산 시 이 헬퍼를 사용한다.
+private const val STRING_COUNT_FOR_Y = 6
+private fun yForSeedIndex(seedIdx: Int, stringSpacingPx: Float, invertStrings: Boolean): Float {
+    return if (invertStrings) {
+        seedIdx * stringSpacingPx
+    } else {
+        (STRING_COUNT_FOR_Y - 1 - seedIdx) * stringSpacingPx
+    }
+}
+// -----------------------------------------
+
 // 다이어그램 관련 컴포저블 정리 파일
 
 @Composable
@@ -233,31 +246,44 @@ fun FretboardDiagram(
                     drawLine(Color.Red, start = Offset(rightEdgeX, 0f), end = Offset(rightEdgeX, contentHeightPx), strokeWidth = dbgPaintW)
                 }
 
-                // detect barres: contiguous runs of strings with same positive fret and same finger (>0)
+                // detect barres only when requested via UI params, using custom rule:
+                // group by (fret,finger), start at the highest-numbered string (lowest index in our mapping),
+                // and extend toward string 1 (index increasing) until just before a muted string.
                 data class Barre(val fret: Int, val finger: Int, val startIdx: Int, val endIdx: Int)
-                val barres = mutableListOf<Barre>()
-                run {
-                    // scan positions left-to-right by index to find contiguous runs
-                    var idx = 0
-                    while (idx < positions.size) {
-                        val f = positions[idx]
-                        val finger = fingers?.getOrNull(idx) ?: 0
+                val barres = if (uiParams.drawBarreAsRectangle) {
+                    // collect indices per (fret,finger)
+                    val groups = mutableMapOf<Pair<Int,Int>, MutableList<Int>>()
+                    for (i in positions.indices) {
+                        val f = positions[i]
+                        val finger = fingers?.getOrNull(i) ?: 0
                         if (f > 0 && finger > 0) {
-                            var j = idx + 1
-                            while (j < positions.size && positions[j] == f && (fingers?.getOrNull(j) ?: 0) == finger) j++
-                            val len = j - idx
-                            if (len >= 2) {
-                                barres.add(Barre(fret = f, finger = finger, startIdx = idx, endIdx = j - 1))
-                            }
-                            idx = j
-                        } else {
-                            idx++
+                            groups.getOrPut(f to finger) { mutableListOf() }.add(i)
                         }
                     }
-                }
+                    val list = mutableListOf<Barre>()
+                    groups.forEach { (fk, idxList) ->
+                        val (fret, finger) = fk
+                        if (idxList.isEmpty()) return@forEach
+                        val start = idxList.minOrNull() ?: return@forEach
+                        // extend toward string 1 (index increasing) until just before a mute string
+                        var end = positions.size - 1
+                        var p = start + 1
+                        while (p < positions.size) {
+                            val valAt = positions[p]
+                            if (valAt == -1) { // stop before mute
+                                end = p - 1
+                                break
+                            }
+                            p++
+                        }
+                        // if no mute found, end stays last string index
+                        if (end - start >= 1) list.add(Barre(fret = fret, finger = finger, startIdx = start, endIdx = end))
+                    }
+                    list
+                } else emptyList()
 
-                // create a set of string indices that are part of any barre so we can skip drawing individual dots there
-                val stringsInBarre = barres.flatMap { it.startIdx..it.endIdx }.toSet()
+                // Always draw single-dot markers; do not suppress markers under a barre rectangle
+                val stringsInBarre = emptySet<Int>()
 
                 // helper: compute center x for visible fret cell 'rel' (0-based) using leftBoundX as origin
                 fun cellCenterX(rel: Int): Float {
@@ -266,48 +292,43 @@ fun FretboardDiagram(
 
                  // draw markers (circles + finger numbers) directly on Canvas for pixel-perfect positioning
                  // but first draw barres behind single-dot markers
-                 barres.forEach { barre ->
-                     val rel = barre.fret - startFret
-                     if (rel in 0 until baseFrets) {
-                        // determine vertical span for the barre (y coords depend on invertStrings)
-                        val startY = if (invertStrings) barre.startIdx * stringSpacingPx else (stringCount - 1 - barre.startIdx) * stringSpacingPx
-                        val endY = if (invertStrings) barre.endIdx * stringSpacingPx else (stringCount - 1 - barre.endIdx) * stringSpacingPx
-                        val topY = min(startY, endY)
-                        val bottomY = maxOf(startY, endY)
-                        val centerX = cellCenterX(rel)
-                        // barre rectangle dimensions
-                        val padding = with(density) { 4.dp.toPx() }
-                        val rectLeft = centerX - fretSpacingPx * 0.45f
-                        val rectRight = centerX + fretSpacingPx * 0.45f
-                        val rectTop = topY - padding
-                        val rectBottom = bottomY + padding
-                        val rectHeight = (rectBottom - rectTop).coerceAtLeast(with(density) { 8.dp.toPx() })
-                        val corner = rectHeight / 2f
-                        // draw rounded rect
-                        drawRoundRect(color = Color(0xFF339CFF), topLeft = Offset(rectLeft, rectTop), size = androidx.compose.ui.geometry.Size(rectRight - rectLeft, rectHeight), cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner, corner))
-                        // draw finger number centered on barre (use same visual as markers)
-                        drawContext.canvas.nativeCanvas.apply {
-                            val paint = android.graphics.Paint().apply {
-                                color = android.graphics.Color.WHITE
-                                textSize = (rectHeight * 0.6f).coerceAtMost(with(density) { 18.dp.toPx() })
-                                isFakeBoldText = true
-                                textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                            val baseline = rectTop + rectHeight / 2f - (paint.descent() + paint.ascent()) / 2f
-                            drawText(barre.finger.toString(), centerX, baseline, paint)
-                        }
-                    }
-                }
+                 if (uiParams.drawBarreAsRectangle) barres.forEach { barre ->
+                       val rel = barre.fret - startFret
+                       if (rel in 0 until baseFrets) {
+                          // determine vertical span for the barre (y coords depend on invertStrings)
+                          val startY = if (invertStrings) barre.startIdx * stringSpacingPx else (stringCount - 1 - barre.startIdx) * stringSpacingPx
+                          val endY = if (invertStrings) barre.endIdx * stringSpacingPx else (stringCount - 1 - barre.endIdx) * stringSpacingPx
+                          val topY = min(startY, endY)
+                          val bottomY = maxOf(startY, endY)
+                          val centerX = cellCenterX(rel)
+                          // barre rectangle dimensions
+                         val padding = with(density) { 4.dp.toPx() }
+                          val rectLeft = centerX - fretSpacingPx * 0.45f
+                          val rectRight = centerX + fretSpacingPx * 0.45f
+                          val rectTop = topY - padding
+                          val rectBottom = bottomY + padding
+                          val rectHeight = (rectBottom - rectTop).coerceAtLeast(with(density) { 8.dp.toPx() })
+                          val corner = rectHeight / 2f
+                          // draw rounded rect
+                         drawRoundRect(color = Color(0xFF339CFF).copy(alpha = 0.25f), topLeft = Offset(rectLeft, rectTop), size = androidx.compose.ui.geometry.Size(rectRight - rectLeft, rectHeight), cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner, corner))
+                          // draw finger number centered on barre (use same visual as markers)
+                          drawContext.canvas.nativeCanvas.apply {
+                              val paint = android.graphics.Paint().apply {
+                                  color = android.graphics.Color.WHITE
+                                  textSize = (rectHeight * 0.6f).coerceAtMost(with(density) { 18.dp.toPx() })
+                                  isFakeBoldText = true
+                                  textAlign = android.graphics.Paint.Align.CENTER
+                              }
+                              val baseline = rectTop + rectHeight / 2f - (paint.descent() + paint.ascent()) / 2f
+                              drawText(barre.finger.toString(), centerX, baseline, paint)
+                          }
+                      }
+                 }
 
                 positions.forEachIndexed { stringIdx, fretNum ->
-                    val y = if (invertStrings) {
-                        // treat index0 as top string
-                        stringIdx * stringSpacingPx
-                    } else {
-                        // treat index0 as lowest string
-                        (stringCount - 1 - stringIdx) * stringSpacingPx
-                    }
-                    when {
+                    // y 좌표는 seed 인덱스(6→1 순)에서 도출하고, invertStrings 여부에 따라 변환
+                    val y = yForSeedIndex(stringIdx, stringSpacingPx, invertStrings)
+                     when {
                         fretNum > 0 -> {
                              // skip drawing single-dot markers for strings that are part of a detected barre
                              if (stringsInBarre.contains(stringIdx)) {
@@ -345,15 +366,15 @@ fun FretboardDiagram(
                          }
                         // Compute open marker radius first, then derive mute 'X' size so both visually match
                         fretNum == 0 -> {
-                            // Anchor open/mute markers to the left inset so their column aligns across nut-start and fret-start
-                            val markerAnchorX = (leftInsetPx).coerceAtLeast(0f)
-                            val x = (markerAnchorX - markerOffsetPx).coerceAtLeast(0f)
-                            val minSpacing = min(fretSpacingPx, stringSpacingPx)
-                            val openRadius = minSpacing * uiParams.openMarkerSizeFactor
-                            val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
-                            drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
-                            drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
-                        }
+                             // Anchor open/mute markers to the left inset so their column aligns across nut-start and fret-start
+                             val markerAnchorX = (leftInsetPx).coerceAtLeast(0f)
+                             val x = (markerAnchorX - markerOffsetPx).coerceAtLeast(0f)
+                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
+                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
+                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
+                             drawCircle(color = Color.Transparent, center = Offset(x, y), radius = openRadius)
+                             drawCircle(color = Color.Black, center = Offset(x, y), radius = openRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWOpen))
+                         }
                         else -> {
                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
                             // compute open radius and scale mute half-size so diagonal ~ open diameter
