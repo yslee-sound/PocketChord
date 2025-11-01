@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
-import android.content.pm.ApplicationInfo
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,10 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.graphics.Color as AndroidColor
 import androidx.core.view.WindowCompat
-import androidx.core.content.edit
-import android.content.Context
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
@@ -38,6 +33,7 @@ import androidx.navigation.compose.composable
 import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.isFinite
+import androidx.lifecycle.lifecycleScope
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,15 +80,17 @@ class MainActivity : ComponentActivity() {
                             Log.d("NavDebug", "Entered route: chord_list/" + root)
                             ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                         }
-                        composable("settings") {
-                            SettingsScreen()
-                        }
+                        // Optional settings screen remains, but without any seeding controls
+                        composable("settings") { BasicSettingsScreen() }
                      }
                  }
              }
          }
 
-        // Template-based seeding disabled. Per-root seeding runs when user opens a root screen.
+        // On-app-update reseed only
+        lifecycleScope.launchWhenCreated {
+             try { com.sweetapps.pocketchord.data.ensureOrReseedOnAppUpdate(this@MainActivity) } catch (_: Exception) {}
+         }
      }
 }
 
@@ -403,23 +401,8 @@ data class FretDiagramData(val name: String, val positions: List<Int>, val finge
 
 // helper: parse CSV like "-1,3,2,0,1,0" into internal positions List<Int> index0=lowest string
 fun parseCsvToPositions(csv: String): List<Int> {
-    // Parse CSV into ints keeping original order
-    val parts = csv.split(",").mapNotNull { it.trim().toIntOrNull() }
-    if (parts.size <= 1) return parts
-
-    // Heuristic: normalize to internal format where index0 = lowest (string 6)
-    // Seeds commonly store low->high (index0 = lowest). But some sources may be high->low.
-    // If the first element looks like a typical low-string marker (mute -1) and last isn't, assume low->high.
-    val first = parts.first()
-    val last = parts.last()
-    if (first == -1 && last != -1) return parts // likely already low->high
-    if (last == -1 && first != -1) return parts.reversed() // likely stored high->low
-
-    // Fallback: compare mute/open counts in halves
-    val half = parts.size / 2
-    val firstHalfMutes = parts.take(half).count { it == -1 }
-    val secondHalfMutes = parts.takeLast(half).count { it == -1 }
-    return if (firstHalfMutes > secondHalfMutes) parts.reversed() else parts
+    // Parse CSV into ints and return as-is. Storage order in DB/seed is 6→1 and UI expects the same.
+    return csv.split(",").mapNotNull { it.trim().toIntOrNull() }
 }
 
 // helper: parse barresJson (seed/DB) into ExplicitBarre list
@@ -483,10 +466,9 @@ fun ChordListScreen(
     val db = com.sweetapps.pocketchord.data.AppDatabase.getInstance(context)
     val chordFlow = db.chordDao().getChordsByRoot(root)
     val chordWithVariants by chordFlow.collectAsState(initial = emptyList())
-    // selected variant for expanded view dialog
     var isSeeding by remember { mutableStateOf(false) }
 
-    // ensure seed for this root on first composition if DB empty
+    // ensure missing variants for this root (insert-only) — dataset-wide reseed is handled at app start
     LaunchedEffect(root) {
         try {
             isSeeding = true
@@ -716,76 +698,11 @@ fun FretboardCard(
 }
 
 @Composable
-fun SettingsScreen() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = context.getSharedPreferences("pocketchord_prefs", Context.MODE_PRIVATE)
-    val initialAuto = prefs.getBoolean("auto_seed_enabled", true)
-    var autoSeed by remember { mutableStateOf(initialAuto) }
-    val summary = prefs.getString("last_seed_import_summary", "no summary") ?: "no summary"
-    val scope = rememberCoroutineScope()
+fun BasicSettingsScreen() {
+    // Minimal settings placeholder — removed manual seeding and toggles
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(text = "디버그 설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(text = "설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
-        val isDebuggable = try { (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 } catch (_: Exception) { false }
-        if (!isDebuggable) {
-            Text("디버그 UI는 개발 빌드에서만 표시됩니다.")
-            return@Column
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(text = "자동 시드 임포트 사용", modifier = Modifier.weight(1f))
-            Switch(checked = autoSeed, onCheckedChange = {
-                autoSeed = it
-                prefs.edit { putBoolean("auto_seed_enabled", it) }
-            })
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "마지막 임포트 요약:")
-        Text(text = summary, fontSize = 14.sp, color = Color.Gray)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            scope.launch(Dispatchers.IO) {
-                try {
-                    // Read per-root JSON keys and ensure each root is seeded
-                    val json = context.assets.open("chords_seed_by_root.json").bufferedReader().use { it.readText() }
-                    val obj = org.json.JSONObject(json)
-                    val names = obj.names()
-                    var seededCount = 0
-                    if (names != null) {
-                        for (i in 0 until names.length()) {
-                            val root = names.getString(i)
-                            com.sweetapps.pocketchord.data.resetAndReseedRoot(context, root)
-                            seededCount++
-                        }
-                    }
-                    prefs.edit { putBoolean("seeded_v1", true) }
-                    Log.d("SeedImport", "Per-root seed completed for $seededCount roots")
-                } catch (e: Exception) {
-                    Log.e("SeedImport", "Force per-root seed failed", e)
-                }
-            }
-        }) {
-            Text("강제 per-root 시드 임포트 실행", color = Color.White)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = {
-            scope.launch(Dispatchers.IO) {
-                try {
-                    val db = com.sweetapps.pocketchord.data.AppDatabase.getInstance(context)
-                    val variants = db.chordDao().getAllVariants()
-                    val sb = StringBuilder()
-                    sb.append("id,chordId,positionsCsv,fingersCsv,firstFretIsNut\n")
-                    for (v in variants) {
-                        sb.append("${v.id},${v.chordId},\"${v.positionsCsv}\",\"${v.fingersCsv ?: ""}\",${v.firstFretIsNut}\n")
-                    }
-                    val fileName = "variants_dump.csv"
-                    context.openFileOutput(fileName, Context.MODE_PRIVATE).use { fos -> fos.write(sb.toString().toByteArray()) }
-                    Log.i("DBDump", "Wrote ${variants.size} variants to $fileName")
-                } catch (t: Throwable) {
-                    Log.e("DBDump", "Failed to dump variants", t)
-                }
-            }
-        }) {
-            Text("Dump DB variants to file", color = Color.White)
-        }
+        Text(text = "앱 업데이트 시 코드 데이터가 자동으로 동기화됩니다.")
     }
 }

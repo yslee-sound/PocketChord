@@ -7,6 +7,19 @@
       { "positions": [8,10,10,9,8,8], "fingers": [1,3,4,2,1,1], "firstFretIsNut": false,
         "barres": [ { "fret": 8, "finger": 1, "fromString": 1, "toString": 6 } ] }
     ] },
+
+    { "name": "Cadd9", "variants": [
+      { "positions": [-1,3,2,0,3,0], "fingers": [0,2,1,0,3,0], "firstFretIsNut": true },
+      { "positions": [-1,-1,10,9,8,10], "fingers": [0,0,3,2,1,4], "firstFretIsNut": false }
+    ] },
+
+    { "name": "CM7", "variants": [
+      { "positions": [-1,3,2,0,0,0], "fingers": [0,3,2,0,0,0], "firstFretIsNut": true },
+      { "positions": [-1,3,5,4,5,3], "fingers": [0,1,3,2,4,1], "firstFretIsNut": false },
+      { "positions": [8,-1,9,9,8,-1], "fingers": [1,0,3,4,2,0], "firstFretIsNut": false },
+      { "positions": [-1,-1,5,5,5,7], "fingers": [0,0,1,1,1,4], "firstFretIsNut": false }
+    ] },
+
     { "name": "Cm", "variants": [
       { "positions": [-1,3,5,5,4,3], "fingers": [0,1,3,4,2,1], "firstFretIsNut": false,
         "barres": [ { "fret": 3, "finger": 1, "fromString": 1, "toString": 5 } ] },
@@ -16,13 +29,6 @@
     { "name": "C7", "variants": [
       { "positions": [-1,3,2,3,1,0], "fingers": [0,3,2,4,1,0], "firstFretIsNut": true },
       { "positions": [-1,3,5,3,5,3], "fingers": [0,1,3,1,4,1], "firstFretIsNut": false }
-    ] },
-
-    { "name": "CM7", "variants": [
-      { "positions": [-1,3,2,0,0,0], "fingers": [0,3,2,0,0,0], "firstFretIsNut": true },
-      { "positions": [-1,3,5,4,5,3], "fingers": [0,1,3,2,4,1], "firstFretIsNut": false },
-      { "positions": [8,10,9,9,8,8], "fingers": [1,3,2,2,1,1], "firstFretIsNut": false,
-        "barres": [ { "fret": 8, "finger": 1, "fromString": 1, "toString": 6 } ] }
     ] },
 
     { "name": "Cm7", "variants": [
@@ -42,10 +48,6 @@
       { "positions": [-1,3,1,2,1,3], "fingers": [0,3,1,2,1,4], "firstFretIsNut": false },
       { "positions": [8,10,10,8,10,8], "fingers": [1,3,4,1,2,1], "firstFretIsNut": false,
         "barres": [ { "fret": 8, "finger": 1, "fromString": 1, "toString": 6 } ] }
-    ] },
-
-    { "name": "Cadd9", "variants": [
-      { "positions": [-1,3,2,0,3,3], "fingers": [0,3,2,0,3,4], "firstFretIsNut": true }
     ] },
 
     { "name": "C7(9)", "variants": [

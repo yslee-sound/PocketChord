@@ -54,4 +54,17 @@ interface ChordDao {
 
     @Delete
     suspend fun deleteVariant(variant: VariantEntity)
+
+    // Favorites preservation
+    @Query("SELECT name, root FROM chords WHERE favorite = 1")
+    suspend fun getFavoriteChordNaturalKeys(): List<FavoriteKey>
+
+    @Query("UPDATE chords SET favorite = :favorite WHERE id = :id")
+    suspend fun setChordFavorite(id: Long, favorite: Boolean)
 }
+
+// Natural key projection to preserve favorites across reseed
+data class FavoriteKey(
+    val name: String,
+    val root: String
+)
