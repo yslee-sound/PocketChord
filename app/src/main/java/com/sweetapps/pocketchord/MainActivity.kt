@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,7 +21,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,23 +45,27 @@ import kotlinx.coroutines.delay
 import android.media.AudioTrack
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Ensure status bar background is white and icons are dark for readability at runtime
-        // Use WindowCompat/WindowInsetsControllerCompat for backward-compatible control
         window.statusBarColor = AndroidColor.WHITE
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.isAppearanceLightStatusBars = true
-        // Optionally make navigation bar light as well
         try {
             controller.isAppearanceLightNavigationBars = true
             window.navigationBarColor = AndroidColor.WHITE
-        } catch (_: Exception) {
-            // ignore on older platforms where this may not be supported
-        }
+        } catch (_: Exception) {}
         setContent {
             PocketChordTheme {
                 val navController = rememberNavController()
@@ -74,21 +78,11 @@ class MainActivity : ComponentActivity() {
                         startDestination = "home",
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable("home") {
-                            Log.d("NavDebug", "Entered route: home")
-                            MainScreen(navController)
-                        }
+                        composable("home") { Log.d("NavDebug", "Entered route: home"); MainScreen(navController) }
                         composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
                         composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
-                        composable("search") {
-                            Log.d("NavDebug", "Entered route: search")
-                            SearchResultScreen()
-                        }
-                        composable("search_chord") {
-                            Log.d("NavDebug", "Entered route: search_chord")
-                            SearchChordScreen()
-                        }
-                        // Declare argument type explicitly; we'll decode on read
+                        composable("search") { Log.d("NavDebug", "Entered route: search"); SearchResultScreen() }
+                        composable("search_chord") { Log.d("NavDebug", "Entered route: search_chord"); SearchChordScreen() }
                         composable(
                             route = "chord_list/{root}",
                             arguments = listOf(navArgument("root") { type = NavType.StringType })
@@ -98,20 +92,16 @@ class MainActivity : ComponentActivity() {
                             Log.d("NavDebug", "Entered route: chord_list/$root (encoded=$encoded)")
                             ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                         }
-                        // More (더보기)
                         composable("more") { MoreScreen() }
-                        // Optional settings screen remains, but without any seeding controls
                         composable("settings") { BasicSettingsScreen() }
-                     }
-                 }
-             }
-         }
-
-        // On-app-update reseed only
+                    }
+                }
+            }
+        }
         lifecycleScope.launchWhenCreated {
-             try { com.sweetapps.pocketchord.data.ensureOrReseedOnAppUpdate(this@MainActivity) } catch (_: Exception) {}
-         }
-     }
+            try { com.sweetapps.pocketchord.data.ensureOrReseedOnAppUpdate(this@MainActivity) } catch (_: Exception) {}
+        }
+    }
 }
 
 @Composable
@@ -246,42 +236,94 @@ fun ChordGrid(navController: NavHostController) {
 }
 
 @Composable
+private fun FancyNavIcon(
+    icon: ImageVector,
+    selected: Boolean,
+    contentDescription: String? = null
+) {
+    val unselectedTint = Color(0xFF9AA7B5)
+    if (selected) {
+        val shape = RoundedCornerShape(14.dp)
+        val gradient = Brush.linearGradient(
+            colors = listOf(Color(0xFF8A6CFF), Color(0xFF6F4EF6))
+        )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .shadow(8.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(gradient),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = contentDescription, tint = Color.White)
+        }
+    } else {
+        Icon(icon, contentDescription = contentDescription, tint = unselectedTint)
+    }
+}
+
+@Composable
 fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    NavigationBar(containerColor = Color.Transparent) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.MusicNote, contentDescription = "코드") },
-            label = { Text("코드") },
-            selected = currentRoute == "home",
-            onClick = { navController.navigate("home") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Alarm, contentDescription = "메트로놈") },
-            label = { Text("메트로놈") },
-            selected = currentRoute == "metronome",
-            onClick = { navController.navigate("metronome") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Equalizer, contentDescription = "튜너") },
-            label = { Text("튜너") },
-            selected = currentRoute == "tuner",
-            onClick = { navController.navigate("tuner") }
-        )
-        // 변경: 즐겨찾기 → 더보기
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.MoreHoriz, contentDescription = "더보기") },
-            label = { Text("더보기") },
-            selected = currentRoute == "more",
-            onClick = { navController.navigate("more") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Settings, contentDescription = "설정") },
-            label = { Text("설정") },
-            selected = currentRoute == "settings",
-            onClick = { navController.navigate("settings") }
-        )
+    // Items definition
+    data class Item(val route: String, val icon: ImageVector, val label: String)
+    val items = listOf(
+        Item("home", Icons.Filled.MusicNote, "코드"),
+        Item("metronome", Icons.Filled.Alarm, "메트로놈"),
+        Item("tuner", Icons.Filled.Equalizer, "튜너"),
+        Item("more", Icons.Filled.MoreHoriz, "더보기"),
+        Item("settings", Icons.Filled.Settings, "설정")
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+    ) {
+        Divider(color = Color(0x1A000000))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEach { item ->
+                val selected = currentRoute == item.route
+                val interaction = remember { MutableInteractionSource() }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = interaction,
+                            indication = null
+                        ) {
+                            if (currentRoute != item.route) {
+                                navController.navigate(item.route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                }
+                            }
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    FancyNavIcon(icon = item.icon, selected = selected, contentDescription = item.label)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (selected) Color(0xFF6F4EF6) else Color(0xFF9AA7B5)
+                    )
+                }
+            }
+        }
     }
 }
 
