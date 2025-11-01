@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
                             Log.d("NavDebug", "Entered route: home")
                             MainScreen(navController)
                         }
-                        composable("metronome") { MetronomeScreen() }
+                        composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
                         composable("tuner") { TunerScreen() }
                         composable("search") {
                             Log.d("NavDebug", "Entered route: search")
@@ -853,7 +853,7 @@ fun MetronomeScreen() {
         Button(onClick = { playing = !playing }, colors = ButtonDefaults.buttonColors(
             containerColor = if (playing) Color(0xFFD32F2F) else Color(0xFF00C853)
         )) {
-            Icon(if (playing) Icons.Filled.Stop else Icons.Filled.PlayArrow, contentDescription = null)
+            Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = null)
             Spacer(Modifier.width(6.dp))
             Text(if (playing) "정지" else "시작")
         }
@@ -946,7 +946,7 @@ fun TunerScreen() {
                 Text("재생")
             }
             OutlinedButton(onClick = { stop() }) {
-                Icon(Icons.Filled.Stop, contentDescription = null)
+                Icon(Icons.Filled.Pause, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
                 Text("정지")
             }
