@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
                             MainScreen(navController)
                         }
                         composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
-                        composable("tuner") { TunerScreen() }
+                        composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
                         composable("search") {
                             Log.d("NavDebug", "Entered route: search")
                             SearchResultScreen()
