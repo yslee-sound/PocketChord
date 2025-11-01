@@ -220,8 +220,8 @@ fun Preview_Fretboard_Samples() {
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Box(modifier = Modifier.width(desiredDiagramWidth).height(diagramHeightForList)) {
-                        // Enable debug overlay only for Cm in preview so we can inspect its layout
-                        val perSampleParams = uiParams.copy(debugOverlay = (name == "Cm"))
+                        // Preview: keep debug overlay off for all samples (clean final preview)
+                        val perSampleParams = uiParams // debugOverlay remains false
                         FretboardDiagramOnly(modifier = Modifier.fillMaxSize(), uiParams = perSampleParams, positions = positions, fingers = fingers, firstFretIsNut = if (name == "Cm") false else true, invertStrings = false)
                     }
                     Spacer(modifier = Modifier.weight(1f))
