@@ -141,6 +141,19 @@ fun ChordGrid(navController: NavHostController) {
         "E", "F", "F#-Gb", "G",
         "G#-Ab", "A", "A#-Bb", "B"
     )
+
+    // Map display names to root keys used in JSON
+    fun getRoot(displayName: String): String {
+        return when (displayName) {
+            "C#-Db" -> "C#"
+            "D#-Eb" -> "D#"
+            "F#-Gb" -> "F#"
+            "G#-Ab" -> "G#"
+            "A#-Bb" -> "A#"
+            else -> displayName
+        }
+    }
+
     Column {
         chords.chunked(3).forEach { rowList ->
             Row(
@@ -151,9 +164,9 @@ fun ChordGrid(navController: NavHostController) {
                     ChordButton(
                         chord = chord,
                         modifier = Modifier.weight(1f).clickable {
-                            val root = chord.substringBefore("-")
+                            val root = getRoot(chord)
                             val route = "chord_list/$root"
-                            Log.d("NavDebug", "Click: navigating to $route from grid (chord=$chord)")
+                            Log.d("NavDebug", "Click: navigating to $route from grid (chord=$chord, root=$root)")
                             navController.navigate(route)
                         }
                     )

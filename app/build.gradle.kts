@@ -16,8 +16,8 @@ android {
         applicationId = "com.sweetapps.pocketchord"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1  // TODO: 앱 업데이트 시마다 반드시 증가시킬 것! (예: 2, 3, 4...)
-        versionName = "1.0"  // TODO: 사용자용 버전 (예: "1.0.1", "1.1.0")
+        versionCode = 2  // 버그 수정: C#-Db 루트 매핑 문제 해결
+        versionName = "1.0.1"  // 버그 수정 버전
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
