@@ -58,6 +58,16 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.ui.draw.scale
 
+// Ads
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.admanager.AdManagerAdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.admanager.AdManagerAdView
+import com.google.android.gms.ads.AdSize
+import androidx.compose.ui.viewinterop.AndroidView
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +79,10 @@ class MainActivity : ComponentActivity() {
             controller.isAppearanceLightNavigationBars = true
             window.navigationBarColor = AndroidColor.WHITE
         } catch (_: Exception) {}
+
+        // Initialize Google Mobile Ads SDK
+        MobileAds.initialize(this) {}
+
         setContent {
             PocketChordTheme {
                 val navController = rememberNavController()
@@ -76,27 +90,31 @@ class MainActivity : ComponentActivity() {
                     bottomBar = { BottomNavigationBar(navController) },
                     containerColor = Color.White
                 ) { innerPadding ->
-                    NavHost(
-                        navController = navController,
-                        startDestination = "home",
-                        modifier = Modifier.padding(innerPadding)
-                    ) {
-                        composable("home") { Log.d("NavDebug", "Entered route: home"); MainScreen(navController) }
-                        composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
-                        composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
-                        composable("search") { Log.d("NavDebug", "Entered route: search"); SearchResultScreen() }
-                        composable("search_chord") { Log.d("NavDebug", "Entered route: search_chord"); SearchChordScreen() }
-                        composable(
-                            route = "chord_list/{root}",
-                            arguments = listOf(navArgument("root") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val encoded = backStackEntry.arguments?.getString("root")
-                            val root = encoded?.let { Uri.decode(it) } ?: "C"
-                            Log.d("NavDebug", "Entered route: chord_list/$root (encoded=$encoded)")
-                            ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
+                    // Wrap NavHost with a Column and place TopBannerAd above it
+                    Column(modifier = Modifier.padding(innerPadding)) {
+                        TopBannerAd()
+                        NavHost(
+                            navController = navController,
+                            startDestination = "home",
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            composable("home") { Log.d("NavDebug", "Entered route: home"); MainScreen(navController) }
+                            composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
+                            composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
+                            composable("search") { Log.d("NavDebug", "Entered route: search"); SearchResultScreen() }
+                            composable("search_chord") { Log.d("NavDebug", "Entered route: search_chord"); SearchChordScreen() }
+                            composable(
+                                route = "chord_list/{root}",
+                                arguments = listOf(navArgument("root") { type = NavType.StringType })
+                            ) { backStackEntry ->
+                                val encoded = backStackEntry.arguments?.getString("root")
+                                val root = encoded?.let { Uri.decode(it) } ?: "C"
+                                Log.d("NavDebug", "Entered route: chord_list/$root (encoded=$encoded)")
+                                ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
+                            }
+                            composable("more") { MoreScreen() }
+                            composable("settings") { BasicSettingsScreen() }
                         }
-                        composable("more") { MoreScreen() }
-                        composable("settings") { BasicSettingsScreen() }
                     }
                 }
             }
@@ -104,6 +122,31 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launchWhenCreated {
             try { com.sweetapps.pocketchord.data.ensureOrReseedOnAppUpdate(this@MainActivity) } catch (_: Exception) {}
         }
+    }
+}
+
+@Composable
+fun TopBannerAd() {
+    // Official AdMob test banner ad unit ID
+    val testAdUnitId = "ca-app-pub-3940256099942544/6300978111"
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            // removed top safe drawing padding to stick the banner to the very top
+    ) {
+        AndroidView(
+            factory = { context ->
+                com.google.android.gms.ads.AdView(context).apply {
+                    setAdSize(AdSize.BANNER)
+                    setAdUnitId(testAdUnitId)
+                    loadAd(AdRequest.Builder().build())
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+        )
+        Divider(color = Color(0x1A000000))
     }
 }
 
@@ -261,7 +304,13 @@ private fun FancyNavIcon(
             Icon(icon, contentDescription = contentDescription, tint = Color.White)
         }
     } else {
-        Icon(icon, contentDescription = contentDescription, tint = unselectedTint)
+        // Keep the same 40.dp footprint to prevent label position shifting
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = contentDescription, tint = unselectedTint)
+        }
     }
 }
 
@@ -321,11 +370,13 @@ fun BottomNavigationBar(navController: NavHostController) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     FancyNavIcon(icon = item.icon, selected = selected, contentDescription = item.label)
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = item.label,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (selected) Color(0xFF6F4EF6) else Color(0xFF9AA7B5)
+                        color = if (selected) Color(0xFF6F4EF6) else Color(0xFF9AA7B5),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
                     )
                 }
             }

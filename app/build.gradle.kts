@@ -63,6 +63,10 @@ dependencies {
     configurations.getByName("kapt").dependencies.add(project.dependencies.create("androidx.room:room-compiler:2.8.3"))
     // Gson
     implementation("com.google.code.gson:gson:2.13.2")
+
+    // Google Mobile Ads SDK (AdMob)
+    implementation("com.google.android.gms:play-services-ads:22.6.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
