@@ -309,43 +309,45 @@ fun FretboardDiagram(
                     }
                     when {
                         fretNum > 0 -> {
-                            // skip drawing single-dot markers for strings that are part of a detected barre
-                            if (stringsInBarre.contains(stringIdx)) {
-                                // if this string is in a barre, skip individual marker
-                            } else {
-                                // draw only if this fret lies within the visible window [startFret, startFret + fretCount - 1]
-                                val rel = fretNum - startFret
-                                if (rel in 0 until baseFrets) {
-                                     val x = cellCenterX(rel)
-                                    // marker radius derived from UI params with a minimum px size for visibility
-                                    val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
-                                    val minRadiusPx = with(density) { 6.dp.toPx() }
-                                    val radius = kotlin.math.max(candidate, minRadiusPx)
-                                    drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
-                                    val finger = fingers?.getOrNull(stringIdx) ?: 0
-                                    if (finger > 0) {
-                                        // draw centered text using nativeCanvas; align baseline so the visual text center equals circle center y
-                                        drawContext.canvas.nativeCanvas.apply {
-                                            val paint = android.graphics.Paint().apply {
-                                                color = android.graphics.Color.WHITE
-                                                // text size based on marker radius (no artificial minimum to keep optical centering)
-                                                textSize = radius * uiParams.markerTextScale
-                                                isFakeBoldText = true
-                                                textAlign = android.graphics.Paint.Align.CENTER
-                                            }
-                                            val txt = finger.toString()
-                                            // use integer font metrics for stable baseline across environments
-                                            val fmInt = paint.fontMetricsInt
-                                            val baseline = y - (fmInt.ascent + fmInt.descent) / 2f
-                                            drawText(txt, x, baseline, paint)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                             // skip drawing single-dot markers for strings that are part of a detected barre
+                             if (stringsInBarre.contains(stringIdx)) {
+                                 // if this string is in a barre, skip individual marker
+                             } else {
+                                 // draw only if this fret lies within the visible window [startFret, startFret + fretCount - 1]
+                                 val rel = fretNum - startFret
+                                 if (rel in 0 until baseFrets) {
+                                      val x = cellCenterX(rel)
+                                     // marker radius derived from UI params with a minimum px size for visibility
+                                     val candidate = min(fretSpacingPx, stringSpacingPx) * uiParams.markerRadiusFactor
+                                     val minRadiusPx = with(density) { 6.dp.toPx() }
+                                     val radius = kotlin.math.max(candidate, minRadiusPx)
+                                     drawCircle(color = Color(0xFF339CFF), center = Offset(x, y), radius = radius)
+                                     val finger = fingers?.getOrNull(stringIdx) ?: 0
+                                     if (finger > 0) {
+                                         // draw centered text using nativeCanvas; align baseline so the visual text center equals circle center y
+                                         drawContext.canvas.nativeCanvas.apply {
+                                             val paint = android.graphics.Paint().apply {
+                                                 color = android.graphics.Color.WHITE
+                                                 // text size based on marker radius (no artificial minimum to keep optical centering)
+                                                 textSize = radius * uiParams.markerTextScale
+                                                 isFakeBoldText = true
+                                                 textAlign = android.graphics.Paint.Align.CENTER
+                                             }
+                                             val txt = finger.toString()
+                                             // use integer font metrics for stable baseline across environments
+                                             val fmInt = paint.fontMetricsInt
+                                             val baseline = y - (fmInt.ascent + fmInt.descent) / 2f
+                                             drawText(txt, x, baseline, paint)
+                                         }
+                                     }
+                                 }
+                             }
+                         }
                         // Compute open marker radius first, then derive mute 'X' size so both visually match
                         fretNum == 0 -> {
-                            val x = leftBoundX - markerOffsetPx
+                            // Anchor open/mute markers to the left inset so their column aligns across nut-start and fret-start
+                            val markerAnchorX = (leftInsetPx).coerceAtLeast(0f)
+                            val x = (markerAnchorX - markerOffsetPx).coerceAtLeast(0f)
                             val minSpacing = min(fretSpacingPx, stringSpacingPx)
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val strokeWOpen = with(density) { uiParams.openMarkerStrokeDp.toPx() }
@@ -359,7 +361,9 @@ fun FretboardDiagram(
                             val openRadius = minSpacing * uiParams.openMarkerSizeFactor
                             val muteScale = uiParams.muteMarkerSizeFactor / openFactor
                             val muteHalf = openRadius * 0.70710677f * muteScale
-                            val x = leftBoundX - markerOffsetPx
+                            // Anchor open/mute markers to the left inset so their column aligns across formats
+                            val markerAnchorX = (leftInsetPx).coerceAtLeast(0f)
+                            val x = (markerAnchorX - markerOffsetPx).coerceAtLeast(0f)
                             val strokeW = with(density) { uiParams.muteMarkerStrokeDp.toPx() }
                             val inset = muteHalf * uiParams.muteMarkerInsetFactor
                             // draw lines from corners inside by inset to achieve balanced visual weight
