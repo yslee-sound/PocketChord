@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,6 +46,7 @@ import kotlinx.coroutines.delay
 import android.media.AudioTrack
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -54,6 +56,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.ui.draw.scale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -295,10 +298,13 @@ fun BottomNavigationBar(navController: NavHostController) {
             items.forEach { item ->
                 val selected = currentRoute == item.route
                 val interaction = remember { MutableInteractionSource() }
+                val pressed by interaction.collectIsPressedAsState()
+                val scale by animateFloatAsState(targetValue = if (pressed) 0.96f else 1f, label = "nav_item_scale")
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .scale(scale)
                         .clickable(
                             interactionSource = interaction,
                             indication = null
