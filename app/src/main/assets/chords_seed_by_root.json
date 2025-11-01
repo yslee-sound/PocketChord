@@ -1,4 +1,11 @@
 {
+  "_metadata": {
+    "version": "20250101",
+    "description": "PocketChord seed data organized by root note",
+    "lastUpdated": "2025-01-01",
+    "totalRoots": 12,
+    "notes": "앱 업데이트 시 versionCode를 증가시키면 자동으로 리시딩됩니다."
+  },
   "C": [
     { "name": "C", "variants": [
       { "positions": [-1,3,2,0,1,0], "fingers": [0,3,2,0,1,0], "firstFretIsNut": true },

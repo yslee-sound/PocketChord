@@ -121,42 +121,78 @@ suspend fun ensureOrReseedOnAppUpdate(
             val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
             val current = currentAppVersionCode(context)
             val seen = prefs.getLong(versionKey, -1L)
-            if (seen == current) return@withContext
+            if (seen == current) {
+                Log.d("SeedVersion", "Already seeded for versionCode=$current, skipping")
+                return@withContext
+            }
+
+            Log.i("SeedVersion", "Starting reseed: versionCode changed from $seen to $current")
+            val startTime = System.currentTimeMillis()
 
             val db = AppDatabase.getInstance(context)
             val dao = db.chordDao()
-            // 0) Capture favorites by natural key before wipe
-            val favoriteKeys = dao.getFavoriteChordNaturalKeys().toSet()
 
-            // 1) wipe all
-            db.clearAllTables()
-
-            // 2) reseed all roots from asset
+            // 0) Read and validate JSON
             val json = context.assets.open(assetFileName).bufferedReader().use { it.readText() }
             val obj = JSONObject(json)
-            val names = obj.names()
-            if (names != null) {
-                for (i in 0 until names.length()) {
-                    val root = names.getString(i)
-                    ensureChordsForRoot(context, root, assetFileName)
-                }
+
+            // Check metadata if exists
+            if (obj.has("_metadata")) {
+                val meta = obj.getJSONObject("_metadata")
+                val dataVersion = meta.optString("version", "unknown")
+                Log.i("SeedVersion", "Seed data version: $dataVersion")
             }
 
-            // 3) restore favorites using natural key (name, root)
-            val allRoots = names?.let { (0 until it.length()).map { idx -> it.getString(idx) } } ?: emptyList()
+            // 1) Capture favorites by natural key before wipe
+            val favoriteKeys = dao.getFavoriteChordNaturalKeys().toSet()
+            Log.i("SeedVersion", "Captured ${favoriteKeys.size} favorites before reseed")
+
+            // 2) Wipe all data
+            db.clearAllTables()
+            Log.i("SeedVersion", "Database cleared")
+
+            // 3) Reseed all roots from asset
+            val names = obj.names()
+            if (names != null) {
+                var processedRoots = 0
+                for (i in 0 until names.length()) {
+                    val root = names.getString(i)
+                    // Skip metadata entries
+                    if (root.startsWith("_")) continue
+
+                    ensureChordsForRoot(context, root, assetFileName)
+                    processedRoots++
+                    Log.d("SeedVersion", "Reseeded root: $root ($processedRoots/${names.length()})")
+                }
+                Log.i("SeedVersion", "Reseeded $processedRoots roots")
+            }
+
+            // 4) Restore favorites using natural key (name, root)
+            val allRoots = names?.let {
+                (0 until it.length())
+                    .map { idx -> it.getString(idx) }
+                    .filter { !it.startsWith("_") }  // Skip metadata
+            } ?: emptyList()
+
+            var restoredCount = 0
             for (r in allRoots) {
                 val list = dao.getChordsByRootOnce(r)
                 list.forEach { cwv ->
                     if (favoriteKeys.any { it.name == cwv.chord.name && it.root == cwv.chord.root }) {
                         dao.setChordFavorite(cwv.chord.id, true)
+                        restoredCount++
                     }
                 }
             }
 
+            // 5) Update version marker
             prefs.edit().putLong(versionKey, current).apply()
-            Log.i("SeedVersion", "Reseeded on app update to versionCode=$current; favorites restored=${favoriteKeys.size}")
+
+            val elapsed = System.currentTimeMillis() - startTime
+            Log.i("SeedVersion", "✓ Reseed completed in ${elapsed}ms: versionCode=$current, favorites restored=$restoredCount/${favoriteKeys.size}")
         } catch (t: Throwable) {
-            Log.w("SeedVersion", "ensureOrReseedOnAppUpdate failed", t)
+            Log.e("SeedVersion", "❌ ensureOrReseedOnAppUpdate failed", t)
+            // Don't rethrow - allow app to continue with existing/empty DB
         }
     }
 }
