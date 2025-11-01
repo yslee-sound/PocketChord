@@ -67,9 +67,16 @@ data class DiagramUiParams(
     // size factors used separately for open and mute markers
     val openMarkerSizeFactor: Float = 0.28f,
     val muteMarkerSizeFactor: Float = 0.28f,
+    // Barre styling
+    // Horizontal thickness as a fraction of one fret spacing (0~1). 0.6 gives a visually balanced width.
+    val barreWidthFactor: Float = 0.60f,
+    // Extra vertical margin added to the marker radius so the barre fully covers finger circles and numbers
+    val barreExtraVerticalMarginDp: Dp = 6.dp,
+    // Fill alpha for barre rectangle
+    val barreAlpha: Float = 0.25f,
     // when true, contiguous strings with the same fret and finger will be drawn as a single barre rectangle.
     // default false so each string gets its own round marker even for the same finger.
-    val drawBarreAsRectangle: Boolean = false,
+    val drawBarreAsRectangle: Boolean = true,
     // inset factor applied when drawing the mute 'X' (fraction of half-size)
     // use zero inset by default so the 'X' diagonal matches the circle diameter visually
     val muteMarkerInsetFactor: Float = 0f,
