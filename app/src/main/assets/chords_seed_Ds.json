@@ -1,0 +1,118 @@
+[
+  { "name": "D#", "variants": [
+    { "positions": [-1,6,8,8,8,6], "fingers": [0,1,3,4,2,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 6, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [-1,-1,1,3,4,3], "fingers": [0,0,1,3,4,2], "firstFretIsNut": false },
+    { "positions": [11,13,13,12,11,11], "fingers": [1,3,4,2,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 11, "finger": 1, "fromString": 1, "toString": 6 } ] }
+  ] },
+
+  { "name": "D#m", "variants": [
+    { "positions": [-1,6,8,8,7,6], "fingers": [0,1,3,4,2,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 6, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [11,13,13,11,11,11], "fingers": [1,3,4,1,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 11, "finger": 1, "fromString": 1, "toString": 6 } ] },
+    { "positions": [-1,-1,1,3,4,2], "fingers": [0,0,1,3,4,2], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#7", "variants": [
+    { "positions": [-1,6,5,6,4,6], "fingers": [0,3,1,4,1,4], "firstFretIsNut": false },
+    { "positions": [-1,6,8,6,8,6], "fingers": [0,1,3,1,4,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 6, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [11,13,11,12,11,11], "fingers": [1,3,1,2,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 11, "finger": 1, "fromString": 1, "toString": 6 } ] }
+  ] },
+
+  { "name": "D#m7", "variants": [
+    { "positions": [-1,6,8,6,7,6], "fingers": [0,1,3,1,2,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 6, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [11,13,11,11,11,11], "fingers": [1,3,1,1,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 11, "finger": 1, "fromString": 1, "toString": 6 } ] },
+    { "positions": [-1,-1,1,3,2,2], "fingers": [0,0,1,4,2,3], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#M7", "variants": [
+    { "positions": [-1,6,8,7,8,6], "fingers": [0,1,3,2,4,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 6, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [11,13,12,12,11,11], "fingers": [1,3,2,2,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 11, "finger": 1, "fromString": 1, "toString": 6 } ] },
+    { "positions": [-1,-1,1,3,3,3], "fingers": [0,0,1,2,3,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#add9", "variants": [
+    { "positions": [-1,6,5,3,4,1], "fingers": [0,4,3,2,3,1], "firstFretIsNut": false },
+    { "positions": [11,13,13,12,13,11], "fingers": [1,2,3,1,4,1], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#6", "variants": [
+    { "positions": [-1,6,8,8,8,8], "fingers": [0,1,2,3,4,4], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,3,1,3], "fingers": [0,0,1,3,1,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#m6", "variants": [
+    { "positions": [-1,6,4,5,4,6], "fingers": [0,3,1,2,1,4], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,3,1,2], "fingers": [0,0,1,4,2,3], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#sus4", "variants": [
+    { "positions": [-1,6,8,8,9,6], "fingers": [0,1,2,3,4,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 6, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [-1,-1,1,3,4,4], "fingers": [0,0,1,2,3,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#sus2", "variants": [
+    { "positions": [-1,6,8,8,6,6], "fingers": [0,1,3,4,1,1], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,3,4,1], "fingers": [0,0,1,3,4,1], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#dim", "variants": [
+    { "positions": [-1,6,7,8,7,8], "fingers": [0,1,2,4,2,3], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,2,1,2], "fingers": [0,0,1,3,2,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#aug", "variants": [
+    { "positions": [-1,6,9,8,8,7], "fingers": [0,1,4,2,3,1], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,4,4,3], "fingers": [0,0,1,3,4,2], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#9", "variants": [
+    { "positions": [-1,6,5,6,6,6], "fingers": [0,2,1,3,3,3], "firstFretIsNut": false },
+    { "positions": [11,11,12,11,11,11], "fingers": [1,1,2,1,1,1], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#m9", "variants": [
+    { "positions": [-1,6,4,6,6,6], "fingers": [0,2,1,3,3,3], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,3,2,1], "fingers": [0,0,2,4,3,1], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#M9", "variants": [
+    { "positions": [-1,6,5,7,6,6], "fingers": [0,2,1,4,2,3], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,0,3,1], "fingers": [0,0,1,0,3,2], "firstFretIsNut": true }
+  ] },
+
+  { "name": "D#7sus4", "variants": [
+    { "positions": [-1,6,8,6,9,6], "fingers": [0,1,3,1,4,1], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,3,2,4], "fingers": [0,0,1,3,2,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#m7b5", "variants": [
+    { "positions": [-1,6,7,6,7,6], "fingers": [0,1,3,1,4,1], "firstFretIsNut": false },
+    { "positions": [-1,-1,1,2,2,2], "fingers": [0,0,1,2,3,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#7#9", "variants": [
+    { "positions": [-1,6,5,6,7,0], "fingers": [0,2,1,3,4,0], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#13", "variants": [
+    { "positions": [-1,6,5,6,8,8], "fingers": [0,2,1,3,4,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#7b9", "variants": [
+    { "positions": [-1,6,5,6,5,6], "fingers": [0,2,1,3,1,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D#maj7#11", "variants": [
+    { "positions": [-1,6,5,7,8,6], "fingers": [0,2,1,3,4,2], "firstFretIsNut": false }
+  ] }
+]

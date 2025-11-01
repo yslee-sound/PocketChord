@@ -16,22 +16,67 @@ private fun sha256Hex(s: String): String {
     return bytes.joinToString("") { "%02x".format(it) }
 }
 
-// Ensure chords for a specific root exist in the DB by reading `chords_seed_by_root.json` asset and inserting missing chords.
+// Public helper to determine per-root seed asset filename (avoid special chars like '#')
+fun seedAssetFileNameForRoot(root: String): String {
+    // Normalize: C, C#, D, D#, E, F, F#, G, G#, A, A#, B => C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B
+    val normalized = root.trim().replace("#", "s").replace("/", "_")
+    return "chords_seed_${normalized}.json"
+}
+
+// Internal: parse asset content and get JSONArray of chords for the root.
+private fun parseChordArrayFromAssetContent(content: String, root: String): org.json.JSONArray? {
+    val trimmed = content.trimStart()
+    return try {
+        when {
+            trimmed.startsWith("{") -> {
+                val rootObj = JSONObject(content)
+                if (!rootObj.has(root)) return null
+                rootObj.getJSONArray(root)
+            }
+            trimmed.startsWith("[") -> {
+                org.json.JSONArray(content)
+            }
+            else -> null
+        }
+    } catch (t: Throwable) {
+        Log.w("SeedParse", "Failed to parse seed content for root=${root}", t)
+        null
+    }
+}
+
+// Ensure chords for a specific root exist in the DB by reading seed asset (per-root array or combined object) and inserting missing chords.
 suspend fun ensureChordsForRoot(context: Context, root: String, assetFileName: String = "chords_seed_by_root.json") {
     withContext(Dispatchers.IO) {
         try {
             val db = AppDatabase.getInstance(context)
             val dao = db.chordDao()
-            // read per-root seed JSON format: { "C": [ {name, variants: [{positions:[], fingers:[], firstFretIsNut:true}] }, ... ], ... }
-            val json = context.assets.open(assetFileName).bufferedReader().use { it.readText() }
-            val rootObj = JSONObject(json)
-            if (!rootObj.has(root)) return@withContext
-            val arr = rootObj.getJSONArray(root)
+            val content = context.assets.open(assetFileName).bufferedReader().use { it.readText() }
+
+            // Support proxy format: {"_include":"chords_seed_by_root.json", "root":"C"}
+            val trimmed = content.trimStart()
+            val arr = try {
+                if (trimmed.startsWith("{")) {
+                    val obj = org.json.JSONObject(content)
+                    if (obj.has("_include")) {
+                        val includeFile = obj.optString("_include", assetFileName)
+                        val includeRoot = obj.optString("root", root)
+                        val base = context.assets.open(includeFile).bufferedReader().use { it.readText() }
+                        parseChordArrayFromAssetContent(base, includeRoot)
+                    } else {
+                        parseChordArrayFromAssetContent(content, root)
+                    }
+                } else {
+                    parseChordArrayFromAssetContent(content, root)
+                }
+            } catch (_: Throwable) { parseChordArrayFromAssetContent(content, root) }
+                ?: return@withContext
+
             db.withTransaction {
                 for (i in 0 until arr.length()) {
                     val obj = arr.getJSONObject(i)
                     val name = obj.optString("name")
-                    val type = obj.optString("type", null)
+                    // safe nullable type extraction (org.json.optString requires non-null fallback)
+                    val type = if (obj.has("type")) obj.optString("type") else null
                     val tags = mutableListOf<String>()
                     if (obj.has("tags")) {
                         val tarr = obj.optJSONArray("tags")
@@ -80,7 +125,7 @@ suspend fun ensureChordsForRoot(context: Context, root: String, assetFileName: S
                 }
             }
         } catch (t: Throwable) {
-            Log.w("EnsureSeed", "Failed to ensure seed for root $root", t)
+            Log.w("EnsureSeed", "Failed to ensure seed for root ${root} from asset ${assetFileName}", t)
         }
     }
 }
@@ -98,7 +143,7 @@ suspend fun resetAndReseedRoot(context: Context, root: String, assetFileName: St
             }
             ensureChordsForRoot(context, root, assetFileName)
         } catch (t: Throwable) {
-            Log.w("SeedImport", "resetAndReseedRoot failed for $root", t)
+            Log.w("SeedImport", "resetAndReseedRoot failed for ${root}", t)
         }
     }
 }
@@ -108,6 +153,8 @@ private fun currentAppVersionCode(context: Context): Long {
     val pInfo = pm.getPackageInfo(context.packageName, 0)
     return PackageInfoCompat.getLongVersionCode(pInfo)
 }
+
+private val ALL_ROOTS = listOf("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
 
 // Only strategy kept: reseed automatically on app update (versionCode change).
 suspend fun ensureOrReseedOnAppUpdate(
@@ -122,25 +169,29 @@ suspend fun ensureOrReseedOnAppUpdate(
             val current = currentAppVersionCode(context)
             val seen = prefs.getLong(versionKey, -1L)
             if (seen == current) {
-                Log.d("SeedVersion", "Already seeded for versionCode=$current, skipping")
+                Log.d("SeedVersion", "Already seeded for versionCode=${current}, skipping")
                 return@withContext
             }
 
-            Log.i("SeedVersion", "Starting reseed: versionCode changed from $seen to $current")
+            Log.i("SeedVersion", "Starting reseed: versionCode changed from ${seen} to ${current}")
             val startTime = System.currentTimeMillis()
 
             val db = AppDatabase.getInstance(context)
             val dao = db.chordDao()
 
-            // 0) Read and validate JSON
-            val json = context.assets.open(assetFileName).bufferedReader().use { it.readText() }
-            val obj = JSONObject(json)
+            // Detect assets
+            val assetNames = try { context.assets.list("")?.toSet() } catch (_: Throwable) { null } ?: emptySet()
+            val hasPerRoot = assetNames.contains(seedAssetFileNameForRoot("C"))
+            val hasCombined = assetNames.contains(assetFileName)
 
-            // Check metadata if exists
-            if (obj.has("_metadata")) {
-                val meta = obj.getJSONObject("_metadata")
-                val dataVersion = meta.optString("version", "unknown")
-                Log.i("SeedVersion", "Seed data version: $dataVersion")
+            var dataVersion: String? = null
+            if (hasCombined) {
+                // Read metadata from combined file if available
+                try {
+                    val json = context.assets.open(assetFileName).bufferedReader().use { it.readText() }
+                    val obj = JSONObject(json)
+                    if (obj.has("_metadata")) dataVersion = obj.getJSONObject("_metadata").optString("version", "")
+                } catch (_: Throwable) {}
             }
 
             // 1) Capture favorites by natural key before wipe
@@ -151,29 +202,45 @@ suspend fun ensureOrReseedOnAppUpdate(
             db.clearAllTables()
             Log.i("SeedVersion", "Database cleared")
 
-            // 3) Reseed all roots from asset
-            val names = obj.names()
-            if (names != null) {
+            // 3) Reseed all roots
+            val allRoots: List<String>
+            if (hasCombined) {
+                // Prefer combined for efficiency
+                val json = context.assets.open(assetFileName).bufferedReader().use { it.readText() }
+                val obj = JSONObject(json)
+                val names = obj.names()
+                allRoots = names?.let { (0 until it.length()).map { idx -> it.getString(idx) }.filter { !it.startsWith("_") } } ?: emptyList()
                 var processedRoots = 0
-                for (i in 0 until names.length()) {
-                    val root = names.getString(i)
-                    // Skip metadata entries
-                    if (root.startsWith("_")) continue
-
+                for (root in allRoots) {
                     ensureChordsForRoot(context, root, assetFileName)
                     processedRoots++
-                    Log.d("SeedVersion", "Reseeded root: $root ($processedRoots/${names.length()})")
+                    Log.d("SeedVersion", "Reseeded root: ${root} (${processedRoots}/${allRoots.size})")
                 }
-                Log.i("SeedVersion", "Reseeded $processedRoots roots")
+                Log.i("SeedVersion", "Reseeded ${processedRoots} roots (combined mode)")
+            } else if (hasPerRoot) {
+                allRoots = ALL_ROOTS
+                var processed = 0
+                for (r in ALL_ROOTS) {
+                    val perRootFile = seedAssetFileNameForRoot(r)
+                    if (assetNames.contains(perRootFile)) {
+                        ensureChordsForRoot(context, r, perRootFile)
+                        processed++
+                        Log.d("SeedVersion", "Reseeded root (per-file): ${r}")
+                    } else {
+                        Log.w(
+                            "SeedVersion",
+                            "Missing per-root asset ${perRootFile} for root ${r} — skipping"
+                        )
+                    }
+                }
+                Log.i("SeedVersion", "Reseeded ${processed} roots (per-file mode)")
+            } else {
+                // No recognized assets found
+                Log.w("SeedVersion", "No seed assets found in assets dir")
+                allRoots = emptyList()
             }
 
             // 4) Restore favorites using natural key (name, root)
-            val allRoots = names?.let {
-                (0 until it.length())
-                    .map { idx -> it.getString(idx) }
-                    .filter { !it.startsWith("_") }  // Skip metadata
-            } ?: emptyList()
-
             var restoredCount = 0
             for (r in allRoots) {
                 val list = dao.getChordsByRootOnce(r)
@@ -189,7 +256,9 @@ suspend fun ensureOrReseedOnAppUpdate(
             prefs.edit().putLong(versionKey, current).apply()
 
             val elapsed = System.currentTimeMillis() - startTime
-            Log.i("SeedVersion", "✓ Reseed completed in ${elapsed}ms: versionCode=$current, favorites restored=$restoredCount/${favoriteKeys.size}")
+            val seedVerSuffix = dataVersion?.takeIf { it.isNotEmpty() }?.let { ", seedVersion=${it}" } ?: ""
+            val msg = "✓ Reseed completed in ${elapsed}ms: versionCode=${current}, favorites restored=${restoredCount}/${favoriteKeys.size}${seedVerSuffix}"
+            Log.i("SeedVersion", msg)
         } catch (t: Throwable) {
             Log.e("SeedVersion", "❌ ensureOrReseedOnAppUpdate failed", t)
             // Don't rethrow - allow app to continue with existing/empty DB

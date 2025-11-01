@@ -1,0 +1,108 @@
+[
+  { "name": "D", "variants": [
+    { "positions": [-1,-1,0,2,3,2], "fingers": [0,0,0,1,3,2], "firstFretIsNut": true },
+    { "positions": [-1,5,7,7,7,5], "fingers": [0,1,3,4,2,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 5, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [10,12,12,11,10,10], "fingers": [1,3,4,2,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 10, "finger": 1, "fromString": 1, "toString": 6 } ] }
+  ] },
+
+  { "name": "Dm", "variants": [
+    { "positions": [-1,-1,0,2,3,1], "fingers": [0,0,0,2,3,1], "firstFretIsNut": true },
+    { "positions": [-1,5,7,7,6,5], "fingers": [0,1,3,4,2,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 5, "finger": 1, "fromString": 1, "toString": 5 } ] },
+    { "positions": [10,12,12,10,10,10], "fingers": [1,3,4,1,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 10, "finger": 1, "fromString": 1, "toString": 6 } ] }
+  ] },
+
+  { "name": "D7", "variants": [
+    { "positions": [-1,-1,0,2,1,2], "fingers": [0,0,0,2,1,3], "firstFretIsNut": true },
+    { "positions": [-1,5,7,5,7,5], "fingers": [0,1,3,1,4,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 5, "finger": 1, "fromString": 1, "toString": 5 } ] }
+  ] },
+
+  { "name": "Dm7", "variants": [
+    { "positions": [-1,-1,0,2,1,1], "fingers": [0,0,0,2,1,1], "firstFretIsNut": true,
+      "barres": [ { "fret": 1, "finger": 1, "fromString": 1, "toString": 2 } ] },
+    { "positions": [-1,5,7,5,6,5], "fingers": [0,1,3,1,2,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 5, "finger": 1, "fromString": 1, "toString": 5 } ] }
+  ] },
+
+  { "name": "DM7", "variants": [
+    { "positions": [-1,-1,0,2,2,2], "fingers": [0,0,0,1,2,3], "firstFretIsNut": true },
+    { "positions": [-1,5,7,6,7,5], "fingers": [0,1,3,2,4,1], "firstFretIsNut": false }
+  ] },
+
+  { "name": "Dadd9", "variants": [
+    { "positions": [-1,5,4,0,3,0], "fingers": [0,4,3,0,2,0], "firstFretIsNut": true },
+    { "positions": [10,12,12,11,12,10], "fingers": [1,2,3,1,4,1], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D6", "variants": [
+    { "positions": [-1,-1,0,2,0,2], "fingers": [0,0,0,1,0,2], "firstFretIsNut": true },
+    { "positions": [-1,5,7,7,7,7], "fingers": [0,1,2,3,4,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "Dm6", "variants": [
+    { "positions": [-1,-1,0,2,0,1], "fingers": [0,0,0,2,0,1], "firstFretIsNut": true },
+    { "positions": [-1,5,7,7,6,7], "fingers": [0,1,3,4,2,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "Dsus4", "variants": [
+    { "positions": [-1,-1,0,2,3,3], "fingers": [0,0,0,1,2,3], "firstFretIsNut": true },
+    { "positions": [-1,5,7,7,8,5], "fingers": [0,1,2,3,4,1], "firstFretIsNut": false }
+  ] },
+
+  { "name": "Dsus2", "variants": [
+    { "positions": [-1,-1,0,2,3,0], "fingers": [0,0,0,1,2,0], "firstFretIsNut": true }
+  ] },
+
+  { "name": "Ddim", "variants": [
+    { "positions": [-1,-1,0,1,0,1], "fingers": [0,0,0,1,0,2], "firstFretIsNut": true },
+    { "positions": [-1,5,6,7,6,-1], "fingers": [0,1,2,4,3,0], "firstFretIsNut": false }
+  ] },
+
+  { "name": "Daug", "variants": [
+    { "positions": [-1,-1,0,3,3,2], "fingers": [0,0,0,2,3,1], "firstFretIsNut": true }
+  ] },
+
+  { "name": "D9", "variants": [
+    { "positions": [-1,5,4,5,5,5], "fingers": [0,2,1,3,3,3], "firstFretIsNut": false,
+      "barres": [ { "fret": 5, "finger": 3, "fromString": 1, "toString": 3 } ] },
+    { "positions": [10,10,11,10,10,10], "fingers": [1,1,2,1,1,1], "firstFretIsNut": false,
+      "barres": [ { "fret": 10, "finger": 1, "fromString": 1, "toString": 6 } ] }
+  ] },
+
+  { "name": "Dm9", "variants": [
+    { "positions": [-1,5,3,5,5,0], "fingers": [0,3,1,2,4,0], "firstFretIsNut": true }
+  ] },
+
+  { "name": "DM9", "variants": [
+    { "positions": [-1,5,4,6,5,0], "fingers": [0,3,1,4,2,0], "firstFretIsNut": true }
+  ] },
+
+  { "name": "D7sus4", "variants": [
+    { "positions": [-1,-1,0,2,1,3], "fingers": [0,0,0,2,1,3], "firstFretIsNut": true }
+  ] },
+
+  { "name": "Dm7b5", "variants": [
+    { "positions": [-1,-1,0,1,1,1], "fingers": [0,0,0,1,1,1], "firstFretIsNut": true,
+      "barres": [ { "fret": 1, "finger": 1, "fromString": 1, "toString": 3 } ] }
+  ] },
+
+  { "name": "D7#9", "variants": [
+    { "positions": [-1,5,4,5,6,0], "fingers": [0,2,1,3,4,0], "firstFretIsNut": true }
+  ] },
+
+  { "name": "D13", "variants": [
+    { "positions": [-1,5,7,5,7,7], "fingers": [0,1,3,1,4,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "D7b9", "variants": [
+    { "positions": [-1,5,4,5,4,5], "fingers": [0,2,1,3,1,4], "firstFretIsNut": false }
+  ] },
+
+  { "name": "Dmaj7#11", "variants": [
+    { "positions": [-1,5,4,6,7,0], "fingers": [0,2,1,3,4,0], "firstFretIsNut": true }
+  ] }
+]

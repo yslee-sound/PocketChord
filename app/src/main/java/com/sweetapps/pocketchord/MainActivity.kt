@@ -34,6 +34,9 @@ import com.sweetapps.pocketchord.ui.theme.PocketChordTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.isFinite
 import androidx.lifecycle.lifecycleScope
+import android.net.Uri
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,9 +78,14 @@ class MainActivity : ComponentActivity() {
                             Log.d("NavDebug", "Entered route: search_chord")
                             SearchChordScreen()
                         }
-                        composable("chord_list/{root}") { backStackEntry ->
-                            val root = backStackEntry.arguments?.getString("root") ?: "C"
-                            Log.d("NavDebug", "Entered route: chord_list/" + root)
+                        // Declare argument type explicitly; we'll decode on read
+                        composable(
+                            route = "chord_list/{root}",
+                            arguments = listOf(navArgument("root") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val encoded = backStackEntry.arguments?.getString("root")
+                            val root = encoded?.let { Uri.decode(it) } ?: "C"
+                            Log.d("NavDebug", "Entered route: chord_list/$root (encoded=$encoded)")
                             ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                         }
                         // Optional settings screen remains, but without any seeding controls
@@ -163,12 +171,15 @@ fun ChordGrid(navController: NavHostController) {
                 rowList.forEach { chord ->
                     ChordButton(
                         chord = chord,
-                        modifier = Modifier.weight(1f).clickable {
-                            val root = getRoot(chord)
-                            val route = "chord_list/$root"
-                            Log.d("NavDebug", "Click: navigating to $route from grid (chord=$chord, root=$root)")
-                            navController.navigate(route)
-                        }
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                val root = getRoot(chord)
+                                // encode to keep special characters (e.g., '#') safe in route path
+                                val route = "chord_list/${Uri.encode(root)}"
+                                Log.d("NavDebug", "Click: navigating to ${route} from grid (chord=${chord}, root=${root})")
+                                navController.navigate(route)
+                            }
                     )
                 }
                 // fill remaining columns with spacers if row has less than 3 items
@@ -481,10 +492,15 @@ fun ChordListScreen(
     val chordWithVariants by chordFlow.collectAsState(initial = emptyList())
     var isSeeding by remember { mutableStateOf(false) }
 
-    // ensure missing variants for this root (insert-only) — dataset-wide reseed is handled at app start
+    val perRootAsset = remember(root) { com.sweetapps.pocketchord.data.seedAssetFileNameForRoot(root) }
+
+    // ensure missing variants for this root (insert-only)
     LaunchedEffect(root) {
         try {
             isSeeding = true
+            // 1) per-root 파일 우선 시딩 (프록시 형식 지원)
+            com.sweetapps.pocketchord.data.ensureChordsForRoot(context, root, perRootAsset)
+            // 2) 안전 폴백: 통합 파일에서도 시딩 (중복은 내부에서 방지)
             com.sweetapps.pocketchord.data.ensureChordsForRoot(context, root)
         } catch (t: Throwable) {
             android.util.Log.w("ChordListScreen", "ensureChordsForRoot failed", t)
@@ -573,7 +589,7 @@ fun ChordListScreen(
                     val fingers = variant.fingersCsv?.let { parseCsvToPositions(it) } ?: List(6) { 0 }
                     // debug log
                     try {
-                        Log.d("ChordDiag", "chord=$chordName csvPositions=${variant.positionsCsv} parsedPositions=$positions csvFingers=${variant.fingersCsv} parsedFingers=$fingers")
+                        Log.d("ChordDiag", "chord=${chordName} csvPositions=${variant.positionsCsv} parsedPositions=${positions} csvFingers=${variant.fingersCsv} parsedFingers=${fingers}")
                     } catch (_: Exception) {}
 
                     val desiredDiagramWidth = uiParams.diagramMaxWidthDp ?: 220.dp
