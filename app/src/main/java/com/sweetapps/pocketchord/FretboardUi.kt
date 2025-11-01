@@ -123,16 +123,18 @@ fun FretboardDiagram(
                 if (s < 2) s = 2
                 s
             }
+             // show nut only when startFret == 1 and caller expects a nut
+             val nutPx = if (startFret == 1 && firstFretIsNut) computedNutPx else 0f
              // right inset and outer available width (from leftInset to right inset) must be known before computing fretSpacingPx
              val rightInsetPx = with(density) { uiParams.diagramRightInsetDp.toPx() }
              val outerAvailableWidth = (boxWpx - leftInsetPx - rightInsetPx).coerceAtLeast(0f)
+             // If nut is shown we must exclude the reserved nut width from the grid available width so that
+             // the visible grid (leftFrac + baseFrets + rightFrac) maps exactly to the space used by vertical frets.
+             val gridAvailableWidth = if (nutPx > 0f) (outerAvailableWidth - reservedNutPx).coerceAtLeast(0f) else outerAvailableWidth
              val spacingDiv = (baseFrets + leftFrac + rightFrac).coerceAtLeast(1f)
-             // Use the same spacing calculation for both nut-start and fret-start so the total visible span
-             // (leftFrac + baseFrets + rightFrac) maps exactly to the outer available width between the red boundaries.
-             val fretSpacingPx = outerAvailableWidth / spacingDiv
-            // show nut only when startFret == 1 and caller expects a nut
-            val nutPx = if (startFret == 1 && firstFretIsNut) computedNutPx else 0f
-            // use provided fretCount
+             // Use the gridAvailableWidth so both nut-start and fret-start diagrams align to the same outer boundaries
+             val fretSpacingPx = gridAvailableWidth / spacingDiv
+             // use provided fretCount
             val stringCount = 6
              // compute fret spacing so 'fretCount' frets fit inside the available width
               // reserve vertical area at bottom for fret labels
