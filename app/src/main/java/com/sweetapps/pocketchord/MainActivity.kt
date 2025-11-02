@@ -67,6 +67,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import com.sweetapps.pocketchord.ads.InterstitialAdManager
 import com.sweetapps.pocketchord.BuildConfig
+import com.sweetapps.pocketchord.ui.screens.SplashScreen
+import androidx.compose.runtime.saveable.rememberSaveable
 
 class MainActivity : ComponentActivity() {
     // 전면광고 매니저
@@ -90,11 +92,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             PocketChordTheme {
                 val navController = rememberNavController()
-                // 아이콘 변경 시 즉시 하단바가 갱신되도록 버전 스테이트 보관
+                // 스플래시 오버레이 표시 여부 (프로세스 회복 시에도 유지)
+                var showSplash by rememberSaveable { mutableStateOf(true) }
+
+                // 아이콘/광고/다이얼로그 프리퍼런스 버전 스테이트
                 var iconPrefsVersion by remember { mutableStateOf(0) }
-                // 배너 광고 표시 여부 변경 시 즉시 반영되도록 버전 스테이트 보관
                 var adPrefsVersion by remember { mutableStateOf(0) }
-                // 긴급 안내 팝업 설정 변경 즉시 반영용 버전 스테이트
                 var dialogPrefsVersion by remember { mutableStateOf(0) }
                 val context = LocalContext.current
                 val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
@@ -104,167 +107,146 @@ class MainActivity : ComponentActivity() {
                 val app = context.applicationContext as PocketChordApplication
                 val isShowingAppOpenAd by app.isShowingAppOpenAd.collectAsState()
 
-                // 현재 라우트에 따라 상단 배너/하단바를 숨기기 위한 상태
+                // 현재 라우트(광고/전면광고 표시 기준 등)
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-                val isSplash = currentRoute == "splash"
 
                 // 전면광고 표시를 위한 이전 라우트 추적
                 var previousRoute by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(currentRoute) {
-                    // 특정 화면에서 돌아올 때 전면광고 표시
                     if (previousRoute != null && currentRoute != null) {
-                        // 코드 상세 화면에서 홈으로 돌아올 때
                         if (previousRoute?.startsWith("chord_list/") == true && currentRoute == "home") {
                             interstitialAdManager.tryShowAd(this@MainActivity)
-                        }
-                        // 메트로놈/튜너에서 홈으로 돌아올 때
-                        else if ((previousRoute == "metronome" || previousRoute == "tuner") && currentRoute == "home") {
+                        } else if ((previousRoute == "metronome" || previousRoute == "tuner") && currentRoute == "home") {
                             interstitialAdManager.tryShowAd(this@MainActivity)
-                        }
-                        // 설정 화면 진입 시
-                        else if (previousRoute == "more" && currentRoute == "settings") {
+                        } else if (previousRoute == "more" && currentRoute == "settings") {
                             interstitialAdManager.tryShowAd(this@MainActivity)
                         }
                     }
                     previousRoute = currentRoute
                 }
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    bottomBar = {
-                        if (!isSplash) {
-                            BottomNavigationBar(navController, prefsVersion = iconPrefsVersion)
-                        }
-                    },
-                    containerColor = Color.White
-                ) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .windowInsetsPadding(
-                                WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
-                            )
-                    ) {
-
-                        // 배너 광고 영역: 모든 화면에서 항상 고정 (스플래시 포함)
-                        // 단, 앱 오프닝 광고가 표시 중일 때는 배너 광고 숨김 (광고 겹침 방지)
-                        if (isSplash || isShowingAppOpenAd) {
-                            // 스플래시 또는 앱 오프닝 광고 표시 중: 빈 공간만
-                            TopBannerAdPlaceholder()
-                        } else {
-                            // 다른 화면: 배너 활성화 시 광고 표시
-                            if (isBannerEnabled) {
-                                TopBannerAd()
-                            } else {
-                                TopBannerAdPlaceholder()
+                // 루트 컨테이너: 오버레이 스플래시를 위해 Box로 레이어 구성
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                        bottomBar = {
+                            // 스플래시 표시 중에는 하단바 숨김 → 레이아웃 변동이 스플래시에 영향을 주지 않음
+                            if (!showSplash) {
+                                BottomNavigationBar(navController, prefsVersion = iconPrefsVersion)
                             }
-                        }
-                        NavHost(
-                            navController = navController,
-                            startDestination = "splash",
-                            modifier = Modifier.weight(1f)
+                        },
+                        containerColor = Color.White
+                    ) { innerPadding ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                                .windowInsetsPadding(
+                                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
+                                )
                         ) {
-                            composable("splash") {
-                                com.sweetapps.pocketchord.ui.screens.SplashScreen(
-                                    logoResId = R.drawable.ic_logo_temp,
-                                    appName = null,  // 로고만 표시
-                                    tagline = null,  // 로고만 표시
-                                    onSplashFinished = {
-                                        navController.navigate("home") {
-                                            popUpTo("splash") { inclusive = true }
-                                            launchSingleTop = true
-                                        }
-                                    }
-                                )
+                            // 스플래시/앱오프닝 광고 표시 중에는 상단 배너 숨김 (레이아웃 고정)
+                            if (showSplash || isShowingAppOpenAd) {
+                                TopBannerAdPlaceholder()
+                            } else {
+                                if (isBannerEnabled) TopBannerAd() else TopBannerAdPlaceholder()
                             }
-                            composable("home") { Log.d("NavDebug", "Entered route: home"); MainScreen(navController) }
-                            composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
-                            composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
-                            composable("search") { Log.d("NavDebug", "Entered route: search"); SearchResultScreen() }
-                            composable("search_chord") { Log.d("NavDebug", "Entered route: search_chord"); SearchChordScreen() }
-                            composable(
-                                route = "chord_list/{root}",
-                                arguments = listOf(navArgument("root") { type = NavType.StringType })
-                            ) { backStackEntry ->
-                                val encoded = backStackEntry.arguments?.getString("root")
-                                val root = encoded?.let { Uri.decode(it) } ?: "C"
-                                Log.d("NavDebug", "Entered route: chord_list/$root (encoded=$encoded)")
-                                ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
-                            }
-                            composable("more") { MoreScreen() }
-                            composable("settings") {
-                                BasicSettingsScreen(
-                                    navController,
-                                    onIconsChanged = { iconPrefsVersion++ },
-                                    onAdsPrefChanged = { adPrefsVersion++ },
-                                    onDialogPrefsChanged = { dialogPrefsVersion++ }
-                                )
-                            }
-                            // 아이콘 선택 화면 라우트
-                            composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
-                            // 라벨 편집 화면 라우트
-                            composable("label_editor") { LabelEditorScreen(onChanged = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
-                            // 강제 업데이트 다이얼로그 라우트
-                            composable("force_update") {
-                                com.sweetapps.pocketchord.ui.screens.ForceUpdateDialog(
-                                    title = "앱 업데이트",
-                                    description = "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다. 업데이트는 대부분 1분 내에 완료됩니다.",
-                                    buttonText = "업데이트",
-                                    features = listOf(
-                                        "코드 라이브러리 최신화",
-                                        "성능 향상 및 버그 수정",
-                                        "UI 사용성 개선"
-                                    ),
-                                    estimatedTime = "약 1분",
-                                    showCloseButton = false,
-                                    onUpdateClick = { navController.popBackStack() }
-                                )
-                            }
-                            // 선택적 업데이트 다이얼로그 라우트
-                            // 앱에서 지금 보이는 문구를 바꾸고 싶다”면 가장 먼저 여기 값을 바꾸면 됩니다.
-                            composable("optional_update") {
-                                com.sweetapps.pocketchord.ui.screens.OptionalUpdateDialog(
-                                    title = "새 버전 사용 가능",
-                                    description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
-                                    updateButtonText = "지금 업데이트",
-                                    laterButtonText = "나중에",
-                                    // features = listOf("안정성 향상", "작은 버그 수정"),
-                                    version = null,
-                                    onUpdateClick = { navController.popBackStack() },
-                                    onLaterClick = { navController.popBackStack() }
-                                )
-                            }
-                            // 긴급 전환 안내 팝업 라우트
-                            composable("emergency_redirect") {
-                                val ctx = LocalContext.current
-                                val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
-                                val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
-                                com.sweetapps.pocketchord.ui.screens.EmergencyRedirectDialog(
-                                    title = "중요 안내",
-                                    description = "현재 앱의 서비스가 종료되어 더 이상 사용할 수 없습니다. 새로운 앱을 설치하여 계속 이용해주세요.",
-                                    newAppName = "PocketChord 2",
-                                    newAppPackage = "com.sweetapps.pocketchord2",
-                                    buttonText = "새 앱 설치하기",
-                                    supportUrl = "https://example.com/faq",
-                                    supportButtonText = "자세한 내용 보기",
-                                    canMigrateData = true,
-                                    isDismissible = allowDismiss,
-                                    onDismiss = { navController.popBackStack() }
-                                )
-                            }
-                            // 공지사항 다이얼로그 라우트
-                            composable("notice") {
-                                com.sweetapps.pocketchord.ui.screens.NoticeDialog(
-                                    title = "새로운 기능 출시",
-                                    description = "더욱 편리해진 새로운 기능을 만나보세요. 이번 업데이트에서는 사용자 경험을 개선하고 다양한 새로운 기능을 추가했습니다.",
-                                    imageUrl = null,
-                                    onDismiss = { navController.popBackStack() }
-                                )
+
+                            NavHost(
+                                navController = navController,
+                                startDestination = "home",
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                composable("home") { Log.d("NavDebug", "Entered route: home"); MainScreen(navController) }
+                                composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
+                                composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
+                                composable("search") { Log.d("NavDebug", "Entered route: search"); SearchResultScreen() }
+                                composable("search_chord") { Log.d("NavDebug", "Entered route: search_chord"); SearchChordScreen() }
+                                composable(
+                                    route = "chord_list/{root}",
+                                    arguments = listOf(navArgument("root") { type = NavType.StringType })
+                                ) { backStackEntry ->
+                                    val encoded = backStackEntry.arguments?.getString("root")
+                                    val root = encoded?.let { Uri.decode(it) } ?: "C"
+                                    Log.d("NavDebug", "Entered route: chord_list/$root (encoded=$encoded)")
+                                    ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
+                                }
+                                composable("more") { MoreScreen() }
+                                composable("settings") {
+                                    BasicSettingsScreen(
+                                        navController,
+                                        onIconsChanged = { iconPrefsVersion++ },
+                                        onAdsPrefChanged = { adPrefsVersion++ },
+                                        onDialogPrefsChanged = { dialogPrefsVersion++ }
+                                    )
+                                }
+                                composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
+                                composable("label_editor") { LabelEditorScreen(onChanged = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
+                                composable("force_update") {
+                                    com.sweetapps.pocketchord.ui.screens.ForceUpdateDialog(
+                                        title = "앱 업데이트",
+                                        description = "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다. 업데이트는 대부분 1분 내에 완료됩니다.",
+                                        buttonText = "업데이트",
+                                        features = listOf(
+                                            "코드 라이브러리 최신화",
+                                            "성능 향상 및 버그 수정",
+                                            "UI 사용성 개선"
+                                        ),
+                                        estimatedTime = "약 1분",
+                                        showCloseButton = false,
+                                        onUpdateClick = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("optional_update") {
+                                    com.sweetapps.pocketchord.ui.screens.OptionalUpdateDialog(
+                                        title = "새 버전 사용 가능",
+                                        description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
+                                        updateButtonText = "지금 업데이트",
+                                        laterButtonText = "나중에",
+                                        version = null,
+                                        onUpdateClick = { navController.popBackStack() },
+                                        onLaterClick = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("emergency_redirect") {
+                                    val ctx = LocalContext.current
+                                    val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
+                                    val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
+                                    com.sweetapps.pocketchord.ui.screens.EmergencyRedirectDialog(
+                                        title = "중요 안내",
+                                        description = "현재 앱의 서비스가 종료되어 더 이상 사용할 수 없습니다. 새로운 앱을 설치하여 계속 이용해주세요.",
+                                        newAppName = "PocketChord 2",
+                                        newAppPackage = "com.sweetapps.pocketchord2",
+                                        buttonText = "새 앱 설치하기",
+                                        supportUrl = "https://example.com/faq",
+                                        supportButtonText = "자세한 내용 보기",
+                                        canMigrateData = true,
+                                        isDismissible = allowDismiss,
+                                        onDismiss = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("notice") {
+                                    com.sweetapps.pocketchord.ui.screens.NoticeDialog(
+                                        title = "새로운 기능 출시",
+                                        description = "더욱 편리해진 새로운 기능을 만나보세요. 이번 업데이트에서는 사용자 경험을 개선하고 다양한 새로운 기능을 추가했습니다.",
+                                        imageUrl = null,
+                                        onDismiss = { navController.popBackStack() }
+                                    )
+                                }
                             }
                         }
+                    }
+
+                    // 스플래시 오버레이: 전체 화면을 덮어 레이아웃 변화가 보이지 않게 함
+                    if (showSplash) {
+                        SplashScreen(
+                            logoResId = R.drawable.ic_logo_temp,
+                            appName = null,
+                            tagline = null,
+                            onSplashFinished = { showSplash = false }
+                        )
                     }
                 }
             }
