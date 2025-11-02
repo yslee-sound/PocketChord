@@ -320,13 +320,6 @@ fun MainScreen(navController: NavHostController) {
         Spacer(modifier = Modifier.height(24.dp))
         TopBar()
         Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "코드를 선택하세요",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFF1F2D3D)
-        )
-        Spacer(modifier = Modifier.height(24.dp))
         ChordGrid(navController)
     }
 }
