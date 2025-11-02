@@ -27,11 +27,13 @@ import com.sweetapps.pocketchord.R
 /**
  * 선택적 업데이트 팝업 컴포넌트
  * "나중에" 버튼이 있어 사용자가 업데이트를 미룰 수 있음
+ * 여기에 보이는 문구는 기본값임
+ * 호출부에서 해당 파라미터를 생략하면, 컴포저블 내부에 정의된 기본값이 사용됩니다.
  */
 @Composable
 fun OptionalUpdateDialog(
     title: String = "새 버전 사용 가능",
-    description: String = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다.",
+    description: String = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
     updateButtonText: String = "지금 업데이트",
     laterButtonText: String = "나중에",
     features: List<String>? = null,

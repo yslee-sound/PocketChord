@@ -86,18 +86,47 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 // 아이콘 변경 시 즉시 하단바가 갱신되도록 버전 스테이트 보관
                 var iconPrefsVersion by remember { mutableStateOf(0) }
+                // 배너 광고 표시 여부 변경 시 즉시 반영되도록 버전 스테이트 보관
+                var adPrefsVersion by remember { mutableStateOf(0) }
+                val context = LocalContext.current
+                val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
+                val isBannerEnabled = remember(adPrefsVersion) { adPrefs.getBoolean("banner_ads_enabled", true) }
+
+                // 현재 라우트에 따라 상단 배너/하단바를 숨기기 위한 상태
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+                val isSplash = currentRoute == "splash"
+
                 Scaffold(
-                    bottomBar = { BottomNavigationBar(navController, prefsVersion = iconPrefsVersion) },
+                    bottomBar = {
+                        if (!isSplash) {
+                            BottomNavigationBar(navController, prefsVersion = iconPrefsVersion)
+                        }
+                    },
                     containerColor = Color.White
                 ) { innerPadding ->
                     // Wrap NavHost with a Column and place TopBannerAd above it
                     Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        TopBannerAd()
+                        if (isBannerEnabled && !isSplash) {
+                            TopBannerAd()
+                        }
                         NavHost(
                             navController = navController,
-                            startDestination = "home",
+                            startDestination = "splash",
                             modifier = Modifier.weight(1f)
                         ) {
+                            composable("splash") {
+                                com.sweetapps.pocketchord.ui.screens.SplashScreen(
+                                    appName = "PocketChord",
+                                    tagline = "코드 검색을 더 쉽게",
+                                    onSplashFinished = {
+                                        navController.navigate("home") {
+                                            popUpTo("splash") { inclusive = true }
+                                            launchSingleTop = true
+                                        }
+                                    }
+                                )
+                            }
                             composable("home") { Log.d("NavDebug", "Entered route: home"); MainScreen(navController) }
                             composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
                             composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
@@ -113,7 +142,7 @@ class MainActivity : ComponentActivity() {
                                 ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                             }
                             composable("more") { MoreScreen() }
-                            composable("settings") { BasicSettingsScreen(navController, onIconsChanged = { iconPrefsVersion++ }) }
+                            composable("settings") { BasicSettingsScreen(navController, onIconsChanged = { iconPrefsVersion++ }, onAdsPrefChanged = { adPrefsVersion++ }) }
                             // 아이콘 선택 화면 라우트
                             composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                             // 라벨 편집 화면 라우트
@@ -135,13 +164,14 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             // 선택적 업데이트 다이얼로그 라우트
+                            // 앱에서 지금 보이는 문구를 바꾸고 싶다”면 가장 먼저 여기 값을 바꾸면 됩니다.
                             composable("optional_update") {
                                 com.sweetapps.pocketchord.ui.screens.OptionalUpdateDialog(
                                     title = "새 버전 사용 가능",
-                                    description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다.",
+                                    description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
                                     updateButtonText = "지금 업데이트",
                                     laterButtonText = "나중에",
-                                    features = listOf("안정성 향상", "작은 버그 수정"),
+                                    // features = listOf("안정성 향상", "작은 버그 수정"),
                                     version = null,
                                     onUpdateClick = { navController.popBackStack() },
                                     onLaterClick = { navController.popBackStack() }
@@ -158,15 +188,14 @@ class MainActivity : ComponentActivity() {
                                     supportUrl = "https://example.com/faq",
                                     supportButtonText = "자세한 내용 보기",
                                     canMigrateData = true,
-                                    isDismissible = true,
-                                    onDismiss = { navController.popBackStack() }
+                                    isDismissible = false
                                 )
                             }
                             // 공지사항 다이얼로그 라우트
                             composable("notice") {
                                 com.sweetapps.pocketchord.ui.screens.NoticeDialog(
-                                    title = "공지사항",
-                                    description = "포켓코드의 최신 소식을 안내드립니다.\n- 신규 코드 다이어그램 추가\n- 성능 및 안정성 향상\n- 사용성 개선",
+                                    title = "새로운 기능 출시",
+                                    description = "더욱 편리해진 새로운 기능을 만나보세요. 이번 업데이트에서는 사용자 경험을 개선하고 다양한 새로운 기능을 추가했습니다.",
                                     imageUrl = null,
                                     onDismiss = { navController.popBackStack() }
                                 )
@@ -186,6 +215,8 @@ class MainActivity : ComponentActivity() {
 fun TopBannerAd() {
     // Official AdMob test banner ad unit ID
     val testAdUnitId = "ca-app-pub-3940256099942544/6300978111"
+    // Keep a reference to destroy AdView when disposed
+    var adView by remember { mutableStateOf<com.google.android.gms.ads.AdView?>(null) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -197,6 +228,7 @@ fun TopBannerAd() {
                     setAdSize(AdSize.BANNER)
                     setAdUnitId(testAdUnitId)
                     loadAd(AdRequest.Builder().build())
+                    adView = this
                 }
             },
             modifier = Modifier
@@ -204,6 +236,12 @@ fun TopBannerAd() {
                 .wrapContentHeight()
         )
         HorizontalDivider(color = Color(0x1A000000))
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            try { adView?.destroy() } catch (_: Exception) {}
+            adView = null
+        }
     }
 }
 
@@ -985,7 +1023,11 @@ fun FretboardCard(
 }
 
 @Composable
-fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit) {
+fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit, onAdsPrefChanged: () -> Unit) {
+    val context = LocalContext.current
+    val adPrefs = remember { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
+    var isBannerEnabled by remember { mutableStateOf(adPrefs.getBoolean("banner_ads_enabled", true)) }
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(text = "설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
@@ -1030,6 +1072,32 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
             Icon(Icons.Filled.Info, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("공지사항 보기")
+        }
+
+        // 배너 광고 ON/OFF 구역 - 스위치로 변경
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "배너 광고", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "배너 광고 표시")
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = if (isBannerEnabled) "현재 상태: 켜짐" else "현재 상태: 꺼짐",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF6B7C8C)
+                )
+            }
+            Switch(
+                checked = isBannerEnabled,
+                onCheckedChange = { checked ->
+                    adPrefs.edit { putBoolean("banner_ads_enabled", checked) }
+                    isBannerEnabled = checked
+                    onAdsPrefChanged()
+                }
+            )
         }
     }
 }
