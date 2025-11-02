@@ -65,8 +65,13 @@ import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.AdSize
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
+import com.sweetapps.pocketchord.ads.InterstitialAdManager
+import com.sweetapps.pocketchord.BuildConfig
 
 class MainActivity : ComponentActivity() {
+    // 전면광고 매니저
+    private lateinit var interstitialAdManager: InterstitialAdManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -80,6 +85,9 @@ class MainActivity : ComponentActivity() {
 
         // Initialize Google Mobile Ads SDK
         MobileAds.initialize(this) {}
+
+        // 전면광고 매니저 초기화
+        interstitialAdManager = InterstitialAdManager(this)
 
         setContent {
             PocketChordTheme {
@@ -98,6 +106,27 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 val isSplash = currentRoute == "splash"
+
+                // 전면광고 표시를 위한 이전 라우트 추적
+                var previousRoute by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(currentRoute) {
+                    // 특정 화면에서 돌아올 때 전면광고 표시
+                    if (previousRoute != null && currentRoute != null) {
+                        // 코드 상세 화면에서 홈으로 돌아올 때
+                        if (previousRoute?.startsWith("chord_list/") == true && currentRoute == "home") {
+                            interstitialAdManager.tryShowAd(this@MainActivity)
+                        }
+                        // 메트로놈/튜너에서 홈으로 돌아올 때
+                        else if ((previousRoute == "metronome" || previousRoute == "tuner") && currentRoute == "home") {
+                            interstitialAdManager.tryShowAd(this@MainActivity)
+                        }
+                        // 설정 화면 진입 시
+                        else if (previousRoute == "more" && currentRoute == "settings") {
+                            interstitialAdManager.tryShowAd(this@MainActivity)
+                        }
+                    }
+                    previousRoute = currentRoute
+                }
 
                 Scaffold(
                     bottomBar = {
@@ -1040,6 +1069,7 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
     val context = LocalContext.current
     val adPrefs = remember { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
     var isBannerEnabled by remember { mutableStateOf(adPrefs.getBoolean("banner_ads_enabled", true)) }
+    var isInterstitialEnabled by remember { mutableStateOf(adPrefs.getBoolean("interstitial_ads_enabled", true)) }
     // 긴급 안내 팝업 X 버튼 허용 토글용 프리퍼런스/상태
     val dialogPrefs = remember { context.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
     var allowEmergencyDismiss by remember { mutableStateOf(dialogPrefs.getBoolean("emergency_dialog_dismissible", false)) }
@@ -1104,30 +1134,63 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
             Text("공지사항 보기")
         }
 
-        // 배너 광고 ON/OFF 구역 - 스위치
-        Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "배너 광고", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "배너 광고 표시")
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = if (isBannerEnabled) "현재 상태: 켜짐" else "현재 상태: 꺼짐",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF6B7C8C)
+        // 개발 도구 (디버깅 목적) - 배너/전면 광고 테스트
+        if (BuildConfig.DEBUG) {
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = "🛠️ 개발 도구", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B35))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "디버그 빌드에서만 표시됩니다",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFFFF6B35)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 배너 광고 토글 (디버그 전용)
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "배너 광고 테스트")
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = if (isBannerEnabled) "활성화됨" else "비활성화됨",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7C8C)
+                    )
+                }
+                Switch(
+                    checked = isBannerEnabled,
+                    onCheckedChange = { checked ->
+                        adPrefs.edit { putBoolean("banner_ads_enabled", checked) }
+                        isBannerEnabled = checked
+                        onAdsPrefChanged()
+                    }
                 )
             }
-            Switch(
-                checked = isBannerEnabled,
-                onCheckedChange = { checked ->
-                    adPrefs.edit { putBoolean("banner_ads_enabled", checked) }
-                    isBannerEnabled = checked
-                    onAdsPrefChanged()
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 전면 광고 토글 (디버그 전용)
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "전면 광고 로그")
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = if (isInterstitialEnabled) "로그 활성화" else "로그 비활성화",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7C8C)
+                    )
                 }
-            )
+                Switch(
+                    checked = isInterstitialEnabled,
+                    onCheckedChange = { checked ->
+                        adPrefs.edit { putBoolean("interstitial_ads_enabled", checked) }
+                        isInterstitialEnabled = checked
+                        onAdsPrefChanged()
+                    }
+                )
+            }
         }
     }
 }
