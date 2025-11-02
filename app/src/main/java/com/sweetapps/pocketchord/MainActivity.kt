@@ -129,8 +129,9 @@ class MainActivity : ComponentActivity() {
                                         "성능 향상 및 버그 수정",
                                         "UI 사용성 개선"
                                     ),
-                                    onUpdateClick = { navController.popBackStack() },
-                                    isDismissible = true
+                                    estimatedTime = "약 1분",
+                                    showCloseButton = false,
+                                    onUpdateClick = { navController.popBackStack() }
                                 )
                             }
                             // 공지사항 다이얼로그 라우트
