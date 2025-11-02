@@ -131,6 +131,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
                         if (!isSplash) {
                             BottomNavigationBar(navController, prefsVersion = iconPrefsVersion)
@@ -138,15 +140,25 @@ class MainActivity : ComponentActivity() {
                     },
                     containerColor = Color.White
                 ) { innerPadding ->
-                    // Wrap NavHost with a Column and place TopBannerAd above it
-                    Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        // 배너 광고 영역: 항상 고정 (광고 유무와 관계없이)
-                        if (!isSplash) {
-                            // 배너 활성화 && 앱 오프닝 광고 표시 중 아님 → 광고 표시
-                            if (isBannerEnabled && !isShowingAppOpenAd) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
+                            )
+                    ) {
+
+                        // 배너 광고 영역: 모든 화면에서 항상 고정 (스플래시 포함)
+                        // 단, 앱 오프닝 광고가 표시 중일 때는 배너 광고 숨김 (광고 겹침 방지)
+                        if (isSplash || isShowingAppOpenAd) {
+                            // 스플래시 또는 앱 오프닝 광고 표시 중: 빈 공간만
+                            TopBannerAdPlaceholder()
+                        } else {
+                            // 다른 화면: 배너 활성화 시 광고 표시
+                            if (isBannerEnabled) {
                                 TopBannerAd()
                             } else {
-                                // 광고가 없을 때 → 같은 크기의 빈 공간
                                 TopBannerAdPlaceholder()
                             }
                         }
@@ -157,8 +169,9 @@ class MainActivity : ComponentActivity() {
                         ) {
                             composable("splash") {
                                 com.sweetapps.pocketchord.ui.screens.SplashScreen(
-                                    appName = "PocketChord",
-                                    tagline = "코드 검색을 더 쉽게",
+                                    logoResId = R.drawable.ic_logo_temp,
+                                    appName = null,  // 로고만 표시
+                                    tagline = null,  // 로고만 표시
                                     onSplashFinished = {
                                         navController.navigate("home") {
                                             popUpTo("splash") { inclusive = true }
@@ -272,22 +285,37 @@ fun TopBannerAd() {
     val bannerHeight = 50.dp
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(bannerHeight)  // 고정 높이
+        modifier = Modifier.fillMaxWidth()
     ) {
-        AndroidView(
-            factory = { context ->
-                com.google.android.gms.ads.AdView(context).apply {
-                    setAdSize(AdSize.BANNER)
-                    setAdUnitId(testAdUnitId)
-                    loadAd(AdRequest.Builder().build())
-                    adView = this
-                }
-            },
+        // 상태바와의 여백
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 배너 광고 영역 (흰색 배경)
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(bannerHeight)
+                .background(Color.White)
+        ) {
+            AndroidView(
+                factory = { context ->
+                    com.google.android.gms.ads.AdView(context).apply {
+                        setAdSize(AdSize.BANNER)
+                        setAdUnitId(testAdUnitId)
+                        loadAd(AdRequest.Builder().build())
+                        adView = this
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(bannerHeight)
+            )
+        }
+        // 배너 광고 하단 구분선만
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 1.dp,
+            color = Color(0xFFE0E0E0)
         )
     }
     DisposableEffect(Unit) {
@@ -302,11 +330,25 @@ fun TopBannerAd() {
 fun TopBannerAdPlaceholder() {
     // 배너 광고가 없을 때 같은 크기의 빈 공간
     val bannerHeight = 50.dp
-    Spacer(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(bannerHeight)
-    )
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // 상태바와의 여백
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(bannerHeight)
+                .background(Color.White)
+        )
+        // 배너 광고 영역 아래 구분선 (광고 없을 때도 동일하게)
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 1.dp,
+            color = Color(0xFFE0E0E0)
+        )
+    }
 }
 
 @Composable

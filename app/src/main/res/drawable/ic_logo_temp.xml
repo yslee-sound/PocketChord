@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- 배경 원 -->
+    <path
+        android:fillColor="#6F4EF6"
+        android:pathData="M60,60m-55,0a55,55 0,1 1,110 0a55,55 0,1 1,-110 0"/>
+
+    <!-- 기타 픽 모양 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,35 L70,45 L70,75 L60,85 L50,75 L50,45 Z"/>
+
+    <!-- 음표 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M75,40 C75,36 78,33 82,33 C86,33 89,36 89,40 L89,70 C89,74 86,77 82,77 C78,77 75,74 75,70 Z"/>
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M82,33 L82,55"/>
+
+    <!-- 문자 C (Chord의 C) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M35,50 C35,42 41,36 49,36 C52,36 55,37 57,39 L54,43 C52,41 51,41 49,41 C44,41 40,45 40,50 C40,55 44,59 49,59 C51,59 52,59 54,57 L57,61 C55,63 52,64 49,64 C41,64 35,58 35,50 Z"/>
+</vector>
+
