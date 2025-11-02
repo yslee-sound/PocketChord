@@ -63,6 +63,7 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.AdSize
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,8 +83,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             PocketChordTheme {
                 val navController = rememberNavController()
+                // 아이콘 변경 시 즉시 하단바가 갱신되도록 버전 스테이트 보관
+                var iconPrefsVersion by remember { mutableStateOf(0) }
                 Scaffold(
-                    bottomBar = { BottomNavigationBar(navController) },
+                    bottomBar = { BottomNavigationBar(navController, prefsVersion = iconPrefsVersion) },
                     containerColor = Color.White
                 ) { innerPadding ->
                     // Wrap NavHost with a Column and place TopBannerAd above it
@@ -109,13 +112,15 @@ class MainActivity : ComponentActivity() {
                                 ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                             }
                             composable("more") { MoreScreen() }
-                            composable("settings") { BasicSettingsScreen() }
+                            composable("settings") { BasicSettingsScreen(navController, onIconsChanged = { iconPrefsVersion++ }) }
+                            // 아이콘 선택 화면 라우트
+                            composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                         }
                     }
                 }
             }
         }
-        lifecycleScope.launchWhenCreated {
+        lifecycleScope.launch {
             try { com.sweetapps.pocketchord.data.ensureOrReseedOnAppUpdate(this@MainActivity) } catch (_: Exception) {}
         }
     }
@@ -311,18 +316,38 @@ private fun FancyNavIcon(
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavHostController) {
+fun BottomNavigationBar(navController: NavHostController, prefsVersion: Int = 0) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val context = LocalContext.current
+    val prefs = remember(prefsVersion) { context.getSharedPreferences("nav_icons", android.content.Context.MODE_PRIVATE) }
 
-    // Items definition
-    data class Item(val route: String, val icon: ImageVector, val label: String)
-    val items = listOf(
-        Item("home", Icons.Filled.MusicNote, "코드"),
-        Item("metronome", Icons.Filled.Alarm, "메트로놈"),
-        Item("tuner", Icons.Filled.Equalizer, "튜너"),
-        Item("more", Icons.Filled.MoreHoriz, "더보기"),
-        Item("settings", Icons.Filled.Settings, "설정")
+    // 각 탭의 아이콘 후보 목록
+    fun candidates(route: String): List<ImageVector> = when (route) {
+        "home" -> listOf(Icons.Filled.MusicNote, Icons.Filled.Home, Icons.Filled.Star)
+        "metronome" -> listOf(
+            Icons.Filled.Alarm,
+            Icons.Filled.Timer,
+            Icons.Filled.AccessTime,
+            Icons.Filled.Timelapse,
+            Icons.Filled.AvTimer,
+            Icons.Filled.HourglassEmpty,
+            Icons.Filled.WatchLater,
+            Icons.Filled.Speed
+        )
+        "tuner" -> listOf(Icons.Filled.Equalizer, Icons.Filled.Tune, Icons.Filled.GraphicEq)
+        "more" -> listOf(Icons.Filled.MoreHoriz, Icons.Filled.Menu, Icons.Filled.List)
+        "settings" -> listOf(Icons.Filled.Settings, Icons.Filled.Build, Icons.Filled.Tune)
+        else -> listOf(Icons.Filled.Circle)
+    }
+
+    data class Item(val route: String, val label: String)
+    val baseItems = listOf(
+        Item("home", "코드"),
+        Item("metronome", "메트로놈"),
+        Item("tuner", "튜너"),
+        Item("more", "더보기"),
+        Item("settings", "설정")
     )
 
     Column(
@@ -340,11 +365,16 @@ fun BottomNavigationBar(navController: NavHostController) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            items.forEach { item ->
+            baseItems.forEach { item ->
                 val selected = currentRoute == item.route
                 val interaction = remember { MutableInteractionSource() }
                 val pressed by interaction.collectIsPressedAsState()
                 val scale by animateFloatAsState(targetValue = if (pressed) 0.96f else 1f, label = "nav_item_scale")
+
+                val iconIdx = prefs.getInt(item.route, 0).coerceAtLeast(0)
+                val iconList = candidates(item.route)
+                val icon = iconList.getOrElse(iconIdx) { iconList.first() }
+
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -365,7 +395,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    FancyNavIcon(icon = item.icon, selected = selected, contentDescription = item.label)
+                    FancyNavIcon(icon = icon, selected = selected, contentDescription = item.label)
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = item.label,
@@ -896,16 +926,22 @@ fun FretboardCard(
 }
 
 @Composable
-fun BasicSettingsScreen() {
-    // Minimal settings placeholder — removed manual seeding and toggles
+fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(text = "설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = "앱 업데이트 시 코드 데이터가 자동으로 동기화됩니다.")
+        Spacer(modifier = Modifier.height(24.dp))
+        // 아이콘 선택으로 이동
+        Button(onClick = { navController.navigate("icon_picker") }) {
+            Icon(Icons.Filled.Brush, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("하단 아이콘 바꾸기")
+        }
     }
 }
 
-// 간단한 더보기 화면
+// 간단한 더보기 화면 복원
 @Composable
 fun MoreScreen() {
     Column(
@@ -917,6 +953,87 @@ fun MoreScreen() {
         Text(text = "더보기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF31455A))
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = "추가 메뉴가 여기에 표시됩니다.")
+    }
+}
+
+// 아이콘 선택 화면: 각 탭별 후보 아이콘을 미리보기로 보여주고 선택값을 SharedPreferences에 저장
+@Composable
+fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("nav_icons", android.content.Context.MODE_PRIVATE) }
+
+    data class Item(val route: String, val label: String)
+    val items = listOf(
+        Item("home", "코드"),
+        Item("metronome", "메트로놈"),
+        Item("tuner", "튜너"),
+        Item("more", "더보기"),
+        Item("settings", "설정")
+    )
+
+    fun candidates(route: String): List<ImageVector> = when (route) {
+        "home" -> listOf(Icons.Filled.MusicNote, Icons.Filled.Home, Icons.Filled.Star)
+        "metronome" -> listOf(
+            Icons.Filled.Alarm,
+            Icons.Filled.Timer,
+            Icons.Filled.AccessTime,
+            Icons.Filled.Timelapse,
+            Icons.Filled.AvTimer,
+            Icons.Filled.HourglassEmpty,
+            Icons.Filled.WatchLater,
+            Icons.Filled.Speed
+        )
+        "tuner" -> listOf(Icons.Filled.Equalizer, Icons.Filled.Tune, Icons.Filled.GraphicEq)
+        "more" -> listOf(Icons.Filled.MoreHoriz, Icons.Filled.Menu, Icons.Filled.List)
+        "settings" -> listOf(Icons.Filled.Settings, Icons.Filled.Build, Icons.Filled.Tune)
+        else -> listOf(Icons.Filled.Circle)
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기") }
+            Spacer(Modifier.width(8.dp))
+            Text("하단 아이콘 선택", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        }
+        HorizontalDivider(color = Color(0x1A000000))
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            items(items) { item ->
+                val current = prefs.getInt(item.route, 0)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(item.label, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color(0xFF31455A))
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        candidates(item.route).forEachIndexed { idx, icon ->
+                            val selected = current == idx
+                            val shape = RoundedCornerShape(14.dp)
+                            val gradient = if (selected) Brush.linearGradient(listOf(Color(0xFF8A6CFF), Color(0xFF6F4EF6))) else null
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(shape)
+                                    .then(if (gradient != null) Modifier.background(gradient) else Modifier.background(Color(0xFFF1F3F4)))
+                                    .border(width = if (selected) 0.dp else 1.dp, color = Color(0x22000000), shape = shape)
+                                    .clickable {
+                                        prefs.edit().putInt(item.route, idx).apply()
+                                        onPicked()
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(icon, contentDescription = null, tint = if (selected) Color.White else Color(0xFF5A6B7C))
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
