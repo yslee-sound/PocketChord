@@ -88,6 +88,8 @@ class MainActivity : ComponentActivity() {
                 var iconPrefsVersion by remember { mutableStateOf(0) }
                 // 배너 광고 표시 여부 변경 시 즉시 반영되도록 버전 스테이트 보관
                 var adPrefsVersion by remember { mutableStateOf(0) }
+                // 긴급 안내 팝업 설정 변경 즉시 반영용 버전 스테이트
+                var dialogPrefsVersion by remember { mutableStateOf(0) }
                 val context = LocalContext.current
                 val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
                 val isBannerEnabled = remember(adPrefsVersion) { adPrefs.getBoolean("banner_ads_enabled", true) }
@@ -142,7 +144,14 @@ class MainActivity : ComponentActivity() {
                                 ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                             }
                             composable("more") { MoreScreen() }
-                            composable("settings") { BasicSettingsScreen(navController, onIconsChanged = { iconPrefsVersion++ }, onAdsPrefChanged = { adPrefsVersion++ }) }
+                            composable("settings") {
+                                BasicSettingsScreen(
+                                    navController,
+                                    onIconsChanged = { iconPrefsVersion++ },
+                                    onAdsPrefChanged = { adPrefsVersion++ },
+                                    onDialogPrefsChanged = { dialogPrefsVersion++ }
+                                )
+                            }
                             // 아이콘 선택 화면 라우트
                             composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                             // 라벨 편집 화면 라우트
@@ -179,6 +188,9 @@ class MainActivity : ComponentActivity() {
                             }
                             // 긴급 전환 안내 팝업 라우트
                             composable("emergency_redirect") {
+                                val ctx = LocalContext.current
+                                val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
+                                val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
                                 com.sweetapps.pocketchord.ui.screens.EmergencyRedirectDialog(
                                     title = "중요 안내",
                                     description = "현재 앱의 서비스가 종료되어 더 이상 사용할 수 없습니다. 새로운 앱을 설치하여 계속 이용해주세요.",
@@ -188,7 +200,8 @@ class MainActivity : ComponentActivity() {
                                     supportUrl = "https://example.com/faq",
                                     supportButtonText = "자세한 내용 보기",
                                     canMigrateData = true,
-                                    isDismissible = false
+                                    isDismissible = allowDismiss,
+                                    onDismiss = { navController.popBackStack() }
                                 )
                             }
                             // 공지사항 다이얼로그 라우트
@@ -1023,10 +1036,13 @@ fun FretboardCard(
 }
 
 @Composable
-fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit, onAdsPrefChanged: () -> Unit) {
+fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit, onAdsPrefChanged: () -> Unit, onDialogPrefsChanged: () -> Unit) {
     val context = LocalContext.current
     val adPrefs = remember { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
     var isBannerEnabled by remember { mutableStateOf(adPrefs.getBoolean("banner_ads_enabled", true)) }
+    // 긴급 안내 팝업 X 버튼 허용 토글용 프리퍼런스/상태
+    val dialogPrefs = remember { context.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
+    var allowEmergencyDismiss by remember { mutableStateOf(dialogPrefs.getBoolean("emergency_dialog_dismissible", false)) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(text = "설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -1060,11 +1076,25 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
             Text("선택적 업데이트 보기")
         }
         Spacer(modifier = Modifier.height(8.dp))
-        // 긴급 전환 안내 팝업 보기 버튼
-        OutlinedButton(onClick = { navController.navigate("emergency_redirect") }) {
-            Icon(Icons.Filled.Warning, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("긴급 전환 안내 보기")
+        // 긴급 전환 안내 팝업 보기 + X 버튼 허용 스위치(옆에 배치)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { navController.navigate("emergency_redirect") }) {
+                Icon(Icons.Filled.Warning, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("긴급 전환 안내 보기")
+            }
+            Spacer(Modifier.width(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("X 버튼 허용", modifier = Modifier.padding(end = 6.dp))
+                Switch(
+                    checked = allowEmergencyDismiss,
+                    onCheckedChange = { ch ->
+                        dialogPrefs.edit { putBoolean("emergency_dialog_dismissible", ch) }
+                        allowEmergencyDismiss = ch
+                        onDialogPrefsChanged()
+                    }
+                )
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         // 공지사항 팝업 보기 버튼
@@ -1074,7 +1104,7 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
             Text("공지사항 보기")
         }
 
-        // 배너 광고 ON/OFF 구역 - 스위치로 변경
+        // 배너 광고 ON/OFF 구역 - 스위치
         Spacer(modifier = Modifier.height(24.dp))
         HorizontalDivider()
         Spacer(modifier = Modifier.height(12.dp))
