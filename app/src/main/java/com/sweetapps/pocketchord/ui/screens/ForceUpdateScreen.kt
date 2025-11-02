@@ -4,11 +4,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -16,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Update
 
 /**
  * 강제 업데이트 팝업 컴포넌트
@@ -50,8 +53,8 @@ fun ForceUpdateDialog(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // 로봇 일러스트레이션
-                RobotIllustration()
+                // 업데이트 일러스트레이션 (아이콘 기반)
+                UpdateIllustration()
 
                 Spacer(modifier = Modifier.height(40.dp))
 
@@ -116,121 +119,32 @@ fun ForceUpdateDialog(
 }
 
 @Composable
-private fun RobotIllustration() {
-    // 애니메이션 효과
-    val infiniteTransition = rememberInfiniteTransition(label = "robot")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = -5f,
-        targetValue = 5f,
+private fun UpdateIllustration() {
+    // 은은한 맥동 애니메이션
+    val infiniteTransition = rememberInfiniteTransition(label = "update")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.98f,
+        targetValue = 1.02f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
+            animation = tween(1600, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "rotation"
+        label = "scale"
     )
 
     Box(
         modifier = Modifier
-            .size(200.dp)
-            .rotate(rotation),
+            .size(160.dp)
+            .scale(scale)
+            .background(Color(0xFF355C5C), CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        // 로봇 몸체
-        Box(
-            modifier = Modifier
-                .size(140.dp, 160.dp)
-                .background(
-                    Color(0xFF6B8E8E),
-                    RoundedCornerShape(20.dp)
-                )
-        ) {
-            // 렌치 아이콘 영역
-            Box(
-                modifier = Modifier
-                    .size(80.dp, 60.dp)
-                    .align(Alignment.Center)
-                    .background(
-                        Color(0xFF4A6B6B),
-                        RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                // 렌치 표시 (간단한 도형으로)
-                Box(
-                    modifier = Modifier
-                        .size(40.dp, 8.dp)
-                        .rotate(45f)
-                        .background(Color.White, RoundedCornerShape(4.dp))
-                )
-            }
-        }
-
-        // 로봇 머리
-        Box(
-            modifier = Modifier
-                .size(100.dp, 80.dp)
-                .offset(y = (-100).dp)
-                .background(
-                    Color(0xFF8BADB0),
-                    RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
-                )
-        ) {
-            // 눈
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .align(Alignment.Center)
-                    .background(Color.White, RoundedCornerShape(15.dp))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(15.dp)
-                        .align(Alignment.Center)
-                        .background(Color(0xFF2C4A4A), RoundedCornerShape(7.dp))
-                )
-            }
-        }
-
-        // 안테나
-        Box(
-            modifier = Modifier
-                .size(4.dp, 30.dp)
-                .offset(y = (-130).dp)
-                .background(Color(0xFF6B8E8E))
-        )
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .offset(y = (-145).dp)
-                .background(Color(0xFFFF4A8E), RoundedCornerShape(6.dp))
-        )
-
-        // 팔 (왼쪽)
-        Box(
-            modifier = Modifier
-                .size(60.dp, 12.dp)
-                .offset(x = (-80).dp, y = (-20).dp)
-                .background(Color(0xFF6B8E8E), RoundedCornerShape(6.dp))
-        )
-        Box(
-            modifier = Modifier
-                .size(16.dp)
-                .offset(x = (-110).dp, y = (-20).dp)
-                .background(Color(0xFF4A7FFF), RoundedCornerShape(8.dp))
-        )
-
-        // 팔 (오른쪽)
-        Box(
-            modifier = Modifier
-                .size(60.dp, 12.dp)
-                .offset(x = 80.dp, y = (-20).dp)
-                .background(Color(0xFF6B8E8E), RoundedCornerShape(6.dp))
-        )
-        Box(
-            modifier = Modifier
-                .size(16.dp)
-                .offset(x = 110.dp, y = (-20).dp)
-                .background(Color(0xFF4A7FFF), RoundedCornerShape(8.dp))
+        // 중심 업데이트 아이콘
+        Icon(
+            imageVector = Icons.Filled.Update,
+            contentDescription = "업데이트",
+            tint = Color.White,
+            modifier = Modifier.size(88.dp)
         )
     }
 }
