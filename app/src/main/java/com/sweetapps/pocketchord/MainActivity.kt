@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.ui.draw.scale
+import androidx.core.content.edit
 
 // Ads
 import com.google.android.gms.ads.AdRequest
@@ -115,6 +116,8 @@ class MainActivity : ComponentActivity() {
                             composable("settings") { BasicSettingsScreen(navController, onIconsChanged = { iconPrefsVersion++ }) }
                             // 아이콘 선택 화면 라우트
                             composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
+                            // 라벨 편집 화면 라우트
+                            composable("label_editor") { LabelEditorScreen(onChanged = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                         }
                     }
                 }
@@ -321,6 +324,7 @@ fun BottomNavigationBar(navController: NavHostController, prefsVersion: Int = 0)
     val currentRoute = navBackStackEntry?.destination?.route
     val context = LocalContext.current
     val prefs = remember(prefsVersion) { context.getSharedPreferences("nav_icons", android.content.Context.MODE_PRIVATE) }
+    val labelPrefs = remember(prefsVersion) { context.getSharedPreferences("nav_labels", android.content.Context.MODE_PRIVATE) }
 
     // 각 탭의 아이콘 후보 목록
     fun candidates(route: String): List<ImageVector> = when (route) {
@@ -336,7 +340,7 @@ fun BottomNavigationBar(navController: NavHostController, prefsVersion: Int = 0)
             Icons.Filled.Speed
         )
         "tuner" -> listOf(Icons.Filled.Equalizer, Icons.Filled.Tune, Icons.Filled.GraphicEq)
-        "more" -> listOf(Icons.Filled.MoreHoriz, Icons.Filled.Menu, Icons.Filled.List)
+        "more" -> listOf(Icons.Filled.MoreHoriz, Icons.Filled.Menu, Icons.Filled.Apps)
         "settings" -> listOf(Icons.Filled.Settings, Icons.Filled.Build, Icons.Filled.Tune)
         else -> listOf(Icons.Filled.Circle)
     }
@@ -374,6 +378,7 @@ fun BottomNavigationBar(navController: NavHostController, prefsVersion: Int = 0)
                 val iconIdx = prefs.getInt(item.route, 0).coerceAtLeast(0)
                 val iconList = candidates(item.route)
                 val icon = iconList.getOrElse(iconIdx) { iconList.first() }
+                val label = (labelPrefs.getString(item.route, item.label) ?: item.label).ifBlank { item.label }
 
                 Column(
                     modifier = Modifier
@@ -395,14 +400,15 @@ fun BottomNavigationBar(navController: NavHostController, prefsVersion: Int = 0)
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    FancyNavIcon(icon = icon, selected = selected, contentDescription = item.label)
+                    FancyNavIcon(icon = icon, selected = selected, contentDescription = label)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = item.label,
+                        text = label,
                         style = MaterialTheme.typography.labelSmall,
                         color = if (selected) Color(0xFF6F4EF6) else Color(0xFF9AA7B5),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
+                        maxLines = 1
                     )
                 }
             }
@@ -932,11 +938,17 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = "앱 업데이트 시 코드 데이터가 자동으로 동기화됩니다.")
         Spacer(modifier = Modifier.height(24.dp))
-        // 아이콘 선택으로 이동
-        Button(onClick = { navController.navigate("icon_picker") }) {
-            Icon(Icons.Filled.Brush, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("하단 아이콘 바꾸기")
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = { navController.navigate("icon_picker") }) {
+                Icon(Icons.Filled.Brush, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("하단 아이콘 바꾸기")
+            }
+            OutlinedButton(onClick = { navController.navigate("label_editor") }) {
+                Icon(Icons.Filled.Edit, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("탭 라벨 바꾸기")
+            }
         }
     }
 }
@@ -963,7 +975,7 @@ fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
     val prefs = remember { context.getSharedPreferences("nav_icons", android.content.Context.MODE_PRIVATE) }
 
     data class Item(val route: String, val label: String)
-    val items = listOf(
+    val entries = listOf(
         Item("home", "코드"),
         Item("metronome", "메트로놈"),
         Item("tuner", "튜너"),
@@ -984,7 +996,7 @@ fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
             Icons.Filled.Speed
         )
         "tuner" -> listOf(Icons.Filled.Equalizer, Icons.Filled.Tune, Icons.Filled.GraphicEq)
-        "more" -> listOf(Icons.Filled.MoreHoriz, Icons.Filled.Menu, Icons.Filled.List)
+        "more" -> listOf(Icons.Filled.MoreHoriz, Icons.Filled.Menu, Icons.Filled.Apps)
         "settings" -> listOf(Icons.Filled.Settings, Icons.Filled.Build, Icons.Filled.Tune)
         else -> listOf(Icons.Filled.Circle)
     }
@@ -1005,11 +1017,11 @@ fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            items(items) { item ->
+            items(entries) { item ->
                 val current = prefs.getInt(item.route, 0)
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(item.label, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color(0xFF31455A))
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         candidates(item.route).forEachIndexed { idx, icon ->
                             val selected = current == idx
@@ -1022,7 +1034,7 @@ fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
                                     .then(if (gradient != null) Modifier.background(gradient) else Modifier.background(Color(0xFFF1F3F4)))
                                     .border(width = if (selected) 0.dp else 1.dp, color = Color(0x22000000), shape = shape)
                                     .clickable {
-                                        prefs.edit().putInt(item.route, idx).apply()
+                                        prefs.edit { putInt(item.route, idx) }
                                         onPicked()
                                     },
                                 contentAlignment = Alignment.Center
@@ -1037,174 +1049,69 @@ fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
     }
 }
 
-// --- New screens ---
 @Composable
-fun MetronomeScreen() {
-    var bpm by remember { mutableStateOf(100f) }
-    var playing by remember { mutableStateOf(false) }
-    var beatInBar by remember { mutableStateOf(4) }
-    var currentBeat by remember { mutableStateOf(1) }
+fun LabelEditorScreen(onChanged: () -> Unit, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("nav_labels", android.content.Context.MODE_PRIVATE) }
+    data class Item(val route: String, val defaultLabel: String)
+    val entries = listOf(
+        Item("home", "코드"),
+        Item("metronome", "메트로놈"),
+        Item("tuner", "튜너"),
+        Item("more", "더보기"),
+        Item("settings", "설정")
+    )
 
-    // Tone generator for click sounds
-    val toneGen = remember { ToneGenerator(AudioManager.STREAM_MUSIC, 80) }
-    DisposableEffect(Unit) {
-        onDispose { try { toneGen.release() } catch (_: Throwable) {} }
+    // 편집용 상태: prefs의 현재값을 초기값으로 사용
+    val states = remember {
+        entries.associate { it.route to mutableStateOf(prefs.getString(it.route, it.defaultLabel) ?: it.defaultLabel) }
     }
 
-    LaunchedEffect(playing, bpm, beatInBar) {
-        currentBeat = 1
-        if (playing) {
-            val intervalMs = (60_000f / bpm).toLong().coerceAtLeast(40L)
-            while (playing) {
-                // accent first beat
-                val tone = if (currentBeat == 1) ToneGenerator.TONE_PROP_BEEP2 else ToneGenerator.TONE_PROP_BEEP
-                try { toneGen.startTone(tone, 60) } catch (_: Throwable) {}
-                currentBeat = if (currentBeat >= beatInBar) 1 else currentBeat + 1
-                delay(intervalMs)
-            }
+    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기") }
+            Spacer(Modifier.width(8.dp))
+            Text("탭 라벨 편집", fontWeight = FontWeight.Bold, fontSize = 20.sp)
         }
-    }
+        HorizontalDivider(color = Color(0x1A000000))
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("메트로놈", fontWeight = FontWeight.Bold, fontSize = 22.sp)
-        Spacer(Modifier.height(16.dp))
-        // Beat indicators
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(beatInBar) { idx ->
-                val active = playing && (idx + 1) == currentBeat
-                Box(modifier = Modifier.size(18.dp).background(if (active) Color(0xFFFF6F00) else Color(0xFFB0BEC5), RoundedCornerShape(50)))
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Text("BPM: ${bpm.toInt()}")
-        Slider(
-            value = bpm,
-            onValueChange = { bpm = it.coerceIn(40f, 240f) },
-            valueRange = 40f..240f
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = { bpm = (bpm - 1).coerceAtLeast(40f) }) { Text("-1") }
-            OutlinedButton(onClick = { bpm = (bpm + 1).coerceAtMost(240f) }) { Text("+1") }
-            OutlinedButton(onClick = { bpm = (bpm - 5).coerceAtLeast(40f) }) { Text("-5") }
-            OutlinedButton(onClick = { bpm = (bpm + 5).coerceAtMost(240f) }) { Text("+5") }
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("박자 수: ")
-            Row {
-                listOf(2,3,4,6).forEach { n ->
-                    FilterChip(
-                        selected = beatInBar == n,
-                        onClick = { beatInBar = n; currentBeat = 1 },
-                        label = { Text("${n}") },
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            items(entries) { item ->
+                val textState = states[item.route] ?: remember { mutableStateOf(item.defaultLabel) }
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(item.defaultLabel, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color(0xFF6B7C8C))
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = textState.value,
+                            onValueChange = { textState.value = it },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text(item.defaultLabel) }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = {
+                            prefs.edit { putString(item.route, textState.value) }
+                            onChanged()
+                        }) {
+                            Icon(Icons.Filled.Save, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("저장")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        OutlinedButton(onClick = {
+                            prefs.edit { remove(item.route) }
+                            textState.value = item.defaultLabel
+                            onChanged()
+                        }) {
+                            Text("기본값")
+                        }
+                    }
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = { playing = !playing }, colors = ButtonDefaults.buttonColors(
-            containerColor = if (playing) Color(0xFFD32F2F) else Color(0xFF00C853)
-        )) {
-            Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text(if (playing) "정지" else "시작")
-        }
-    }
-}
-
-@Composable
-fun TunerScreen() {
-    // Standard guitar open-string reference tones
-    val strings = listOf(
-        "E(6) 82.41Hz" to 82.41,
-        "A(5) 110Hz" to 110.0,
-        "D(4) 146.83Hz" to 146.83,
-        "G(3) 196.00Hz" to 196.0,
-        "B(2) 246.94Hz" to 246.94,
-        "E(1) 329.63Hz" to 329.63
-    )
-    var selected by remember { mutableStateOf(strings[5]) }
-    var track by remember { mutableStateOf<AudioTrack?>(null) }
-    var isPlaying by remember { mutableStateOf(false) }
-
-    fun stop() {
-        try { track?.stop() } catch (_: Throwable) {}
-        try { track?.release() } catch (_: Throwable) {}
-        track = null
-        isPlaying = false
-    }
-
-    DisposableEffect(Unit) { onDispose { stop() } }
-
-    fun createLoopingTone(freqHz: Double): AudioTrack? {
-        val sampleRate = 44_100
-        val durationSec = 1.0 // short but looped
-        val frameCount = (sampleRate * durationSec).toInt()
-        val buffer = ShortArray(frameCount) { i ->
-            val t = i / sampleRate.toDouble()
-            val v = kotlin.math.sin(2.0 * Math.PI * freqHz * t)
-            (v * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-        return try {
-            val attrs = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-            val format = AudioFormat.Builder()
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setSampleRate(sampleRate)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                .build()
-            val at = AudioTrack.Builder()
-                .setAudioAttributes(attrs)
-                .setAudioFormat(format)
-                .setTransferMode(AudioTrack.MODE_STATIC)
-                .setBufferSizeInBytes(buffer.size * 2)
-                .build()
-            at.write(buffer, 0, buffer.size)
-            // loop forever
-            at.setLoopPoints(0, buffer.size, -1)
-            at
-        } catch (t: Throwable) {
-            Log.w("Tuner", "AudioTrack create failed", t)
-            null
-        }
-    }
-
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("튜너 (기준음 재생)", fontWeight = FontWeight.Bold, fontSize = 22.sp)
-        Spacer(Modifier.height(16.dp))
-        // selection chips
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            strings.forEach { pair ->
-                FilterChip(
-                    selected = selected == pair,
-                    onClick = { selected = pair },
-                    label = { Text(pair.first) }
-                )
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = {
-                stop()
-                val newTrack = createLoopingTone(selected.second)
-                newTrack?.play()
-                track = newTrack
-                isPlaying = newTrack != null
-            }) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("재생")
-            }
-            OutlinedButton(onClick = { stop() }) {
-                Icon(Icons.Filled.Pause, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("정지")
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        if (isPlaying) Text("재생 중: ${selected.first}")
     }
 }
