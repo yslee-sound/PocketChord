@@ -140,9 +140,15 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     // Wrap NavHost with a Column and place TopBannerAd above it
                     Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        // 배너 광고: 스플래시 아님 && 배너 활성화 && 앱 오프닝 광고 표시 중 아님
-                        if (isBannerEnabled && !isSplash && !isShowingAppOpenAd) {
-                            TopBannerAd()
+                        // 배너 광고 영역: 항상 고정 (광고 유무와 관계없이)
+                        if (!isSplash) {
+                            // 배너 활성화 && 앱 오프닝 광고 표시 중 아님 → 광고 표시
+                            if (isBannerEnabled && !isShowingAppOpenAd) {
+                                TopBannerAd()
+                            } else {
+                                // 광고가 없을 때 → 같은 크기의 빈 공간
+                                TopBannerAdPlaceholder()
+                            }
                         }
                         NavHost(
                             navController = navController,
@@ -262,10 +268,13 @@ fun TopBannerAd() {
     val testAdUnitId = "ca-app-pub-3940256099942544/6300978111"
     // Keep a reference to destroy AdView when disposed
     var adView by remember { mutableStateOf<com.google.android.gms.ads.AdView?>(null) }
+    // 배너 광고의 표준 높이 (50dp)
+    val bannerHeight = 50.dp
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // removed top safe drawing padding to stick the banner to the very top
+            .height(bannerHeight)  // 고정 높이
     ) {
         AndroidView(
             factory = { context ->
@@ -278,9 +287,8 @@ fun TopBannerAd() {
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
+                .height(bannerHeight)
         )
-        HorizontalDivider(color = Color(0x1A000000))
     }
     DisposableEffect(Unit) {
         onDispose {
@@ -288,6 +296,17 @@ fun TopBannerAd() {
             adView = null
         }
     }
+}
+
+@Composable
+fun TopBannerAdPlaceholder() {
+    // 배너 광고가 없을 때 같은 크기의 빈 공간
+    val bannerHeight = 50.dp
+    Spacer(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(bannerHeight)
+    )
 }
 
 @Composable
