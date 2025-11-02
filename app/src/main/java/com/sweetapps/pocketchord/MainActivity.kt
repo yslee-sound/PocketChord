@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
                     containerColor = Color.White
                 ) { innerPadding ->
                     // Wrap NavHost with a Column and place TopBannerAd above it
-                    Column(modifier = Modifier.padding(innerPadding)) {
+                    Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                         TopBannerAd()
                         NavHost(
                             navController = navController,
@@ -131,6 +131,15 @@ class MainActivity : ComponentActivity() {
                                     ),
                                     onUpdateClick = { navController.popBackStack() },
                                     isDismissible = true
+                                )
+                            }
+                            // 공지사항 다이얼로그 라우트
+                            composable("notice") {
+                                com.sweetapps.pocketchord.ui.screens.NoticeDialog(
+                                    title = "공지사항",
+                                    description = "포켓코드의 최신 소식을 안내드립니다.\n- 신규 코드 다이어그램 추가\n- 성능 및 안정성 향상\n- 사용성 개선",
+                                    imageUrl = null,
+                                    onDismiss = { navController.popBackStack() }
                                 )
                             }
                         }
@@ -971,6 +980,13 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
             Icon(Icons.Filled.SystemUpdate, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("강제 업데이트 화면 보기")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 공지사항 팝업 보기 버튼
+        OutlinedButton(onClick = { navController.navigate("notice") }) {
+            Icon(Icons.Filled.Info, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("공지사항 보기")
         }
     }
 }
