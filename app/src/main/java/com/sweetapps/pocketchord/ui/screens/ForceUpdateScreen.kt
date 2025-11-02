@@ -116,8 +116,9 @@ fun ForceUpdateDialog(
                     Button(
                         onClick = onUpdateClick,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) { Text(buttonText) }
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF))
+                    ) { Text(buttonText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
                 }
             }
         }

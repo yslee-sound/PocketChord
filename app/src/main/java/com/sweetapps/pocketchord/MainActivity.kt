@@ -134,6 +134,19 @@ class MainActivity : ComponentActivity() {
                                     onUpdateClick = { navController.popBackStack() }
                                 )
                             }
+                            // 선택적 업데이트 다이얼로그 라우트
+                            composable("optional_update") {
+                                com.sweetapps.pocketchord.ui.screens.OptionalUpdateDialog(
+                                    title = "새 버전 사용 가능",
+                                    description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다.",
+                                    updateButtonText = "지금 업데이트",
+                                    laterButtonText = "나중에",
+                                    features = listOf("안정성 향상", "작은 버그 수정"),
+                                    version = null,
+                                    onUpdateClick = { navController.popBackStack() },
+                                    onLaterClick = { navController.popBackStack() }
+                                )
+                            }
                             // 공지사항 다이얼로그 라우트
                             composable("notice") {
                                 com.sweetapps.pocketchord.ui.screens.NoticeDialog(
@@ -980,7 +993,14 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
         OutlinedButton(onClick = { navController.navigate("force_update") }) {
             Icon(Icons.Filled.SystemUpdate, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("강제 업데이트 화면 보기")
+            Text("강제 업데이트 보기")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 선택적 업데이트 팝업 보기 버튼
+        OutlinedButton(onClick = { navController.navigate("optional_update") }) {
+            Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("선택적 업데이트 보기")
         }
         Spacer(modifier = Modifier.height(8.dp))
         // 공지사항 팝업 보기 버튼
