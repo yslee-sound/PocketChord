@@ -83,8 +83,6 @@ class MainActivity : ComponentActivity() {
             window.navigationBarColor = AndroidColor.WHITE
         } catch (_: Exception) {}
 
-        // Initialize Google Mobile Ads SDK
-        MobileAds.initialize(this) {}
 
         // 전면광고 매니저 초기화
         interstitialAdManager = InterstitialAdManager(this)
@@ -101,6 +99,10 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
                 val isBannerEnabled = remember(adPrefsVersion) { adPrefs.getBoolean("banner_ads_enabled", true) }
+
+                // 앱 오프닝 광고 표시 상태 관찰
+                val app = context.applicationContext as PocketChordApplication
+                val isShowingAppOpenAd by app.isShowingAppOpenAd.collectAsState()
 
                 // 현재 라우트에 따라 상단 배너/하단바를 숨기기 위한 상태
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -138,7 +140,8 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     // Wrap NavHost with a Column and place TopBannerAd above it
                     Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        if (isBannerEnabled && !isSplash) {
+                        // 배너 광고: 스플래시 아님 && 배너 활성화 && 앱 오프닝 광고 표시 중 아님
+                        if (isBannerEnabled && !isSplash && !isShowingAppOpenAd) {
                             TopBannerAd()
                         }
                         NavHost(
@@ -1070,6 +1073,7 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
     val adPrefs = remember { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
     var isBannerEnabled by remember { mutableStateOf(adPrefs.getBoolean("banner_ads_enabled", true)) }
     var isInterstitialEnabled by remember { mutableStateOf(adPrefs.getBoolean("interstitial_ads_enabled", true)) }
+    var isAppOpenTestMode by remember { mutableStateOf(adPrefs.getBoolean("app_open_test_mode", false)) }
     // 긴급 안내 팝업 X 버튼 허용 토글용 프리퍼런스/상태
     val dialogPrefs = remember { context.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
     var allowEmergencyDismiss by remember { mutableStateOf(dialogPrefs.getBoolean("emergency_dialog_dismissible", false)) }
@@ -1187,6 +1191,29 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
                     onCheckedChange = { checked ->
                         adPrefs.edit { putBoolean("interstitial_ads_enabled", checked) }
                         isInterstitialEnabled = checked
+                        onAdsPrefChanged()
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 앱 오프닝 광고 테스트 모드 토글 (디버그 전용)
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "앱 오프닝 광고 테스트")
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = if (isAppOpenTestMode) "항상 표시 (정책 무시)" else "정책에 맞춰 표시",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7C8C)
+                    )
+                }
+                Switch(
+                    checked = isAppOpenTestMode,
+                    onCheckedChange = { checked ->
+                        adPrefs.edit { putBoolean("app_open_test_mode", checked) }
+                        isAppOpenTestMode = checked
                         onAdsPrefChanged()
                     }
                 )

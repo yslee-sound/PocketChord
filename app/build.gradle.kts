@@ -68,6 +68,9 @@ dependencies {
     // Google Mobile Ads SDK (AdMob)
     implementation("com.google.android.gms:play-services-ads:22.6.0")
 
+    // Lifecycle Process for App Open Ads
+    implementation("androidx.lifecycle:lifecycle-process:2.6.2")
+
     // Coil Compose for image loading in NoticeDialog
     implementation("io.coil-kt:coil-compose:2.6.0")
 
