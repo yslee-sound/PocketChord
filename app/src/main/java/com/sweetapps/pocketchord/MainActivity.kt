@@ -118,6 +118,21 @@ class MainActivity : ComponentActivity() {
                             composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                             // 라벨 편집 화면 라우트
                             composable("label_editor") { LabelEditorScreen(onChanged = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
+                            // 강제 업데이트 다이얼로그 라우트
+                            composable("force_update") {
+                                com.sweetapps.pocketchord.ui.screens.ForceUpdateDialog(
+                                    title = "앱 업데이트",
+                                    description = "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다. 업데이트는 대부분 1분 내에 완료됩니다.",
+                                    buttonText = "업데이트",
+                                    features = listOf(
+                                        "코드 라이브러리 최신화",
+                                        "성능 향상 및 버그 수정",
+                                        "UI 사용성 개선"
+                                    ),
+                                    onUpdateClick = { navController.popBackStack() },
+                                    isDismissible = true
+                                )
+                            }
                         }
                     }
                 }
@@ -949,6 +964,13 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
                 Spacer(Modifier.width(8.dp))
                 Text("탭 라벨 바꾸기")
             }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        // 강제 업데이트 화면 보기 버튼
+        OutlinedButton(onClick = { navController.navigate("force_update") }) {
+            Icon(Icons.Filled.SystemUpdate, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("강제 업데이트 화면 보기")
         }
     }
 }
