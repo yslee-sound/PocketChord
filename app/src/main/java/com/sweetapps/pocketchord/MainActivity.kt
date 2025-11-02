@@ -147,6 +147,21 @@ class MainActivity : ComponentActivity() {
                                     onLaterClick = { navController.popBackStack() }
                                 )
                             }
+                            // 긴급 전환 안내 팝업 라우트
+                            composable("emergency_redirect") {
+                                com.sweetapps.pocketchord.ui.screens.EmergencyRedirectDialog(
+                                    title = "중요 안내",
+                                    description = "현재 앱의 서비스가 종료되어 더 이상 사용할 수 없습니다. 새로운 앱을 설치하여 계속 이용해주세요.",
+                                    newAppName = "PocketChord 2",
+                                    newAppPackage = "com.sweetapps.pocketchord2",
+                                    buttonText = "새 앱 설치하기",
+                                    supportUrl = "https://example.com/faq",
+                                    supportButtonText = "자세한 내용 보기",
+                                    canMigrateData = true,
+                                    isDismissible = true,
+                                    onDismiss = { navController.popBackStack() }
+                                )
+                            }
                             // 공지사항 다이얼로그 라우트
                             composable("notice") {
                                 com.sweetapps.pocketchord.ui.screens.NoticeDialog(
@@ -1001,6 +1016,13 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
             Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("선택적 업데이트 보기")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 긴급 전환 안내 팝업 보기 버튼
+        OutlinedButton(onClick = { navController.navigate("emergency_redirect") }) {
+            Icon(Icons.Filled.Warning, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("긴급 전환 안내 보기")
         }
         Spacer(modifier = Modifier.height(8.dp))
         // 공지사항 팝업 보기 버튼
