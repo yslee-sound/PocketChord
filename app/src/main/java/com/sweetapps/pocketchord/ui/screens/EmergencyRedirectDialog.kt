@@ -4,8 +4,12 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -170,16 +175,26 @@ fun EmergencyRedirectDialog(
                             )
                         }
 
-                        // 하단 링크(옵션) – 중앙 정렬
+                        // 하단 링크(옵션) – 링크 스타일(리플 제거 + 눌림 시 밑줄/색상 변화)
                         supportUrl?.let { url ->
                             Spacer(modifier = Modifier.height(10.dp))
-                            TextButton(onClick = { openWebPage(context, url) }) {
-                                Text(
-                                    text = supportButtonText,
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF8A8A8A)
-                                )
-                            }
+                            val interaction = remember { MutableInteractionSource() }
+                            val pressed by interaction.collectIsPressedAsState()
+                            val base = Color(0xFF8A8A8A)
+                            val active = Color(0xFF6F4EF6)
+                            val color by animateColorAsState(if (pressed) active else base, label = "support_link_color")
+                            Text(
+                                text = supportButtonText,
+                                fontSize = 14.sp,
+                                color = color,
+                                textAlign = TextAlign.Center,
+                                textDecoration = if (pressed) TextDecoration.Underline else TextDecoration.None,
+                                modifier = Modifier
+                                    .padding(vertical = 8.dp, horizontal = 12.dp)
+                                    .clickable(interactionSource = interaction, indication = null) {
+                                        openWebPage(context, url)
+                                    }
+                            )
                         }
                     }
 
