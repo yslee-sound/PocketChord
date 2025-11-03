@@ -67,8 +67,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import com.sweetapps.pocketchord.ads.InterstitialAdManager
 import com.sweetapps.pocketchord.BuildConfig
-import com.sweetapps.pocketchord.ui.screens.SplashScreen
-import androidx.compose.runtime.saveable.rememberSaveable
 
 class MainActivity : ComponentActivity() {
     // 전면광고 매니저
@@ -92,8 +90,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             PocketChordTheme {
                 val navController = rememberNavController()
-                // 스플래시 오버레이 표시 여부 (프로세스 회복 시에도 유지)
-                var showSplash by rememberSaveable { mutableStateOf(true) }
 
                 // 아이콘/광고/다이얼로그 프리퍼런스 버전 스테이트
                 var iconPrefsVersion by remember { mutableStateOf(0) }
@@ -126,16 +122,14 @@ class MainActivity : ComponentActivity() {
                     previousRoute = currentRoute
                 }
 
-                // 루트 컨테이너: 오버레이 스플래시를 위해 Box로 레이어 구성
+                // 루트 컨테이너
                 Box(modifier = Modifier.fillMaxSize()) {
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         contentWindowInsets = WindowInsets(0, 0, 0, 0),
                         bottomBar = {
-                            // 스플래시 표시 중에는 하단바 숨김 → 레이아웃 변동이 스플래시에 영향을 주지 않음
-                            if (!showSplash) {
-                                BottomNavigationBar(navController, prefsVersion = iconPrefsVersion)
-                            }
+                            // 항상 하단바 표시 (스플래시 제거)
+                            BottomNavigationBar(navController, prefsVersion = iconPrefsVersion)
                         },
                         containerColor = Color.White
                     ) { innerPadding ->
@@ -147,8 +141,8 @@ class MainActivity : ComponentActivity() {
                                     WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
                                 )
                         ) {
-                            // 스플래시/앱오프닝 광고 표시 중에는 상단 배너 숨김 (레이아웃 고정)
-                            if (showSplash || isShowingAppOpenAd) {
+                            // 앱오프닝 광고 표시 중에는 상단 배너 숨김
+                            if (isShowingAppOpenAd) {
                                 TopBannerAdPlaceholder()
                             } else {
                                 if (isBannerEnabled) TopBannerAd() else TopBannerAdPlaceholder()
@@ -239,15 +233,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 스플래시 오버레이: 전체 화면을 덮어 레이아웃 변화가 보이지 않게 함
-                    if (showSplash) {
-                        SplashScreen(
-                            logoResId = R.drawable.ic_logo_temp,
-                            appName = null,
-                            tagline = null,
-                            onSplashFinished = { showSplash = false }
-                        )
-                    }
+                    // 컴포즈 스플래시 오버레이 제거
                 }
             }
         }

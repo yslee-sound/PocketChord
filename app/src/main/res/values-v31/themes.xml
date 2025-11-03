@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ 시스템 스플래시 커스터마이즈 -->
+    <style name="Theme.PocketChord" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- 배경색: 브랜드 색상(#f28090) -->
+        <item name="android:windowSplashScreenBackground">#f28090</item>
+        <!-- 애니메이티드 아이콘: 단색 또는 벡터 추천 (AnimatedVectorDrawable도 가능) -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <!-- 아이콘 배경색(Adaptive icon 등에서 사용). 아이콘 크기는 시스템이 고정(기본 48dp) → 속성으로 조정 불가 -->
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <!-- 스플래시 종료 애니메이션 지속시간 (ms) - 선택 -->
+        <item name="android:windowSplashScreenAnimationDuration">200</item>
+    </style>
+</resources>

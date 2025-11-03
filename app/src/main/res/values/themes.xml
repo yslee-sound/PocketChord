@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- 기본 앱 테마. Android 12+ 스플래시 속성은 values-v31/themes.xml에서 오버라이드됩니다. -->
     <style name="Theme.PocketChord" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>
