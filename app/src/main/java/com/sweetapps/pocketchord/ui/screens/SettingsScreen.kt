@@ -19,12 +19,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import com.sweetapps.pocketchord.BuildConfig
+import androidx.core.net.toUri
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
-    var debugMode by remember { mutableStateOf(false) }
-    val appVersion = "1.0.0" // 실제 앱 버전으로 변경하세요
+    val appVersion = BuildConfig.VERSION_NAME
 
     Box(
         modifier = Modifier
@@ -88,10 +90,10 @@ fun SettingsScreen() {
                     showArrow = true,
                     onClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("mailto:support@pocketchord.com")
+                            data = "mailto:support@pocketchord.com".toUri()
                             putExtra(Intent.EXTRA_SUBJECT, "PocketChord 문의")
                         }
-                        context.startActivity(intent)
+                        try { context.startActivity(intent) } catch (_: Exception) {}
                     }
                 )
 
@@ -103,27 +105,27 @@ fun SettingsScreen() {
                     showArrow = true,
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse("market://details?id=${context.packageName}")
+                            data = "market://details?id=${context.packageName}".toUri()
                         }
                         try {
                             context.startActivity(intent)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Play 스토어 앱이 없는 경우 웹 브라우저로 열기
                             val webIntent = Intent(Intent.ACTION_VIEW).apply {
-                                data = Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")
+                                data = "https://play.google.com/store/apps/details?id=${context.packageName}".toUri()
                             }
-                            context.startActivity(webIntent)
+                            try { context.startActivity(webIntent) } catch (_: Exception) {}
                         }
                     }
                 )
 
-                // 디버그 모드
-                SettingsItemWithSwitch(
+                // 디버그 설정 진입 (하위 스크린)
+                SettingsItem(
                     icon = Icons.Default.BugReport,
                     title = "디버그 모드",
-                    subtitle = if (debugMode) "활성화됨" else "비활성화됨",
-                    checked = debugMode,
-                    onCheckedChange = { debugMode = it }
+                    subtitle = "광고/아이콘/업데이트 도구",
+                    showArrow = true,
+                    onClick = { navController.navigate("debug_settings") }
                 )
             }
 
@@ -151,11 +153,7 @@ fun SettingsScreen() {
             }
         }
 
-        // Bottom Navigation Bar
-        BottomNavigationBar(
-            currentRoute = "settings",
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        // 하단 네비게이션 바는 앱 스캐폴드에서 제공되므로, 이 화면에서는 별도 표시하지 않습니다.
     }
 }
 
@@ -237,163 +235,5 @@ fun SettingsItem(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun SettingsItemWithSwitch(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF3F4F6)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = Color(0xFF6366F1),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Column {
-                    Text(
-                        text = title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1F2937)
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 14.sp,
-                        color = Color(0xFF6B7280),
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(0xFF6366F1),
-                    uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = Color(0xFFE5E7EB)
-                )
-            )
-        }
-    }
-}
-
-@Composable
-fun BottomNavigationBar(
-    currentRoute: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(80.dp),
-        color = Color.White,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            NavigationItem(
-                icon = Icons.Default.Home,
-                label = "홈",
-                isSelected = currentRoute == "home",
-                onClick = { /* Navigate to home */ }
-            )
-            NavigationItem(
-                icon = Icons.Default.Timer,
-                label = "메트로놈",
-                isSelected = currentRoute == "metronome",
-                onClick = { /* Navigate to metronome */ }
-            )
-            NavigationItem(
-                icon = Icons.Default.GraphicEq,
-                label = "튜너",
-                isSelected = currentRoute == "tuner",
-                onClick = { /* Navigate to tuner */ }
-            )
-            NavigationItem(
-                icon = Icons.Default.Star,
-                label = "즐겨찾기",
-                isSelected = currentRoute == "favorites",
-                onClick = { /* Navigate to favorites */ }
-            )
-            NavigationItem(
-                icon = Icons.Default.Settings,
-                label = "설정",
-                isSelected = currentRoute == "settings",
-                onClick = { /* Navigate to settings */ }
-            )
-        }
-    }
-}
-
-@Composable
-fun NavigationItem(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (isSelected) Color(0xFF6366F1) else Color(0xFF9CA3AF),
-            modifier = Modifier.size(24.dp)
-        )
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = if (isSelected) Color(0xFF6366F1) else Color(0xFF9CA3AF),
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.padding(top = 4.dp)
-        )
     }
 }

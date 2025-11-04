@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 apply(plugin = "kotlin-kapt")
@@ -16,8 +17,8 @@ android {
         applicationId = "com.sweetapps.pocketchord"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2  // 버그 수정: C#-Db 루트 매핑 문제 해결
-        versionName = "1.0.1"  // 버그 수정 버전
+        versionCode = 1  // 버그 수정: C#-Db 루트 매핑 문제 해결
+        versionName = "1.0.0"  // 버그 수정 버전
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -73,6 +74,11 @@ dependencies {
 
     // Coil Compose for image loading in NoticeDialog
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // supabase 관련
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.postgrest)
+    implementation(libs.ktor.client.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

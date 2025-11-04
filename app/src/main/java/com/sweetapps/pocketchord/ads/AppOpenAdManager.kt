@@ -43,14 +43,26 @@ class AppOpenAdManager(
     init {
         application.registerActivityLifecycleCallbacks(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        // 앱 시작 시 광고 미리 로드
-        loadAd()
+        // 앱 시작 시 광고 미리 로드 (스위치 ON/OFF 무관하게)
+        loadAd(force = true)
+    }
+
+    private fun isAppOpenEnabled(): Boolean {
+        val adPrefs = application.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE)
+        return adPrefs.getBoolean("app_open_test_mode", false)
     }
 
     /**
      * 앱 오프닝 광고를 로드합니다
+     * @param force true이면 스위치 상태와 무관하게 로드 시도
      */
-    private fun loadAd() {
+    private fun loadAd(force: Boolean = false) {
+        // 스위치가 꺼져 있으면 로드하지 않음 (단, 강제 로드시에는 예외)
+        if (!force && !isAppOpenEnabled()) {
+            Log.d(TAG, "앱 오프닝 광고 비활성화됨: 로드하지 않음")
+            return
+        }
+
         if (isLoadingAd || isAdAvailable()) {
             return
         }
@@ -100,7 +112,14 @@ class AppOpenAdManager(
      * 광고를 표시합니다
      */
     fun showAdIfAvailable(activity: Activity, onAdDismissed: () -> Unit = {}) {
-        // 테스트 모드 확인
+        // 스위치가 꺼져 있으면 표시하지 않음 (미리 로드된 광고는 보존)
+        if (!isAppOpenEnabled()) {
+            Log.d(TAG, "앱 오프닝 광고 비활성화됨: 표시하지 않음")
+            onAdDismissed()
+            return
+        }
+
+        // 테스트 모드 확인 (ON일 때 정책 무시)
         val adPrefs = application.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE)
         val isTestMode = adPrefs.getBoolean("app_open_test_mode", false)
 
@@ -148,7 +167,7 @@ class AppOpenAdManager(
                 // Application에 광고가 닫혔음을 알림
                 (application as? PocketChordApplication)?.setAppOpenAdShowing(false)
                 onAdDismissed()
-                loadAd() // 다음 광고 미리 로드
+                loadAd() // 다음 광고 미리 로드 (스위치 상태에 따라 로드)
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
@@ -176,6 +195,13 @@ class AppOpenAdManager(
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
 
+        // 스위치가 꺼져 있으면 아무 것도 하지 않음 (미리 로드된 광고는 보존)
+        if (!isAppOpenEnabled()) {
+            Log.d(TAG, "앱 오프닝 광고 비활성화됨: onStart에서 작업 없음")
+            isFirstLaunch = false
+            return
+        }
+
         // 테스트 모드 확인
         val adPrefs = application.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE)
         val isTestMode = adPrefs.getBoolean("app_open_test_mode", false)
@@ -184,6 +210,8 @@ class AppOpenAdManager(
         if (!isTestMode && isFirstLaunch) {
             Log.d(TAG, "첫 실행이므로 광고를 표시하지 않습니다")
             isFirstLaunch = false
+            // 필요 시 다음을 위한 로드 (스위치가 ON일 때만)
+            loadAd()
             return
         }
 
@@ -223,4 +251,3 @@ class AppOpenAdManager(
         currentActivity = null
     }
 }
-

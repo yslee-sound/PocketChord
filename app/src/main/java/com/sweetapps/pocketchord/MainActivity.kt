@@ -67,6 +67,52 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import com.sweetapps.pocketchord.ads.InterstitialAdManager
 import com.sweetapps.pocketchord.BuildConfig
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+
+// supabase
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+
+val supabase = createSupabaseClient(
+    supabaseUrl = "https://bajurdtglfaiqilnpamt.supabase.co", // 예: https://abcd1234.supabase.co
+    supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhanVyZHRnbGZhaXFpbG5wYW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODI2NzksImV4cCI6MjA3NzU1ODY3OX0.lqFbkf974wf-uYrY0VFuD7MwCiDF5hKTx-bIbVujfH4"       // 공개용 키만 사용
+) {
+    // 필요한 모듈만 설치(예: PostgREST)
+    install(Postgrest)
+    // 필요 시: install(Auth), install(Storage) 등 추가
+}
+
+@Serializable
+data class Instrument(
+    // 필요 시 타입/이름 조정: e.g., @SerialName("instrument_id") val id: Int
+    val id: Int,
+    val name: String
+)
+
+@Composable
+fun InstrumentsList() {
+    var instruments by remember { mutableStateOf<List<Instrument>>(listOf()) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            instruments = supabase.from("instruments")
+                .select().decodeList<Instrument>()
+        }
+    }
+    LazyColumn {
+        items(
+            instruments,
+            key = { instrument -> instrument.id },
+        ) { instrument ->
+            Text(
+                instrument.name,
+                modifier = Modifier.padding(8.dp),
+            )
+        }
+    }
+}
 
 class MainActivity : ComponentActivity() {
     // 전면광고 매니저
@@ -168,7 +214,12 @@ class MainActivity : ComponentActivity() {
                                     ChordListScreen(navController = navController, root = root, onBack = { navController.popBackStack() })
                                 }
                                 composable("more") { MoreScreen() }
+                                // 변경: settings는 새 UI 스크린으로 연결
                                 composable("settings") {
+                                    com.sweetapps.pocketchord.ui.screens.SettingsScreen(navController)
+                                }
+                                // 추가: 디버그 설정 하위 스크린
+                                composable("debug_settings") {
                                     BasicSettingsScreen(
                                         navController,
                                         onIconsChanged = { iconPrefsVersion++ },
@@ -179,6 +230,9 @@ class MainActivity : ComponentActivity() {
                                 composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                                 composable("label_editor") { LabelEditorScreen(onChanged = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                                 composable("force_update") {
+                                    val ctx = LocalContext.current
+                                    val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
+                                    val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
                                     com.sweetapps.pocketchord.ui.screens.ForceUpdateDialog(
                                         title = "앱 업데이트",
                                         description = "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다. 업데이트는 대부분 1분 내에 완료됩니다.",
@@ -189,8 +243,9 @@ class MainActivity : ComponentActivity() {
                                             "UI 사용성 개선"
                                         ),
                                         estimatedTime = "약 1분",
-                                        showCloseButton = false,
-                                        onUpdateClick = { navController.popBackStack() }
+                                        showCloseButton = allowDismiss,
+                                        onUpdateClick = { navController.popBackStack() },
+                                        onDismiss = { navController.popBackStack() }
                                     )
                                 }
                                 composable("optional_update") {
@@ -1100,145 +1155,170 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
     val dialogPrefs = remember { context.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
     var allowEmergencyDismiss by remember { mutableStateOf(dialogPrefs.getBoolean("emergency_dialog_dismissible", false)) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(text = "설정", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "앱 업데이트 시 코드 데이터가 자동으로 동기화됩니다.")
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { navController.navigate("icon_picker") }) {
-                Icon(Icons.Filled.Brush, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("하단 아이콘 바꾸기")
-            }
-            OutlinedButton(onClick = { navController.navigate("label_editor") }) {
-                Icon(Icons.Filled.Edit, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("탭 라벨 바꾸기")
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        // 강제 업데이트 화면 보기 버튼
-        OutlinedButton(onClick = { navController.navigate("force_update") }) {
-            Icon(Icons.Filled.SystemUpdate, contentDescription = null)
+    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        // 헤더
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기") }
             Spacer(Modifier.width(8.dp))
-            Text("강제 업데이트 보기")
+            Text("디버그 설정", fontWeight = FontWeight.Bold, fontSize = 20.sp)
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        // 선택적 업데이트 팝업 보기 버튼
-        OutlinedButton(onClick = { navController.navigate("optional_update") }) {
-            Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("선택적 업데이트 보기")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        // 긴급 전환 안내 팝업 보기 + X 버튼 허용 스위치(옆에 배치)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { navController.navigate("emergency_redirect") }) {
-                Icon(Icons.Filled.Warning, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("긴급 전환 안내 보기")
-            }
-            Spacer(Modifier.width(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("X 버튼 허용", modifier = Modifier.padding(end = 6.dp))
-                Switch(
-                    checked = allowEmergencyDismiss,
-                    onCheckedChange = { ch ->
-                        dialogPrefs.edit { putBoolean("emergency_dialog_dismissible", ch) }
-                        allowEmergencyDismiss = ch
-                        onDialogPrefsChanged()
-                    }
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        // 공지사항 팝업 보기 버튼
-        OutlinedButton(onClick = { navController.navigate("notice") }) {
-            Icon(Icons.Filled.Info, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("공지사항 보기")
-        }
+        HorizontalDivider(color = Color(0x1A000000))
 
-        // 개발 도구 (디버깅 목적) - 배너/전면 광고 테스트
-        if (BuildConfig.DEBUG) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Text(text = "앱 업데이트 시 코드 데이터가 자동으로 동기화됩니다.")
             Spacer(modifier = Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "🛠️ 개발 도구", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B35))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "디버그 빌드에서만 표시됩니다",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFFF6B35)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 배너 광고 토글 (디버그 전용)
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "배너 광고 테스트")
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = if (isBannerEnabled) "활성화됨" else "비활성화됨",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7C8C)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { navController.navigate("icon_picker") }) {
+                    Icon(Icons.Filled.Brush, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("하단 아이콘 바꾸기")
+                }
+                OutlinedButton(onClick = { navController.navigate("label_editor") }) {
+                    Icon(Icons.Filled.Edit, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("탭 라벨 바꾸기")
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            // 강제 업데이트 화면 보기 버튼 + X 버튼 허용 스위치
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = { navController.navigate("force_update") }) {
+                    Icon(Icons.Filled.SystemUpdate, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("강제 업데이트 보기")
+                }
+                Spacer(Modifier.width(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("X 버튼 허용", modifier = Modifier.padding(end = 6.dp))
+                    Switch(
+                        checked = allowEmergencyDismiss,
+                        onCheckedChange = { ch ->
+                            dialogPrefs.edit { putBoolean("emergency_dialog_dismissible", ch) }
+                            allowEmergencyDismiss = ch
+                            onDialogPrefsChanged()
+                        }
                     )
                 }
-                Switch(
-                    checked = isBannerEnabled,
-                    onCheckedChange = { checked ->
-                        adPrefs.edit { putBoolean("banner_ads_enabled", checked) }
-                        isBannerEnabled = checked
-                        onAdsPrefChanged()
-                    }
-                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // 선택적 업데이트 팝업 보기 버튼
+            OutlinedButton(onClick = { navController.navigate("optional_update") }) {
+                Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("선택적 업데이트 보기")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // 긴급 전환 안내 팝업 보기 + X 버튼 허용 스위치(옆에 배치)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = { navController.navigate("emergency_redirect") }) {
+                    Icon(Icons.Filled.Warning, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("긴급 전환 안내 보기")
+                }
+                Spacer(Modifier.width(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("X 버튼 허용", modifier = Modifier.padding(end = 6.dp))
+                    Switch(
+                        checked = allowEmergencyDismiss,
+                        onCheckedChange = { ch ->
+                            dialogPrefs.edit { putBoolean("emergency_dialog_dismissible", ch) }
+                            allowEmergencyDismiss = ch
+                            onDialogPrefsChanged()
+                        }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // 공지사항 팝업 보기 버튼
+            OutlinedButton(onClick = { navController.navigate("notice") }) {
+                Icon(Icons.Filled.Info, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("공지사항 보기")
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // 개발 도구 (디버깅 목적) - 배너/전면 광고 테스트
+            if (BuildConfig.DEBUG) {
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(text = "🛠️ 개발 도구", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B35))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "디버그 빌드에서만 표시됩니다",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFF6B35)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 전면 광고 토글 (디버그 전용)
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "전면 광고 로그")
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = if (isInterstitialEnabled) "로그 활성화" else "로그 비활성화",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7C8C)
+                // 배너 광고 토글 (디버그 전용)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "배너 광고 테스트")
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = if (isBannerEnabled) "활성화됨" else "비활성화됨",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF6B7C8C)
+                        )
+                    }
+                    Switch(
+                        checked = isBannerEnabled,
+                        onCheckedChange = { checked ->
+                            adPrefs.edit { putBoolean("banner_ads_enabled", checked) }
+                            isBannerEnabled = checked
+                            onAdsPrefChanged()
+                        }
                     )
                 }
-                Switch(
-                    checked = isInterstitialEnabled,
-                    onCheckedChange = { checked ->
-                        adPrefs.edit { putBoolean("interstitial_ads_enabled", checked) }
-                        isInterstitialEnabled = checked
-                        onAdsPrefChanged()
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 전면 광고 토글 (디버그 전용)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "전면 광고 로그")
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = if (isInterstitialEnabled) "로그 활성화" else "로그 비활성화",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF6B7C8C)
+                        )
                     }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 앱 오프닝 광고 테스트 모드 토글 (디버그 전용)
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "앱 오프닝 광고 테스트")
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = if (isAppOpenTestMode) "항상 표시 (정책 무시)" else "정책에 맞춰 표시",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7C8C)
+                    Switch(
+                        checked = isInterstitialEnabled,
+                        onCheckedChange = { checked ->
+                            adPrefs.edit { putBoolean("interstitial_ads_enabled", checked) }
+                            isInterstitialEnabled = checked
+                            onAdsPrefChanged()
+                        }
                     )
                 }
-                Switch(
-                    checked = isAppOpenTestMode,
-                    onCheckedChange = { checked ->
-                        adPrefs.edit { putBoolean("app_open_test_mode", checked) }
-                        isAppOpenTestMode = checked
-                        onAdsPrefChanged()
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 앱 오프닝 광고 테스트 모드 토글 (디버그 전용)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "앱 오프닝 광고")
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = if (isAppOpenTestMode) "ON: 앱 오프닝 광고 허용 (테스트)" else "OFF: 앱 오프닝 광고 비활성화",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF6B7C8C)
+                        )
                     }
-                )
+                    Switch(
+                        checked = isAppOpenTestMode,
+                        onCheckedChange = { checked ->
+                            adPrefs.edit { putBoolean("app_open_test_mode", checked) }
+                            isAppOpenTestMode = checked
+                            onAdsPrefChanged()
+                        }
+                    )
+                }
             }
         }
     }
