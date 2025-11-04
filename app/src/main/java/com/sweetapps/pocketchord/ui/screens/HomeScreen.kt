@@ -6,8 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -42,42 +40,17 @@ fun MainScreen(navController: NavHostController) {
 /**
  * 상단 타이틀 바
  *
- * PocketChord 브랜드 로고와 앱 이름을 표시합니다.
+ * PocketChord 앱 이름을 간단한 텍스트로 표시합니다.
  */
 @Composable
 private fun TopBar() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Purple circular badge with play icon
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Color(0xFF6F4EF6), shape = RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "PocketChord",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 20.sp,
-                color = Color(0xFF1F2D3D)
-            )
-        }
-    }
+    Text(
+        text = "PocketChord",
+        fontWeight = FontWeight.Bold,
+        fontSize = 24.sp,
+        color = Color(0xFF1F2D3D),
+        modifier = Modifier.padding(start = 4.dp)
+    )
 }
 
 /**
