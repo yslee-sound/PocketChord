@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,10 +28,17 @@ fun MainScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF6F8FB))
-            .padding(horizontal = 24.dp)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFD4E7F7),  // 위쪽 - 연한 하늘색
+                        Color(0xFFE8F2FA)   // 아래쪽 - 더 밝은 하늘색
+                    )
+                )
+            )
+            .padding(start = 20.dp, end = 16.dp)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         TopBar()
         Spacer(modifier = Modifier.height(24.dp))
         ChordGrid(navController)
@@ -47,9 +55,8 @@ private fun TopBar() {
     Text(
         text = "PocketChord",
         fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        color = Color(0xFF1F2D3D),
-        modifier = Modifier.padding(start = 4.dp)
+        fontSize = 26.sp,
+        color = Color(0xFF1F2D3D)
     )
 }
 
