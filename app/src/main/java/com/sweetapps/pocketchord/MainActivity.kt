@@ -68,6 +68,7 @@ import kotlinx.coroutines.launch
 import com.sweetapps.pocketchord.ads.InterstitialAdManager
 import com.sweetapps.pocketchord.BuildConfig
 import com.sweetapps.pocketchord.ui.screens.setupSplashScreen
+import com.sweetapps.pocketchord.ui.screens.MainScreen
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -413,129 +414,6 @@ fun TopBannerAdPlaceholder() {
     }
 }
 
-@Composable
-fun MainScreen(navController: NavHostController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF6F8FB))
-            .padding(horizontal = 24.dp)
-    ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        TopBar()
-        Spacer(modifier = Modifier.height(24.dp))
-        ChordGrid(navController)
-    }
-}
-
-@Composable
-fun TopBar() {
-    // Branded card-like header similar to the mock
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Purple circular badge with play icon
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Color(0xFF6F4EF6), shape = RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "PocketChord",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 20.sp,
-                color = Color(0xFF1F2D3D)
-            )
-        }
-    }
-}
-
-@Composable
-fun ChordButton(chord: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.aspectRatio(1f),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = chord,
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = Color(0xFF2F3B52)
-            )
-        }
-    }
-}
-
-@Composable
-fun ChordGrid(navController: NavHostController) {
-    val chords = listOf(
-        "C", "C#-Db", "D", "D#-Eb",
-        "E", "F", "F#-Gb", "G",
-        "G#-Ab", "A", "A#-Bb", "B"
-    )
-
-    // Map display names to root keys used in JSON
-    fun getRoot(displayName: String): String {
-        return when (displayName) {
-            "C#-Db" -> "C#"
-            "D#-Eb" -> "D#"
-            "F#-Gb" -> "F#"
-            "G#-Ab" -> "G#"
-            "A#-Bb" -> "A#"
-            else -> displayName
-        }
-    }
-
-    Column {
-        chords.chunked(3).forEach { rowList ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                rowList.forEach { chord ->
-                    ChordButton(
-                        chord = chord,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable {
-                                val root = getRoot(chord)
-                                // encode to keep special characters (e.g., '#') safe in route path
-                                val route = "chord_list/${Uri.encode(root)}"
-                                Log.d("NavDebug", "Click: navigating to ${route} from grid (chord=${chord}, root=${root})")
-                                navController.navigate(route)
-                            }
-                    )
-                }
-                // fill remaining columns with spacers if row has less than 3 items
-                if (rowList.size < 3) {
-                    repeat(3 - rowList.size) { Spacer(modifier = Modifier.weight(1f)) }
-                }
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-        }
-    }
-}
 
 @Composable
 private fun FancyNavIcon(
