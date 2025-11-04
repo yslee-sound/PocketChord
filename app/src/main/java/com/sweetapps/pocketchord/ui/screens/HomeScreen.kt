@@ -7,15 +7,20 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.core.content.edit
+import com.sweetapps.pocketchord.data.supabase.model.Announcement
+import com.sweetapps.pocketchord.data.supabase.repository.AnnouncementRepository
+import com.sweetapps.pocketchord.ui.dialogs.AnnouncementDialog
 
 /**
  * 홈 화면 (코드 그리드)
@@ -25,6 +30,66 @@ import androidx.navigation.NavHostController
  */
 @Composable
 fun MainScreen(navController: NavHostController) {
+    // 공지사항 상태 관리
+    var showAnnouncementDialog by remember { mutableStateOf(false) }
+    var announcement by remember { mutableStateOf<Announcement?>(null) }
+    val context = LocalContext.current
+
+    // Flutter의 initState + addPostFrameCallback과 동일
+    // 화면이 처음 표시될 때 공지사항 확인
+    LaunchedEffect(Unit) {
+        // ⚠️ 테스트 모드: 중복 방지 기능 비활성화 (항상 표시)
+        // TODO: 프로덕션 배포 전 중복 방지 기능 다시 활성화 필요!
+
+        try {
+            // Supabase에서 최신 공지사항 가져오기
+            val repository = AnnouncementRepository(
+                com.sweetapps.pocketchord.supabase,
+                "com.sweetapps.pocketchord"
+            )
+
+            repository.getLatestAnnouncement()
+                .onSuccess { result ->
+                    result?.let { ann ->
+                        // 테스트 모드: 항상 표시
+                        announcement = ann
+                        showAnnouncementDialog = true
+                        Log.d("HomeScreen", "✅ [TEST MODE] Showing announcement: ${ann.title}")
+                    } ?: run {
+                        Log.d("HomeScreen", "No announcement found")
+                    }
+                }
+                .onFailure { error ->
+                    Log.e("HomeScreen", "Failed to load announcement", error)
+                }
+        } catch (e: Exception) {
+            Log.e("HomeScreen", "Exception while loading announcement", e)
+        }
+    }
+
+    // 공지사항 다이얼로그 표시
+    if (showAnnouncementDialog && announcement != null) {
+        AnnouncementDialog(
+            announcement = announcement!!,
+            onDismiss = {
+                // ⚠️ 테스트 모드: SharedPreferences 저장 비활성화
+                // 프로덕션에서는 아래 코드 활성화 필요
+                /*
+                announcement?.id?.let { id ->
+                    val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit {
+                        putLong("last_announcement_id", id)
+                    }
+                    Log.d("HomeScreen", "Marked announcement as shown: id=$id")
+                }
+                */
+                Log.d("HomeScreen", "⚠️ [TEST MODE] Dialog dismissed without saving ID")
+                showAnnouncementDialog = false
+            }
+        )
+    }
+
+    // 기존 UI
     Column(
         modifier = Modifier
             .fillMaxSize()
