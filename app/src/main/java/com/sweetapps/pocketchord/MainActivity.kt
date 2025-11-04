@@ -156,6 +156,7 @@ class MainActivity : ComponentActivity() {
         setupSplashScreen()
 
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         window.statusBarColor = AndroidColor.WHITE
         val controller = WindowCompat.getInsetsController(window, window.decorView)

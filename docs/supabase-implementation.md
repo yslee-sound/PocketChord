@@ -245,6 +245,161 @@ class UpdateInfoRepository(
 
 ---
 
+## 🧪 Supabase 연결 테스트
+
+### 테스트 목적
+앱 시작 시 Supabase에서 데이터를 제대로 가져올 수 있는지 확인합니다.
+
+### 테스트 코드 (이미 적용됨)
+
+`MainActivity.kt`에 다음 코드가 추가되어 있습니다:
+
+```kotlin
+class MainActivity : ComponentActivity() {
+    /**
+     * Supabase 연결 테스트 함수
+     * 
+     * ⚠️ 테스트 완료 후 이 함수와 onCreate의 호출 부분을 삭제하세요!
+     */
+    private fun testSupabaseConnection() {
+        lifecycleScope.launch {
+            try {
+                val repository = AnnouncementRepository(
+                    supabase,
+                    "com.sweetapps.pocketchord"
+                )
+                
+                val result = repository.getLatestAnnouncement()
+                
+                result.onSuccess { announcement ->
+                    Log.d("SupabaseTest", "announcement: $announcement")
+                    announcement?.let {
+                        Log.d("SupabaseTest", "id: ${it.id}")
+                        Log.d("SupabaseTest", "title: ${it.title}")
+                        Log.d("SupabaseTest", "content: ${it.content}")
+                        Log.d("SupabaseTest", "isActive: ${it.isActive}")
+                        Log.d("SupabaseTest", "createdAt: ${it.createdAt}")
+                        Log.d("SupabaseTest", "✅ Supabase 연결 성공!")
+                    }
+                }.onFailure { error ->
+                    Log.e("SupabaseTest", "❌ Supabase 연결 실패", error)
+                }
+            } catch (e: Exception) {
+                Log.e("SupabaseTest", "❌ 테스트 중 예외 발생", e)
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        setupSplashScreen()
+        super.onCreate(savedInstanceState)
+        
+        // ==================== Supabase 테스트 ====================
+        testSupabaseConnection()
+        // ========================================================
+        
+        enableEdgeToEdge()
+        // ...
+    }
+}
+```
+
+### 테스트 실행 방법
+
+1. **Supabase에 테스트 데이터 추가**
+   ```sql
+   INSERT INTO announcements (app_id, title, content, is_active)
+   VALUES ('com.sweetapps.pocketchord', '테스트 공지', '연결 테스트입니다.', true);
+   ```
+
+2. **앱 실행**
+   - Android Studio에서 앱 실행
+   - 또는 `.\gradlew installDebug`
+
+3. **Logcat에서 확인**
+   - Android Studio → Logcat
+   - 필터: `SupabaseTest`
+   
+   **성공 시 출력:**
+   ```
+   D/SupabaseTest: announcement: Announcement(id=1, ...)
+   D/SupabaseTest: id: 1
+   D/SupabaseTest: title: 테스트 공지
+   D/SupabaseTest: content: 연결 테스트입니다.
+   D/SupabaseTest: isActive: true
+   D/SupabaseTest: createdAt: 2025-11-05T...
+   D/SupabaseTest: appId: com.sweetapps.pocketchord
+   D/SupabaseTest: ✅ Supabase 연결 성공!
+   ```
+   
+   **데이터 없을 시:**
+   ```
+   W/SupabaseTest: ⚠️ 공지사항이 없습니다. Supabase에 데이터를 추가하세요.
+   ```
+   
+   **실패 시:**
+   ```
+   E/SupabaseTest: ❌ Supabase 연결 실패
+   E/SupabaseTest: Error: [에러 메시지]
+   ```
+
+### ⚠️ 테스트 완료 후 제거 (중요!)
+
+테스트가 성공적으로 완료되면 **반드시 테스트 코드를 제거**하세요!
+
+#### 제거할 코드
+
+**1. testSupabaseConnection() 함수 전체 삭제**
+```kotlin
+// 이 함수 전체를 삭제
+private fun testSupabaseConnection() {
+    lifecycleScope.launch {
+        // ...
+    }
+}
+```
+
+**2. onCreate에서 호출 부분 삭제**
+```kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    setupSplashScreen()
+    super.onCreate(savedInstanceState)
+    
+    // ==================== 이 부분 삭제 ====================
+    testSupabaseConnection()
+    // ====================================================
+    
+    enableEdgeToEdge()
+    // ...
+}
+```
+
+#### 제거 이유
+- 앱 시작마다 불필요한 네트워크 요청 발생
+- 프로덕션 환경에서는 필요 없는 로그
+- 성능 저하
+
+### 대안: 조건부 테스트 (선택사항)
+
+테스트 코드를 남겨두되 디버그 빌드에서만 실행:
+
+```kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    setupSplashScreen()
+    super.onCreate(savedInstanceState)
+    
+    // 디버그 빌드에서만 테스트
+    if (BuildConfig.DEBUG) {
+        testSupabaseConnection()
+    }
+    
+    enableEdgeToEdge()
+    // ...
+}
+```
+
+---
+
 ## 🚀 사용 방법
 
 ### 1. Supabase 클라이언트 초기화
