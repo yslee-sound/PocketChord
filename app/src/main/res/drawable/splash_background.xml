@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Brand color background as a shape drawable -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#f28090" />
+        </shape>
+    </item>
+
+    <!-- Centered app logo (vector drawable) -->
+    <item
+        android:gravity="center"
+        android:width="280dp"
+        android:height="280dp"
+        android:drawable="@drawable/ic_splash_logo"/>
+</layer-list>

@@ -10,5 +10,12 @@
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
         <!-- 스플래시 종료 애니메이션 지속시간 (ms) - 선택 -->
         <item name="android:windowSplashScreenAnimationDuration">200</item>
+        <!-- 시스템 바까지 동일 색상으로 채우기 -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">#f28090</item>
+        <item name="android:navigationBarColor">#f28090</item>
+        <!-- 아이콘 명암 (가능한 기기에서) -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

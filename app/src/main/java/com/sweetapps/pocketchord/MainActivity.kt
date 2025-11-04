@@ -2,6 +2,7 @@ package com.sweetapps.pocketchord
 
 import android.os.Bundle
 import android.util.Log
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -119,6 +120,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var interstitialAdManager: InterstitialAdManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 시스템 스플래시 화면 설치 (테마의 windowSplashScreen 속성 사용)
+        val splash = installSplashScreen()
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.statusBarColor = AndroidColor.WHITE

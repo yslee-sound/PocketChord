@@ -3,4 +3,17 @@
 
     <!-- 기본 앱 테마. Android 12+ 스플래시 속성은 values-v31/themes.xml에서 오버라이드됩니다. -->
     <style name="Theme.PocketChord" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Launch (splash) theme for pre-Android 12 devices. Uses a windowBackground drawable so the system shows a splash while the app initializes. -->
+    <style name="Theme.PocketChord.Launch" parent="Theme.PocketChord">
+        <!-- windowBackground is used as the launch splash on pre-Android 12 devices -->
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <!-- 시스템 바까지 동일 색상으로 채우기 -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">#f28090</item>
+        <item name="android:navigationBarColor">#f28090</item>
+        <!-- 아이콘 명암 (가능한 기기에서) -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
 </resources>

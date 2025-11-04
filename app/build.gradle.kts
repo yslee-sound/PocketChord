@@ -80,6 +80,9 @@ dependencies {
     implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.android)
 
+    // AndroidX SplashScreen: 시스템 스플래시 화면 지원 (Android 12+ 및 하위 호환)
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
