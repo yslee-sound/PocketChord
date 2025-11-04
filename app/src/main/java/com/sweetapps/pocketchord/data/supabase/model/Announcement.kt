@@ -53,10 +53,10 @@ data class Announcement(
     /**
      * 앱 식별자
      * 하나의 Supabase 프로젝트에서 여러 앱을 관리할 때 사용
-     * 기본값: "pocketchord"
+     * 기본값: "com.sweetapps.pocketchord"
      */
     @SerialName("app_id")
-    val appId: String = "pocketchord",
+    val appId: String = "com.sweetapps.pocketchord",
 
     /**
      * 공지사항 제목

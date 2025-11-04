@@ -98,7 +98,7 @@ Supabase 테이블 구조를 Kotlin 데이터 클래스로 "복사"하는 것이
 |--------------|------|-------------|------|------|
 | `id` | BIGINT | `id` | `Long?` | 자동 생성, nullable |
 | `created_at` | TIMESTAMP | `createdAt` | `String?` | ISO 8601 형식 |
-| `app_id` | TEXT | `appId` | `String` | 기본값: "pocketchord" |
+| `app_id` | TEXT | `appId` | `String` | 기본값: "com.sweetapps.pocketchord" |
 | `title` | TEXT | `title` | `String` | 필수 |
 | `content` | TEXT | `content` | `String` | 필수 |
 | `is_active` | BOOLEAN | `isActive` | `Boolean` | 기본값: true |
@@ -187,8 +187,8 @@ USING (true);
 -- 테스트 공지사항 추가
 INSERT INTO announcements (app_id, title, content, is_active)
 VALUES 
-  ('pocketchord', '환영합니다!', 'PocketChord에 오신 것을 환영합니다.', true),
-  ('pocketchord', '새로운 기능', '이제 더 많은 코드를 볼 수 있습니다.', true);
+  ('com.sweetapps.pocketchord', '환영합니다!', 'PocketChord에 오신 것을 환영합니다.', true),
+  ('com.sweetapps.pocketchord', '새로운 기능', '이제 더 많은 코드를 볼 수 있습니다.', true);
 
 -- 테스트 버전 정보 추가
 INSERT INTO app_versions (version_code, version_name, min_required_version, release_notes)
@@ -303,7 +303,7 @@ data class Announcement(
     val createdAt: String? = null,  // ISO 8601 format
 
     @SerialName("app_id")
-    val appId: String = "pocketchord",
+    val appId: String = "com.sweetapps.pocketchord",
 ```
 
 ### 3.3 앱 버전 정보 모델 (UpdateInfo.kt)
@@ -435,7 +435,7 @@ val supabase = createSupabaseClient(
 // ✅ 올바른 코드
 supabase.from("announcements")
     .select()
-    .eq("app_id", "pocketchord")     // ⭐ 필수!
+    .eq("app_id", "com.sweetapps.pocketchord")     // ⭐ 필수!
     .eq("is_active", true)
     .decodeList<Announcement>()
 
@@ -556,7 +556,7 @@ class SupabaseRepository(private val supabase: SupabaseClient) {
     suspend fun getActiveAnnouncements(): Result<List<Announcement>> = runCatching {
         supabase.from("announcements")
             .select()
-            .eq("app_id", "pocketchord")
+            .eq("app_id", "com.sweetapps.pocketchord")
             .eq("is_active", true)
             .order("created_at", descending = true)
             .decodeList()
