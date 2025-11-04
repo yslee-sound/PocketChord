@@ -274,7 +274,7 @@ class MainActivity : ComponentActivity() {
                                     val ctx = LocalContext.current
                                     val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
                                     val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
-                                    com.sweetapps.pocketchord.ui.screens.ForceUpdateDialog(
+                                    com.sweetapps.pocketchord.ui.dialogs.ForceUpdateDialog(
                                         title = "앱 업데이트",
                                         description = "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다. 업데이트는 대부분 1분 내에 완료됩니다.",
                                         buttonText = "업데이트",
@@ -290,7 +290,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 composable("optional_update") {
-                                    com.sweetapps.pocketchord.ui.screens.OptionalUpdateDialog(
+                                    com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog(
                                         title = "새 버전 사용 가능",
                                         description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
                                         updateButtonText = "지금 업데이트",
@@ -304,7 +304,7 @@ class MainActivity : ComponentActivity() {
                                     val ctx = LocalContext.current
                                     val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
                                     val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
-                                    com.sweetapps.pocketchord.ui.screens.EmergencyRedirectDialog(
+                                    com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog(
                                         title = "중요 안내",
                                         description = "현재 앱의 서비스가 종료되어 더 이상 사용할 수 없습니다. 새로운 앱을 설치하여 계속 이용해주세요.",
                                         newAppName = "PocketChord 2",
@@ -318,7 +318,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 composable("notice") {
-                                    com.sweetapps.pocketchord.ui.screens.NoticeDialog(
+                                    com.sweetapps.pocketchord.ui.dialogs.NoticeDialog(
                                         title = "새로운 기능 출시",
                                         description = "더욱 편리해진 새로운 기능을 만나보세요. 이번 업데이트에서는 사용자 경험을 개선하고 다양한 새로운 기능을 추가했습니다.",
                                         imageUrl = null,

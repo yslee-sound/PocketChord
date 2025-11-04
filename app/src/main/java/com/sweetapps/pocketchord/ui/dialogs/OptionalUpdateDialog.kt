@@ -1,4 +1,4 @@
-package com.sweetapps.pocketchord.ui.screens
+package com.sweetapps.pocketchord.ui.dialogs
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

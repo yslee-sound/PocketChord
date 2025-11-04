@@ -1,4 +1,4 @@
-package com.sweetapps.pocketchord.ui.screens
+package com.sweetapps.pocketchord.ui.dialogs
 
 import android.content.ActivityNotFoundException
 import android.content.Context
