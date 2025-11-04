@@ -1,5 +1,6 @@
-package com.sweetapps.pocketchord.data.supabase
+package com.sweetapps.pocketchord.data.supabase.repository
 
+import com.sweetapps.pocketchord.data.supabase.model.AppVersion
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 
@@ -94,4 +95,5 @@ class UpdateInfoRepository(
             .take(limit)
     }
 }
+
 

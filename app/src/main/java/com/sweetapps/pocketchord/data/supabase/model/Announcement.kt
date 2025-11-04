@@ -1,4 +1,4 @@
-package com.sweetapps.pocketchord.data.supabase
+package com.sweetapps.pocketchord.data.supabase.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
