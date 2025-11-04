@@ -2,7 +2,6 @@ package com.sweetapps.pocketchord
 
 import android.os.Bundle
 import android.util.Log
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -68,6 +67,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import com.sweetapps.pocketchord.ads.InterstitialAdManager
 import com.sweetapps.pocketchord.BuildConfig
+import com.sweetapps.pocketchord.ui.screens.setupSplashScreen
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,31 +86,62 @@ val supabase = createSupabaseClient(
     // 필요 시: install(Auth), install(Storage) 등 추가
 }
 
+// 임시: announcements 테이블로 테스트 (instruments 테이블 생성 전)
 @Serializable
-data class Instrument(
-    // 필요 시 타입/이름 조정: e.g., @SerialName("instrument_id") val id: Int
+data class Announcement(
     val id: Int,
-    val name: String
+    val title: String,
+    val message: String? = null
 )
 
 @Composable
 fun InstrumentsList() {
-    var instruments by remember { mutableStateOf<List<Instrument>>(listOf()) }
+    var items by remember { mutableStateOf<List<Announcement>>(listOf()) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            instruments = supabase.from("instruments")
-                .select().decodeList<Instrument>()
+        try {
+            val result = withContext(Dispatchers.IO) {
+                supabase.from("announcements")
+                    .select().decodeList<Announcement>()
+            }
+            items = result
+        } catch (e: Exception) {
+            error = e.message ?: "알 수 없는 오류"
+            android.util.Log.e("InstrumentsList", "Error loading data", e)
+        } finally {
+            isLoading = false
         }
     }
-    LazyColumn {
-        items(
-            instruments,
-            key = { instrument -> instrument.id },
-        ) { instrument ->
-            Text(
-                instrument.name,
-                modifier = Modifier.padding(8.dp),
-            )
+
+    when {
+        isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        error != null -> Column(Modifier.fillMaxSize().padding(16.dp)) {
+            Text("❌ 오류 발생", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Red)
+            Spacer(Modifier.height(8.dp))
+            Text(error ?: "", fontSize = 14.sp)
+        }
+        items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("데이터가 없습니다", fontSize = 16.sp, color = Color.Gray)
+        }
+        else -> LazyColumn(Modifier.fillMaxSize()) {
+            items(items, key = { it.id }) { item ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F8FB))
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(item.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        item.message?.let { msg ->
+                            Spacer(Modifier.height(4.dp))
+                            Text(msg, fontSize = 14.sp, color = Color.Gray)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -120,8 +151,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var interstitialAdManager: InterstitialAdManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 시스템 스플래시 화면 설치 (테마의 windowSplashScreen 속성 사용)
-        val splash = installSplashScreen()
+        // 스플래시 화면 설정 (ui/screens/SplashScreen.kt 참고)
+        setupSplashScreen()
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -203,7 +234,11 @@ class MainActivity : ComponentActivity() {
                                 startDestination = "home",
                                 modifier = Modifier.weight(1f)
                             ) {
-                                composable("home") { Log.d("NavDebug", "Entered route: home"); MainScreen(navController) }
+                                // 홈 화면: 코드 그리드 표시
+                                composable("home") {
+                                    Log.d("NavDebug", "Entered route: home")
+                                    MainScreen(navController)
+                                }
                                 composable("metronome") { com.sweetapps.pocketchord.ui.screens.MetronomeProScreen() }
                                 composable("tuner") { com.sweetapps.pocketchord.ui.screens.GuitarTunerScreen() }
                                 composable("search") { Log.d("NavDebug", "Entered route: search"); SearchResultScreen() }
