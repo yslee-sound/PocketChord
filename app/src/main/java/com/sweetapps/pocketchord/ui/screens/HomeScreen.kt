@@ -42,8 +42,11 @@ fun MainScreen(navController: NavHostController) {
             // Supabase에서 최신 공지사항 가져오기
             val repository = AnnouncementRepository(
                 com.sweetapps.pocketchord.supabase,
-                "com.sweetapps.pocketchord"
+                com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID
             )
+
+            // 현재 사용 중인 appId 로그 출력 (디버깅용)
+            Log.d("HomeScreen", "Using SUPABASE_APP_ID=${com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID}")
 
             repository.getLatestAnnouncement()
                 .onSuccess { result ->
@@ -220,4 +223,3 @@ private fun ChordGrid(navController: NavHostController) {
         }
     }
 }
-

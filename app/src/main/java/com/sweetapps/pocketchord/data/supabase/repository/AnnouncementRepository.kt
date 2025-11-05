@@ -18,7 +18,7 @@ import io.github.jan.supabase.postgrest.from
  */
 class AnnouncementRepository(
     private val client: SupabaseClient,
-    private val appId: String = "com.sweetapps.pocketchord"
+    private val appId: String = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID
 ) {
     /**
      * 모든 활성 공지사항 조회
@@ -74,4 +74,3 @@ class AnnouncementRepository(
             .take(limit)
     }
 }
-
