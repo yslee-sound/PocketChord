@@ -9,23 +9,77 @@ apply(plugin = "kotlin-kapt")
 
 android {
     namespace = "com.sweetapps.pocketchord"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.sweetapps.pocketchord"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1  // 버그 수정: C#-Db 루트 매핑 문제 해결
-        versionName = "1.0.0"  // 버그 수정 버전
+        versionCode = 2  // 버그 수정: C#-Db 루트 매핑 문제 해결
+        versionName = "1.0.1"  // 버그 수정 버전
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 모든 빌드 타입에 공통으로 적용되는 BuildConfig
+        buildConfigField("String", "VERSION_NAME", "\"${versionName}\"")
+        buildConfigField("int", "VERSION_CODE", "${versionCode}")
+    }
+
+    // 서명 설정 (환경변수 기반)
+    signingConfigs {
+        create("release") {
+            // 환경변수에서 서명 정보 읽기
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            val keystoreStorePw = System.getenv("KEYSTORE_STORE_PW")
+            val keyAlias = System.getenv("KEY_ALIAS")
+            val keyPw = System.getenv("KEY_PASSWORD")
+
+            if (keystorePath != null && keystoreStorePw != null && keyAlias != null && keyPw != null) {
+                storeFile = file(keystorePath)
+                storePassword = keystoreStorePw
+                this.keyAlias = keyAlias
+                keyPassword = keyPw
+            } else {
+                // 환경변수 누락 시 경고 (릴리즈 빌드 시 실패하도록)
+                println("⚠️ WARNING: Release signing config missing!")
+                println("Required environment variables:")
+                println("  - KEYSTORE_PATH")
+                println("  - KEYSTORE_STORE_PW")
+                println("  - KEY_ALIAS")
+                println("  - KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            // 디버그 빌드용 Supabase app_id
+            buildConfigField(
+                "String",
+                "SUPABASE_APP_ID",
+                "\"com.sweetapps.pocketchord.debug\""
+            )
+
+            // 디버그 식별자 추가 (선택사항)
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-DEBUG"
+        }
+
         release {
-            isMinifyEnabled = false
+            // 릴리즈 빌드용 Supabase app_id
+            buildConfigField(
+                "String",
+                "SUPABASE_APP_ID",
+                "\"com.sweetapps.pocketchord\""
+            )
+
+            // 서명 설정 적용
+            signingConfig = signingConfigs.getByName("release")
+
+            // 코드 난독화 및 최적화
+            isMinifyEnabled = true
+            isShrinkResources = true
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
