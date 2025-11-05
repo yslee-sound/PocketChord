@@ -38,9 +38,6 @@ fun MainScreen(navController: NavHostController) {
     // Flutter의 initState + addPostFrameCallback과 동일
     // 화면이 처음 표시될 때 공지사항 확인
     LaunchedEffect(Unit) {
-        // ⚠️ 테스트 모드: 중복 방지 기능 비활성화 (항상 표시)
-        // TODO: 프로덕션 배포 전 중복 방지 기능 다시 활성화 필요!
-
         try {
             // Supabase에서 최신 공지사항 가져오기
             val repository = AnnouncementRepository(
@@ -51,10 +48,19 @@ fun MainScreen(navController: NavHostController) {
             repository.getLatestAnnouncement()
                 .onSuccess { result ->
                     result?.let { ann ->
-                        // 테스트 모드: 항상 표시
-                        announcement = ann
-                        showAnnouncementDialog = true
-                        Log.d("HomeScreen", "✅ [TEST MODE] Showing announcement: ${ann.title}")
+                        // ==================== Flutter 로직 적용 ====================
+                        // _isViewed() 체크: 이미 본 공지사항인지 확인
+                        val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
+                        val viewedIds = prefs.getStringSet("viewed_announcements", setOf()) ?: setOf()
+
+                        if (!viewedIds.contains(ann.id.toString())) {
+                            // 본 적 없는 공지사항이면 표시
+                            announcement = ann
+                            showAnnouncementDialog = true
+                            Log.d("HomeScreen", "✅ Showing new announcement: ${ann.title} (id=${ann.id})")
+                        } else {
+                            Log.d("HomeScreen", "⏭️ Announcement already viewed: id=${ann.id}")
+                        }
                     } ?: run {
                         Log.d("HomeScreen", "No announcement found")
                     }
@@ -72,18 +78,24 @@ fun MainScreen(navController: NavHostController) {
         AnnouncementDialog(
             announcement = announcement!!,
             onDismiss = {
-                // ⚠️ 테스트 모드: SharedPreferences 저장 비활성화
-                // 프로덕션에서는 아래 코드 활성화 필요
-                /*
+                // ==================== Flutter의 _setViewed() 로직 적용 ====================
                 announcement?.id?.let { id ->
                     val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
+
+                    // 1. 기존의 공지사항 ID를 가져온다
+                    val viewedIds = prefs.getStringSet("viewed_announcements", setOf())?.toMutableSet() ?: mutableSetOf()
+
+                    // 2. 새 ID 추가 (contains 체크는 Set이 자동으로 처리)
+                    viewedIds.add(id.toString())
+
+                    // 3. 변경된 목록을 저장
                     prefs.edit {
-                        putLong("last_announcement_id", id)
+                        putStringSet("viewed_announcements", viewedIds)
                     }
-                    Log.d("HomeScreen", "Marked announcement as shown: id=$id")
+
+                    Log.d("HomeScreen", "✅ Marked announcement as viewed: id=$id")
+                    Log.d("HomeScreen", "📋 Total viewed announcements: ${viewedIds.size}")
                 }
-                */
-                Log.d("HomeScreen", "⚠️ [TEST MODE] Dialog dismissed without saving ID")
                 showAnnouncementDialog = false
             }
         )
