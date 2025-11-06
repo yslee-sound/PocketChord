@@ -163,26 +163,14 @@ fun OptionalUpdateDialog(
                                 )
                             }
                         } else {
-                            Column(
+                            // 가로 한 줄: 왼쪽 '나중에' (보조), 오른쪽 '지금 업데이트'(주 버튼)
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Button(
-                                    onClick = onUpdateClick,
-                                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        updateButtonText,
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                                Button(
                                     onClick = { onLaterClick?.invoke() },
-                                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    modifier = Modifier.weight(1f).height(52.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFF2F4F7),
                                         contentColor = Color(0xFF333333)
@@ -193,6 +181,19 @@ fun OptionalUpdateDialog(
                                         laterButtonText,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                Button(
+                                    onClick = onUpdateClick,
+                                    modifier = Modifier.weight(1f).height(52.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        updateButtonText,
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
