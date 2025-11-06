@@ -138,7 +138,7 @@ fun MainScreen(navController: NavHostController) {
         OptionalUpdateDialog(
             isForce = updateInfo!!.isForce,
             title = "앱 업데이트",
-            updateButtonText = if (updateInfo!!.isForce) "업데이트" else "지금 업데이트",
+            updateButtonText = "지금 업데이트",
             version = updateInfo!!.versionName,
             features = if (features.isNotEmpty()) features else null,
             onUpdateClick = {

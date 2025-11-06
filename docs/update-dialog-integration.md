@@ -92,8 +92,7 @@ fun MainScreen(viewModel: MainViewModel) {
         OptionalUpdateDialog(
             isForce = update.isForce,  // Supabase의 is_force 값 사용
             title = "앱 업데이트",
-            description = update.releaseNotes,
-            updateButtonText = if (update.isForce) "업데이트" else "지금 업데이트",
+            updateButtonText = "지금 업데이트",
             version = update.versionName,
             features = null,
             onUpdateClick = {
@@ -144,8 +143,7 @@ composable("update_dialog") {
     OptionalUpdateDialog(
         isForce = updateInfo.isForce,
         title = "앱 업데이트",
-        description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다.",
-        updateButtonText = if (updateInfo.isForce) "업데이트" else "지금 업데이트",
+        updateButtonText = "지금 업데이트",
         version = updateInfo.versionName,
         onUpdateClick = {
             // Play Store로 이동

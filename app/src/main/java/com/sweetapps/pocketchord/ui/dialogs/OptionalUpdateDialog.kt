@@ -37,7 +37,7 @@ import com.sweetapps.pocketchord.R
 fun OptionalUpdateDialog(
     isForce: Boolean = false,
     title: String = "앱 업데이트",
-    updateButtonText: String = if (isForce) "업데이트" else "지금 업데이트",
+    updateButtonText: String = "지금 업데이트",
     laterButtonText: String = "나중에",
     features: List<String>? = null,
     version: String? = null,
@@ -149,18 +149,25 @@ fun OptionalUpdateDialog(
 
                         // 버튼 레이아웃
                         if (isForce) {
-                            Button(
-                                onClick = onUpdateClick,
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
-                                shape = RoundedCornerShape(12.dp)
+                            // 오른쪽 정렬: 왼쪽은 비워두고, 오른쪽에만 버튼
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text(
-                                    updateButtonText,
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Spacer(modifier = Modifier.weight(1f).height(52.dp))
+                                Button(
+                                    onClick = onUpdateClick,
+                                    modifier = Modifier.weight(1f).height(52.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        updateButtonText,
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
                         } else {
                             // 가로 한 줄: 왼쪽 '나중에' (보조), 오른쪽 '지금 업데이트'(주 버튼)
