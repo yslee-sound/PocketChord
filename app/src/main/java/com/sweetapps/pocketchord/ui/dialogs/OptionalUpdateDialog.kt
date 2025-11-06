@@ -232,23 +232,12 @@ fun OptionalUpdateDialog(
 
 @Composable
 private fun FeatureItem(text: String) {
-    Row(
-        verticalAlignment = Alignment.Top,
+    // 불릿(점) 제거: 텍스트만 좌측 정렬로 표시
+    Text(
+        text = text,
+        fontSize = 14.sp,
+        color = Color(0xFF666666),
+        lineHeight = 20.sp,
         modifier = Modifier.fillMaxWidth()
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(top = 8.dp)
-                .size(6.dp)
-                .background(Color(0xFF4A7FFF), RoundedCornerShape(3.dp))
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            color = Color(0xFF666666),
-            lineHeight = 20.sp,
-            modifier = Modifier.weight(1f)
-        )
-    }
+    )
 }
