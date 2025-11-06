@@ -124,11 +124,11 @@ fun OptionalUpdateDialog(
                             textAlign = TextAlign.Center
                         )
 
-                        // 기능 목록 (옵션)
-                        features?.let { list ->
+                        val hasFeatures = !features.isNullOrEmpty()
+                        if (hasFeatures) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                list.forEach { feature ->
+                                features!!.forEach { feature ->
                                     FeatureItem(feature)
                                     Spacer(modifier = Modifier.height(8.dp))
                                 }
@@ -145,7 +145,8 @@ fun OptionalUpdateDialog(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(22.dp))
+                        // features 없으면 버튼 위 여백 축소 (기존 22dp → 8dp)
+                        Spacer(modifier = Modifier.height(if (hasFeatures) 22.dp else 8.dp))
 
                         // 버튼 레이아웃
                         if (isForce) {
@@ -154,17 +155,17 @@ fun OptionalUpdateDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Spacer(modifier = Modifier.weight(1f).height(52.dp))
+                                Spacer(modifier = Modifier.weight(1f).height(48.dp))
                                 Button(
                                     onClick = onUpdateClick,
-                                    modifier = Modifier.weight(1f).height(52.dp),
+                                    modifier = Modifier.weight(1f).height(48.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
                                         updateButtonText,
                                         color = Color.White,
-                                        fontSize = 16.sp,
+                                        style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
@@ -177,7 +178,7 @@ fun OptionalUpdateDialog(
                             ) {
                                 Button(
                                     onClick = { onLaterClick?.invoke() },
-                                    modifier = Modifier.weight(1f).height(52.dp),
+                                    modifier = Modifier.weight(1f).height(48.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFF2F4F7),
                                         contentColor = Color(0xFF333333)
@@ -186,20 +187,20 @@ fun OptionalUpdateDialog(
                                 ) {
                                     Text(
                                         laterButtonText,
-                                        fontSize = 16.sp,
+                                        style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
                                 Button(
                                     onClick = onUpdateClick,
-                                    modifier = Modifier.weight(1f).height(52.dp),
+                                    modifier = Modifier.weight(1f).height(48.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
                                         updateButtonText,
                                         color = Color.White,
-                                        fontSize = 16.sp,
+                                        style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }

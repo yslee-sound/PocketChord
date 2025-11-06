@@ -39,13 +39,6 @@ import android.net.Uri
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.compose.foundation.layout.FlowRow
-import android.media.ToneGenerator
-import android.media.AudioManager
-import kotlinx.coroutines.delay
-import android.media.AudioTrack
-import android.media.AudioAttributes
-import android.media.AudioFormat
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
@@ -58,94 +51,16 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.ui.draw.scale
 import androidx.core.content.edit
+import android.content.Context.MODE_PRIVATE
 
 // Ads
 import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.AdSize
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import com.sweetapps.pocketchord.ads.InterstitialAdManager
-import com.sweetapps.pocketchord.BuildConfig
 import com.sweetapps.pocketchord.ui.screens.setupSplashScreen
 import com.sweetapps.pocketchord.ui.screens.MainScreen
-import io.github.jan.supabase.postgrest.from
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-
-// supabase
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
-
-val supabase = createSupabaseClient(
-    supabaseUrl = "https://bajurdtglfaiqilnpamt.supabase.co", // 예: https://abcd1234.supabase.co
-    supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhanVyZHRnbGZhaXFpbG5wYW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODI2NzksImV4cCI6MjA3NzU1ODY3OX0.lqFbkf974wf-uYrY0VFuD7MwCiDF5hKTx-bIbVujfH4"       // 공개용 키만 사용
-) {
-    // 필요한 모듈만 설치(예: PostgREST)
-    install(Postgrest)
-    // 필요 시: install(Auth), install(Storage) 등 추가
-}
-
-// 임시: announcements 테이블로 테스트 (instruments 테이블 생성 전)
-@Serializable
-data class Announcement(
-    val id: Int,
-    val title: String,
-    val message: String? = null
-)
-
-@Composable
-fun InstrumentsList() {
-    var items by remember { mutableStateOf<List<Announcement>>(listOf()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        try {
-            val result = withContext(Dispatchers.IO) {
-                supabase.from("announcements")
-                    .select().decodeList<Announcement>()
-            }
-            items = result
-        } catch (e: Exception) {
-            error = e.message ?: "알 수 없는 오류"
-            android.util.Log.e("InstrumentsList", "Error loading data", e)
-        } finally {
-            isLoading = false
-        }
-    }
-
-    when {
-        isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        error != null -> Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Text("❌ 오류 발생", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Red)
-            Spacer(Modifier.height(8.dp))
-            Text(error ?: "", fontSize = 14.sp)
-        }
-        items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("데이터가 없습니다", fontSize = 16.sp, color = Color.Gray)
-        }
-        else -> LazyColumn(Modifier.fillMaxSize()) {
-            items(items, key = { it.id }) { item ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F8FB))
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(item.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        item.message?.let { msg ->
-                            Spacer(Modifier.height(4.dp))
-                            Text(msg, fontSize = 14.sp, color = Color.Gray)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 class MainActivity : ComponentActivity() {
     // 전면광고 매니저
@@ -158,14 +73,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
+        @Suppress("DEPRECATION")
         window.statusBarColor = AndroidColor.WHITE
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.isAppearanceLightStatusBars = true
         try {
             controller.isAppearanceLightNavigationBars = true
+            @Suppress("DEPRECATION")
             window.navigationBarColor = AndroidColor.WHITE
         } catch (_: Exception) {}
-
 
         // 전면광고 매니저 초기화
         interstitialAdManager = InterstitialAdManager(this)
@@ -179,7 +95,7 @@ class MainActivity : ComponentActivity() {
                 var adPrefsVersion by remember { mutableStateOf(0) }
                 var dialogPrefsVersion by remember { mutableStateOf(0) }
                 val context = LocalContext.current
-                val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
+                val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", MODE_PRIVATE) }
                 val isBannerEnabled = remember(adPrefsVersion) { adPrefs.getBoolean("banner_ads_enabled", true) }
 
                 // 앱 오프닝 광고 표시 상태 관찰
@@ -283,7 +199,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("emergency_redirect") {
                                     val ctx = LocalContext.current
-                                    val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
+                                    val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", MODE_PRIVATE) }
                                     val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
                                     com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog(
                                         title = "중요 안내",
@@ -395,7 +311,6 @@ fun TopBannerAdPlaceholder() {
     }
 }
 
-
 @Composable
 private fun FancyNavIcon(
     icon: ImageVector,
@@ -434,8 +349,8 @@ fun BottomNavigationBar(navController: NavHostController, prefsVersion: Int = 0)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val context = LocalContext.current
-    val prefs = remember(prefsVersion) { context.getSharedPreferences("nav_icons", android.content.Context.MODE_PRIVATE) }
-    val labelPrefs = remember(prefsVersion) { context.getSharedPreferences("nav_labels", android.content.Context.MODE_PRIVATE) }
+    val prefs = remember(prefsVersion) { context.getSharedPreferences("nav_icons", MODE_PRIVATE) }
+    val labelPrefs = remember(prefsVersion) { context.getSharedPreferences("nav_labels", MODE_PRIVATE) }
 
     // 각 탭의 아이콘 후보 목록
     fun candidates(route: String): List<ImageVector> = when (route) {
@@ -790,7 +705,7 @@ fun ChordListScreen(
             // 2) 안전 폴백: 통합 파일에서도 시딩 (중복은 내부에서 방지)
             com.sweetapps.pocketchord.data.ensureChordsForRoot(context, root)
         } catch (t: Throwable) {
-            android.util.Log.w("ChordListScreen", "ensureChordsForRoot failed", t)
+            Log.w("ChordListScreen", "ensureChordsForRoot failed", t)
         } finally {
             isSeeding = false
         }
@@ -824,7 +739,7 @@ fun ChordListScreen(
                 .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { onBack() }) {
+            IconButton(onClick = { if (!navController.popBackStack()) onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기", tint = Color(0xFF31455A))
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -965,6 +880,7 @@ fun ChordListScreen(
 }
 
 @Composable
+@Suppress("unused")
 fun FretboardCard(
     chordName: String,
     modifier: Modifier = Modifier,
@@ -1045,12 +961,12 @@ fun FretboardCard(
 @Composable
 fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit, onAdsPrefChanged: () -> Unit, onDialogPrefsChanged: () -> Unit) {
     val context = LocalContext.current
-    val adPrefs = remember { context.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE) }
+    val adPrefs = remember { context.getSharedPreferences("ads_prefs", MODE_PRIVATE) }
     var isBannerEnabled by remember { mutableStateOf(adPrefs.getBoolean("banner_ads_enabled", true)) }
     var isInterstitialEnabled by remember { mutableStateOf(adPrefs.getBoolean("interstitial_ads_enabled", true)) }
     var isAppOpenTestMode by remember { mutableStateOf(adPrefs.getBoolean("app_open_test_mode", false)) }
     // 긴급 안내 팝업 X 버튼 허용 토글용 프리퍼런스/상태
-    val dialogPrefs = remember { context.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
+    val dialogPrefs = remember { context.getSharedPreferences("dialog_prefs", MODE_PRIVATE) }
     var allowEmergencyDismiss by remember { mutableStateOf(dialogPrefs.getBoolean("emergency_dialog_dismissible", false)) }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
@@ -1069,7 +985,7 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
             Text(text = "앱 업데이트 시 코드 데이터가 자동으로 동기화됩니다.")
             Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { navController.navigate("icon_picker") }) {
+                Button(onClick = { navController.navigate("icon_picker"); onIconsChanged() }) {
                     Icon(Icons.Filled.Brush, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("하단 아이콘 바꾸기")
@@ -1220,7 +1136,7 @@ fun MoreScreen() {
 @Composable
 fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("nav_icons", android.content.Context.MODE_PRIVATE) }
+    val prefs = remember { context.getSharedPreferences("nav_icons", MODE_PRIVATE) }
 
     data class Item(val route: String, val label: String)
     val entries = listOf(
@@ -1300,7 +1216,7 @@ fun IconPickerScreen(onPicked: () -> Unit, onBack: () -> Unit) {
 @Composable
 fun LabelEditorScreen(onChanged: () -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("nav_labels", android.content.Context.MODE_PRIVATE) }
+    val prefs = remember { context.getSharedPreferences("nav_labels", MODE_PRIVATE) }
     data class Item(val route: String, val defaultLabel: String)
     val entries = listOf(
         Item("home", "코드"),

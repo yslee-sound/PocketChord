@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,6 +25,22 @@ android {
         // 모든 빌드 타입에 공통으로 적용되는 BuildConfig
         buildConfigField("String", "VERSION_NAME", "\"${versionName}\"")
         buildConfigField("int", "VERSION_CODE", "${versionCode}")
+
+        // Supabase 접속 정보: 환경변수 → local.properties → gradle.properties 순으로 조회
+        val props = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+        val supabaseUrl = System.getenv("SUPABASE_URL")
+            ?: props.getProperty("SUPABASE_URL")
+            ?: (project.findProperty("SUPABASE_URL") as String?)
+            ?: ""
+        val supabaseAnonKey = System.getenv("SUPABASE_ANON_KEY")
+            ?: props.getProperty("SUPABASE_ANON_KEY")
+            ?: (project.findProperty("SUPABASE_ANON_KEY") as String?)
+            ?: ""
+        buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${supabaseAnonKey}\"")
     }
 
     // 서명 설정 (환경변수 기반)

@@ -29,6 +29,7 @@ import com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog
 import android.content.Intent
 import android.content.ActivityNotFoundException
 import android.content.SharedPreferences
+import com.sweetapps.pocketchord.PocketChordApplication
 
 /**
  * 홈 화면 (코드 그리드)
@@ -46,6 +47,8 @@ fun MainScreen(navController: NavHostController) {
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var announcement by remember { mutableStateOf<Announcement?>(null) }
     val context = LocalContext.current
+    val app = context.applicationContext as PocketChordApplication
+    val supabaseClient = app.supabase
     val updatePrefs: SharedPreferences = remember { context.getSharedPreferences("update_prefs", android.content.Context.MODE_PRIVATE) }
     val dismissedVersionCode = remember { mutableStateOf(updatePrefs.getInt("dismissed_version_code", -1)) }
 
@@ -53,10 +56,14 @@ fun MainScreen(navController: NavHostController) {
     // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > update > notice)
     LaunchedEffect(Unit) {
         try {
+            if (!app.isSupabaseConfigured) {
+                Log.w("HomeScreen", "Supabase 미설정: 업데이트/공지 네트워크 호출 생략")
+                return@LaunchedEffect
+            }
             val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
 
             val announcementRepository = AnnouncementRepository(
-                com.sweetapps.pocketchord.supabase,
+                supabaseClient,
                 com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID
             )
 
@@ -72,7 +79,7 @@ fun MainScreen(navController: NavHostController) {
                 .onFailure { e -> Log.e("HomeScreen", "Failed to load emergency", e) }
 
             // 2) 업데이트 확인
-            val updateRepository = UpdateInfoRepository(com.sweetapps.pocketchord.supabase)
+            val updateRepository = UpdateInfoRepository(supabaseClient)
             updateRepository.checkUpdateRequired(com.sweetapps.pocketchord.BuildConfig.VERSION_CODE)
                 .onSuccess { update ->
                     val isUpdate = update != null
