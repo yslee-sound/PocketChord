@@ -20,7 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
 import com.sweetapps.pocketchord.R
 
 /**
@@ -43,10 +43,10 @@ fun EmergencyRedirectDialog(
     description: String,
     newAppName: String,
     newAppPackage: String,
+    redirectUrl: String? = null, // 추가: URL 리디렉트 지원
     buttonText: String = "새 앱 설치하기",
     supportUrl: String? = null,
     supportButtonText: String = "자세한 내용 보기",
-    canMigrateData: Boolean = false,
     isDismissible: Boolean = false,
     onDismiss: (() -> Unit)? = null,
     badgeText: String? = "서비스 종료",
@@ -160,7 +160,13 @@ fun EmergencyRedirectDialog(
 
                         // 설치 버튼
                         Button(
-                            onClick = { openPlayStore(context, newAppPackage) },
+                            onClick = {
+                                if (!redirectUrl.isNullOrBlank()) {
+                                    openWebPage(context, redirectUrl)
+                                } else {
+                                    openPlayStore(context, newAppPackage)
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp),
@@ -224,20 +230,20 @@ fun EmergencyRedirectDialog(
 
 private fun openPlayStore(context: Context, packageName: String) {
     val intent = Intent(Intent.ACTION_VIEW).apply {
-        data = Uri.parse("market://details?id=$packageName")
+        data = "market://details?id=$packageName".toUri()
         setPackage("com.android.vending")
     }
     try {
         context.startActivity(intent)
-    } catch (e: ActivityNotFoundException) {
+    } catch (_: ActivityNotFoundException) {
         val webIntent = Intent(Intent.ACTION_VIEW).apply {
-            data = Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+            data = "https://play.google.com/store/apps/details?id=$packageName".toUri()
         }
         context.startActivity(webIntent)
     }
 }
 
 private fun openWebPage(context: Context, url: String) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
     context.startActivity(intent)
 }

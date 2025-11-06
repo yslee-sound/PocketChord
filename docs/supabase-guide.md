@@ -604,8 +604,9 @@ class MainActivity : ComponentActivity() {
             
             // 업데이트 확인
             repository.checkForUpdate(BuildConfig.VERSION_CODE).onSuccess { update ->
-                if (update?.isForceUpdate == true) {
-                    showForceUpdateDialog(update)
+                if (update != null) {
+                    // update.isForce 값에 따라 강제/선택적 업데이트 다이얼로그 표시
+                    showUpdateDialog(update)
                 }
             }
         }

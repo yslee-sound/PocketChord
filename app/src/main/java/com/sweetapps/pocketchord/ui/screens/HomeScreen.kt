@@ -18,9 +18,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import com.sweetapps.pocketchord.data.supabase.model.Announcement
+import com.sweetapps.pocketchord.data.supabase.model.UpdateInfo
 import com.sweetapps.pocketchord.data.supabase.repository.AnnouncementRepository
+import com.sweetapps.pocketchord.data.supabase.repository.UpdateInfoRepository
 import com.sweetapps.pocketchord.ui.dialogs.AnnouncementDialog
+import com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog
+import com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog
+import android.content.Intent
+import android.content.ActivityNotFoundException
 
 /**
  * 홈 화면 (코드 그리드)
@@ -30,54 +37,119 @@ import com.sweetapps.pocketchord.ui.dialogs.AnnouncementDialog
  */
 @Composable
 fun MainScreen(navController: NavHostController) {
-    // 공지사항 상태 관리
+    // 팝업 상태 관리 (우선순위: emergency > update > notice)
+    var showEmergencyDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
     var showAnnouncementDialog by remember { mutableStateOf(false) }
+
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var announcement by remember { mutableStateOf<Announcement?>(null) }
     val context = LocalContext.current
 
     // Flutter의 initState + addPostFrameCallback과 동일
-    // 화면이 처음 표시될 때 공지사항 확인
+    // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > update > notice)
     LaunchedEffect(Unit) {
         try {
-            // Supabase에서 최신 공지사항 가져오기
-            val repository = AnnouncementRepository(
+            val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
+
+            val announcementRepository = AnnouncementRepository(
                 com.sweetapps.pocketchord.supabase,
                 com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID
             )
 
-            // 현재 사용 중인 appId 로그 출력 (디버깅용)
-            Log.d("HomeScreen", "Using SUPABASE_APP_ID=${com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID}")
+            // 1) 긴급 공지 우선
+            announcementRepository.getActiveEmergency()
+                .onSuccess { emergency ->
+                    if (emergency != null) {
+                        announcement = emergency
+                        showEmergencyDialog = true
+                        return@LaunchedEffect
+                    }
+                }
+                .onFailure { e -> Log.e("HomeScreen", "Failed to load emergency", e) }
 
-            repository.getLatestAnnouncement()
+            // 2) 업데이트 확인
+            val updateRepository = UpdateInfoRepository(com.sweetapps.pocketchord.supabase)
+            updateRepository.checkUpdateRequired(com.sweetapps.pocketchord.BuildConfig.VERSION_CODE)
+                .onSuccess { update ->
+                    if (update != null) {
+                        updateInfo = update
+                        showUpdateDialog = true
+                        Log.d("HomeScreen", "✅ Update available: ${update.versionName} (isForce=${update.isForce})")
+                        return@LaunchedEffect
+                    }
+                }
+                .onFailure { error -> Log.e("HomeScreen", "Failed to check update", error) }
+
+            // 3) 일반 공지
+            announcementRepository.getLatestAnnouncement()
                 .onSuccess { result ->
                     result?.let { ann ->
-                        // ==================== Flutter 로직 적용 ====================
-                        // _isViewed() 체크: 이미 본 공지사항인지 확인
-                        val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
                         val viewedIds = prefs.getStringSet("viewed_announcements", setOf()) ?: setOf()
-
                         if (!viewedIds.contains(ann.id.toString())) {
-                            // 본 적 없는 공지사항이면 표시
                             announcement = ann
                             showAnnouncementDialog = true
                             Log.d("HomeScreen", "✅ Showing new announcement: ${ann.title} (id=${ann.id})")
-                        } else {
-                            Log.d("HomeScreen", "⏭️ Announcement already viewed: id=${ann.id}")
                         }
-                    } ?: run {
-                        Log.d("HomeScreen", "No announcement found")
                     }
                 }
-                .onFailure { error ->
-                    Log.e("HomeScreen", "Failed to load announcement", error)
-                }
+                .onFailure { error -> Log.e("HomeScreen", "Failed to load announcement", error) }
         } catch (e: Exception) {
-            Log.e("HomeScreen", "Exception while loading announcement", e)
+            Log.e("HomeScreen", "Exception while loading popups", e)
         }
     }
 
-    // 공지사항 다이얼로그 표시
-    if (showAnnouncementDialog && announcement != null) {
+    // ==================== 팝업 표시 (우선순위: emergency > update > notice) ====================
+
+    // 1순위: Emergency (향후 구현)
+    if (showEmergencyDialog && announcement?.isEmergency == true) {
+        val em = announcement!!
+        EmergencyRedirectDialog(
+            title = em.title,
+            description = em.content,
+            newAppName = "PocketChord 2",
+            newAppPackage = "com.sweetapps.pocketchord2",
+            redirectUrl = em.redirectUrl,
+            isDismissible = em.dismissible,
+            onDismiss = {
+                showEmergencyDialog = false
+            }
+        )
+    }
+    // 2순위: Update
+    else if (showUpdateDialog && updateInfo != null) {
+        OptionalUpdateDialog(
+            isForce = updateInfo!!.isForce,
+            title = if (updateInfo!!.isForce) "앱 업데이트" else "새 버전 사용 가능",
+            description = updateInfo!!.releaseNotes,
+            updateButtonText = if (updateInfo!!.isForce) "업데이트" else "지금 업데이트",
+            version = updateInfo!!.versionName,
+            onUpdateClick = {
+                // Play Store로 이동
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = (updateInfo!!.downloadUrl
+                        ?: "market://details?id=${context.packageName}").toUri()
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (_: ActivityNotFoundException) {
+                    // Play Store 앱이 없으면 웹 브라우저로 열기
+                    val webIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = "https://play.google.com/store/apps/details?id=${context.packageName}".toUri()
+                    }
+                    context.startActivity(webIntent)
+                }
+            },
+            onLaterClick = if (updateInfo!!.isForce) null else {
+                {
+                    showUpdateDialog = false
+                    Log.d("HomeScreen", "Update dialog dismissed")
+                }
+            }
+        )
+    }
+    // 3순위: Announcement (공지사항)
+    else if (showAnnouncementDialog && announcement != null) {
         AnnouncementDialog(
             announcement = announcement!!,
             onDismiss = {

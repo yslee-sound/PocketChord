@@ -78,5 +78,33 @@ data class Announcement(
      * - false: 숨김 (관리자만 확인 가능)
      */
     @SerialName("is_active")
-    val isActive: Boolean = true
-)
+    val isActive: Boolean = true,
+
+    /**
+     * 공지 유형 (announcement | emergency)
+     */
+    @SerialName("kind")
+    val kind: String = "announcement",
+
+    /**
+     * 리다이렉트 URL (긴급 안내에서 사용)
+     */
+    @SerialName("redirect_url")
+    val redirectUrl: String? = null,
+
+    /**
+     * 닫기 가능 여부 (긴급 안내는 false가 일반적)
+     */
+    @SerialName("dismissible")
+    val dismissible: Boolean = true,
+
+    /**
+     * 노출 기간(선택)
+     */
+    @SerialName("start_at")
+    val startAt: String? = null,
+    @SerialName("end_at")
+    val endAt: String? = null
+) {
+    val isEmergency: Boolean get() = kind.equals("emergency", ignoreCase = true)
+}

@@ -270,27 +270,9 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
                                 composable("label_editor") { LabelEditorScreen(onChanged = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
-                                composable("force_update") {
-                                    val ctx = LocalContext.current
-                                    val dialogPrefs = remember(dialogPrefsVersion) { ctx.getSharedPreferences("dialog_prefs", android.content.Context.MODE_PRIVATE) }
-                                    val allowDismiss = remember(dialogPrefsVersion) { dialogPrefs.getBoolean("emergency_dialog_dismissible", false) }
-                                    com.sweetapps.pocketchord.ui.dialogs.ForceUpdateDialog(
-                                        title = "앱 업데이트",
-                                        description = "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다. 업데이트는 대부분 1분 내에 완료됩니다.",
-                                        buttonText = "업데이트",
-                                        features = listOf(
-                                            "코드 라이브러리 최신화",
-                                            "성능 향상 및 버그 수정",
-                                            "UI 사용성 개선"
-                                        ),
-                                        estimatedTime = "약 1분",
-                                        showCloseButton = allowDismiss,
-                                        onUpdateClick = { navController.popBackStack() },
-                                        onDismiss = { navController.popBackStack() }
-                                    )
-                                }
                                 composable("optional_update") {
                                     com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog(
+                                        isForce = false,
                                         title = "새 버전 사용 가능",
                                         description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
                                         updateButtonText = "지금 업데이트",
@@ -312,7 +294,6 @@ class MainActivity : ComponentActivity() {
                                         buttonText = "새 앱 설치하기",
                                         supportUrl = "https://example.com/faq",
                                         supportButtonText = "자세한 내용 보기",
-                                        canMigrateData = true,
                                         isDismissible = allowDismiss,
                                         onDismiss = { navController.popBackStack() }
                                     )
@@ -1101,27 +1082,6 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // 강제 업데이트 화면 보기 버튼 + X 버튼 허용 스위치
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { navController.navigate("force_update") }) {
-                    Icon(Icons.Filled.SystemUpdate, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("강제 업데이트 보기")
-                }
-                Spacer(Modifier.width(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("X 버튼 허용", modifier = Modifier.padding(end = 6.dp))
-                    Switch(
-                        checked = allowEmergencyDismiss,
-                        onCheckedChange = { ch ->
-                            dialogPrefs.edit { putBoolean("emergency_dialog_dismissible", ch) }
-                            allowEmergencyDismiss = ch
-                            onDialogPrefsChanged()
-                        }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
             // 선택적 업데이트 팝업 보기 버튼
             OutlinedButton(onClick = { navController.navigate("optional_update") }) {
                 Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null)

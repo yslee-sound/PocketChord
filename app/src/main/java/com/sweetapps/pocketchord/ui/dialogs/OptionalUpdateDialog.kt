@@ -25,27 +25,38 @@ import androidx.compose.ui.window.DialogProperties
 import com.sweetapps.pocketchord.R
 
 /**
- * 선택적 업데이트 팝업 컴포넌트
- * "나중에" 버튼이 있어 사용자가 업데이트를 미룰 수 있음
- * 여기에 보이는 문구는 기본값임
- * 호출부에서 해당 파라미터를 생략하면, 컴포저블 내부에 정의된 기본값이 사용됩니다.
+ * 업데이트 팝업 컴포넌트 (강제/선택적 통합)
+ *
+ * isForce = true: 강제 업데이트 모드 (닫기 불가, "나중에" 버튼 숨김)
+ * isForce = false: 선택적 업데이트 모드 ("나중에" 버튼 표시, 닫기 가능)
+ *
+ * Supabase의 is_force 필드 값에 따라 동작이 결정됩니다.
+ * 여기에 보이는 문구는 기본값이며, 호출부에서 재정의 가능합니다.
  */
 @Composable
 fun OptionalUpdateDialog(
-    title: String = "새 버전 사용 가능",
-    description: String = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
-    updateButtonText: String = "지금 업데이트",
+    isForce: Boolean = false,
+    title: String = if (isForce) "앱 업데이트" else "새 버전 사용 가능",
+    description: String = if (isForce)
+        "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다."
+        else "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
+    updateButtonText: String = if (isForce) "업데이트" else "지금 업데이트",
     laterButtonText: String = "나중에",
     features: List<String>? = null,
     version: String? = null,
+    estimatedTime: String? = null,
     onUpdateClick: () -> Unit,
-    onLaterClick: () -> Unit
+    onLaterClick: (() -> Unit)? = null
 ) {
     Dialog(
-        onDismissRequest = onLaterClick,
+        onDismissRequest = {
+            if (!isForce) {
+                onLaterClick?.invoke()
+            }
+        },
         properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true,
+            dismissOnBackPress = !isForce,
+            dismissOnClickOutside = !isForce,
             usePlatformDefaultWidth = false
         )
     ) {
@@ -139,43 +150,89 @@ fun OptionalUpdateDialog(
                             }
                         }
 
+                        // 예상 소요 시간 (옵션)
+                        estimatedTime?.let {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "예상 소요: $it",
+                                color = Color(0xFF8A8A8A),
+                                fontSize = 13.sp
+                            )
+                        }
+
                         Spacer(modifier = Modifier.height(22.dp))
 
-                        // 버튼 2줄(세로 스택), 테두리 제거
-                        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // 버튼 레이아웃 (강제 업데이트: 1개 버튼, 선택적: 2개 버튼)
+                        if (isForce) {
+                            // 강제 업데이트: 업데이트 버튼만 표시
                             Button(
                                 onClick = onUpdateClick,
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
                                 shape = RoundedCornerShape(12.dp)
-                            ) { Text(updateButtonText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+                            ) {
+                                Text(
+                                    updateButtonText,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        } else {
+                            // 선택적 업데이트: 업데이트 + 나중에 버튼
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = onUpdateClick,
+                                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A7FFF)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        updateButtonText,
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
 
-                            // 경계선 없는 보조 버튼(연한 배경)
-                            Button(
-                                onClick = onLaterClick,
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFF2F4F7),
-                                    contentColor = Color(0xFF333333)
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) { Text(laterButtonText, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
+                                // 경계선 없는 보조 버튼(연한 배경)
+                                Button(
+                                    onClick = { onLaterClick?.invoke() },
+                                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFF2F4F7),
+                                        contentColor = Color(0xFF333333)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        laterButtonText,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    // X 닫기 버튼 (우측 상단)
-                    IconButton(
-                        onClick = onLaterClick,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "닫기",
-                            tint = Color(0xFF999999)
-                        )
+                    // X 닫기 버튼 (선택적 업데이트 모드에서만 표시)
+                    if (!isForce) {
+                        IconButton(
+                            onClick = { onLaterClick?.invoke() },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                                .size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "닫기",
+                                tint = Color(0xFF999999)
+                            )
+                        }
                     }
                 }
             }
