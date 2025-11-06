@@ -273,8 +273,7 @@ class MainActivity : ComponentActivity() {
                                 composable("optional_update") {
                                     com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog(
                                         isForce = false,
-                                        title = "새 버전 사용 가능",
-                                        description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
+                                        title = "앱 업데이트",
                                         updateButtonText = "지금 업데이트",
                                         laterButtonText = "나중에",
                                         version = null,

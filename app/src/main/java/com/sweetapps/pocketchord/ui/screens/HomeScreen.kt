@@ -28,6 +28,7 @@ import com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog
 import com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog
 import android.content.Intent
 import android.content.ActivityNotFoundException
+import android.content.SharedPreferences
 
 /**
  * 홈 화면 (코드 그리드)
@@ -45,6 +46,8 @@ fun MainScreen(navController: NavHostController) {
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var announcement by remember { mutableStateOf<Announcement?>(null) }
     val context = LocalContext.current
+    val updatePrefs: SharedPreferences = remember { context.getSharedPreferences("update_prefs", android.content.Context.MODE_PRIVATE) }
+    val dismissedVersionCode = remember { mutableStateOf(updatePrefs.getInt("dismissed_version_code", -1)) }
 
     // Flutter의 initState + addPostFrameCallback과 동일
     // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > update > notice)
@@ -72,11 +75,15 @@ fun MainScreen(navController: NavHostController) {
             val updateRepository = UpdateInfoRepository(com.sweetapps.pocketchord.supabase)
             updateRepository.checkUpdateRequired(com.sweetapps.pocketchord.BuildConfig.VERSION_CODE)
                 .onSuccess { update ->
-                    if (update != null) {
+                    val isUpdate = update != null
+                    Log.d("HomeScreen", "isUpdate=$isUpdate localCode=${com.sweetapps.pocketchord.BuildConfig.VERSION_CODE} remoteCode=${update?.versionCode}")
+
+                    if (update != null && update.versionCode != dismissedVersionCode.value) {
                         updateInfo = update
                         showUpdateDialog = true
-                        Log.d("HomeScreen", "✅ Update available: ${update.versionName} (isForce=${update.isForce})")
                         return@LaunchedEffect
+                    } else if (update != null) {
+                        Log.d("HomeScreen", "Update already dismissed earlier (code matched)")
                     }
                 }
                 .onFailure { error -> Log.e("HomeScreen", "Failed to check update", error) }
@@ -118,12 +125,22 @@ fun MainScreen(navController: NavHostController) {
     }
     // 2순위: Update
     else if (showUpdateDialog && updateInfo != null) {
+        val features = remember(updateInfo) {
+            // 릴리즈 노트를 줄 단위 bullet 로 분리 (빈 줄/공백 제거 + 선행 기호 제거)
+            updateInfo!!.releaseNotes
+                .split('\n')
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .map { line ->
+                    line.removePrefix("- ").removePrefix("*").removePrefix("* ").removePrefix("• ")
+                }
+        }
         OptionalUpdateDialog(
             isForce = updateInfo!!.isForce,
-            title = if (updateInfo!!.isForce) "앱 업데이트" else "새 버전 사용 가능",
-            description = updateInfo!!.releaseNotes,
+            title = "앱 업데이트",
             updateButtonText = if (updateInfo!!.isForce) "업데이트" else "지금 업데이트",
             version = updateInfo!!.versionName,
+            features = if (features.isNotEmpty()) features else null,
             onUpdateClick = {
                 // Play Store로 이동
                 val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -142,8 +159,13 @@ fun MainScreen(navController: NavHostController) {
             },
             onLaterClick = if (updateInfo!!.isForce) null else {
                 {
+                    // 선택적 업데이트를 사용자가 닫았으므로 동일 versionCode 재표시 방지 저장
+                    updatePrefs.edit {
+                        putInt("dismissed_version_code", updateInfo!!.versionCode)
+                    }
+                    dismissedVersionCode.value = updateInfo!!.versionCode
                     showUpdateDialog = false
-                    Log.d("HomeScreen", "Update dialog dismissed")
+                    Log.d("HomeScreen", "Update dialog dismissed for code=${updateInfo!!.versionCode}")
                 }
             }
         )

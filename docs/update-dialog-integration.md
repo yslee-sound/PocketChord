@@ -91,11 +91,11 @@ fun MainScreen(viewModel: MainViewModel) {
     updateInfo?.let { update ->
         OptionalUpdateDialog(
             isForce = update.isForce,  // Supabase의 is_force 값 사용
-            title = if (update.isForce) "앱 업데이트" else "새 버전 사용 가능",
+            title = "앱 업데이트",
             description = update.releaseNotes,
             updateButtonText = if (update.isForce) "업데이트" else "지금 업데이트",
             version = update.versionName,
-            features = parseReleaseNotes(update.releaseNotes), // 릴리즈 노트를 리스트로 파싱
+            features = null,
             onUpdateClick = {
                 // Play Store로 이동
                 val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -143,16 +143,10 @@ composable("update_dialog") {
     
     OptionalUpdateDialog(
         isForce = updateInfo.isForce,
-        title = if (updateInfo.isForce) "앱 업데이트" else "새 버전 사용 가능",
-        description = "새로운 기능과 개선사항이 포함된 업데이트를 사용할 수 있습니다.",
-        updateButtonText = "업데이트",
+        title = "앱 업데이트",
+        description = "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다.",
+        updateButtonText = if (updateInfo.isForce) "업데이트" else "지금 업데이트",
         version = updateInfo.versionName,
-        features = listOf(
-            "성능 향상 및 최적화",
-            "버그 수정",
-            "UI/UX 개선"
-        ),
-        estimatedTime = "약 1분",
         onUpdateClick = {
             // Play Store로 이동
             val intent = Intent(Intent.ACTION_VIEW, 
@@ -251,4 +245,3 @@ OptionalUpdateDialog(
 - 강제 업데이트 모드에서는 사용자가 다이얼로그를 닫을 수 없으므로 신중하게 사용
 - Play Store 링크는 반드시 테스트하여 정상 동작 확인
 - 네트워크 오류 처리를 위한 fallback 로직 구현 권장
-

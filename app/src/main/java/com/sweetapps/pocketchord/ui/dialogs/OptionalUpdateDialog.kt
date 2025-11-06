@@ -36,10 +36,7 @@ import com.sweetapps.pocketchord.R
 @Composable
 fun OptionalUpdateDialog(
     isForce: Boolean = false,
-    title: String = if (isForce) "앱 업데이트" else "새 버전 사용 가능",
-    description: String = if (isForce)
-        "새로운 기능 추가, 더 빠른 속도, 버그 해결 등이 포함된 업데이트를 사용할 수 있습니다."
-        else "더 나은 경험을 위해 최신 버전으로 업데이트하는 것을 권장합니다. 새로운 기능과 개선사항을 확인해보세요.",
+    title: String = "앱 업데이트",
     updateButtonText: String = if (isForce) "업데이트" else "지금 업데이트",
     laterButtonText: String = "나중에",
     features: List<String>? = null,
@@ -84,7 +81,7 @@ fun OptionalUpdateDialog(
                             .padding(28.dp)
                             .padding(top = 16.dp) // X 버튼 공간
                     ) {
-                        // 상단 이미지(교체 가능). 필요 시 다른 리소스/URL로 교체
+                        // 상단 이미지
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -127,21 +124,9 @@ fun OptionalUpdateDialog(
                             textAlign = TextAlign.Center
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // 설명(스크롤 영역 내 배치로 잘림 방지)
-                        Text(
-                            text = description,
-                            fontSize = 15.sp,
-                            color = Color(0xFF666666),
-                            textAlign = TextAlign.Center,
-                            lineHeight = 22.sp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
                         // 기능 목록 (옵션)
                         features?.let { list ->
-                            Spacer(modifier = Modifier.height(20.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 list.forEach { feature ->
                                     FeatureItem(feature)
@@ -162,9 +147,8 @@ fun OptionalUpdateDialog(
 
                         Spacer(modifier = Modifier.height(22.dp))
 
-                        // 버튼 레이아웃 (강제 업데이트: 1개 버튼, 선택적: 2개 버튼)
+                        // 버튼 레이아웃
                         if (isForce) {
-                            // 강제 업데이트: 업데이트 버튼만 표시
                             Button(
                                 onClick = onUpdateClick,
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -179,7 +163,6 @@ fun OptionalUpdateDialog(
                                 )
                             }
                         } else {
-                            // 선택적 업데이트: 업데이트 + 나중에 버튼
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -197,8 +180,6 @@ fun OptionalUpdateDialog(
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
-
-                                // 경계선 없는 보조 버튼(연한 배경)
                                 Button(
                                     onClick = { onLaterClick?.invoke() },
                                     modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -218,7 +199,7 @@ fun OptionalUpdateDialog(
                         }
                     }
 
-                    // X 닫기 버튼 (선택적 업데이트 모드에서만 표시)
+                    // X 닫기 버튼 (선택적 모드에서만 표시)
                     if (!isForce) {
                         IconButton(
                             onClick = { onLaterClick?.invoke() },
