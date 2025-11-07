@@ -5,7 +5,7 @@
 목표
 - is_active = true만 노출, 단 하나의 정책 레코드로 팝업 결정
 - 우선순위: 긴급 공지 > 강제 업데이트 > 선택적 업데이트 > 일반 공지
-- 클라이언트는 app_policy 1건만 읽고 판단 (성공 시 다른 테이블 무시)
+- 클라이언트는 app_policy 1건만 읽고 판단 (현재 빌드: RPC/기존 테이블 폴백 사용하지 않음)
 
 권장 해석 규칙
 - 강제 업데이트: current_version_code < min_supported_version
@@ -172,54 +172,10 @@ ON CONFLICT (app_id) DO UPDATE SET
   notice_content = EXCLUDED.notice_content;
 ```
 
-운영 절차 (SOP)
-- 긴급 공지 켜기: emergency_is_active=true, emergency_title/content 입력 (필요시 redirect/dismissible)
-- 강제 업데이트: min_supported_version를 현재 앱 버전보다 크게 설정
-- 선택적 업데이트: update_is_active=true, latest_version_code를 현재 앱 버전보다 크게 설정, (선택) download_url
-- 일반 공지: notice_is_active=true, notice_title/notice_content 입력
-- 모두 끄기: 위 플래그 false 또는 is_active=false
-
-검증/조회 쿼리
-
-```sql
--- 현재 활성 정책 확인
-SELECT *
-FROM public.app_policy
-WHERE app_id = 'pocketchord-android-prod' AND is_active = TRUE;
-```
-
-롤백/삭제 (주의)
-
-```sql
--- 정책 테이블/정책 제거 (필요 시)
-DROP POLICY IF EXISTS "read active policy" ON public.app_policy;
-DROP POLICY IF EXISTS "admin can write" ON public.app_policy;
-ALTER TABLE public.app_policy DISABLE ROW LEVEL SECURITY;
-DROP TABLE IF EXISTS public.app_policy;
-```
-
-클라이언트 연동 메모
-- 앱은 `app_policy`를 먼저 조회해 결정합니다(정책이 있으면 그것만 사용). 실패/부재 시 기존 테이블(announcements/update_info)로 폴백.
-- 정책이 강제를 요구하지 않으면, 클라이언트는 기존의 강제 업데이트 캐시를 즉시 정리해 “계속 뜨는” 현상을 방지합니다.
-
-보안 주의
-- 앱(anon key)은 SELECT만 허용됩니다. 쓰기 정책은 기본적으로 없음(대시보드/SQL 에디터/서버 키로만 변경).
-- 관리 정책을 여는 경우, 반드시 허용 이메일/역할을 제한하세요.
-
-부록: 참고 규칙
-- 강제 업데이트: current_version_code < min_supported_version
-- 선택적 업데이트: update_is_active AND latest_version_code > current_version_code
-- 우선순위: 긴급 > 강제 > 선택적 > 공지 (항상 1개만 표시)
-
 ## 전체 설정 스크립트 (한 번에 실행 가능)
-아래 스크립트는 테이블 생성 → 인덱스 → RLS → 정책 → RPC 함수까지 한 번에 구성합니다.
+아래 스크립트는 테이블 생성 → 인덱스 → RLS → 정책까지 한 번에 구성합니다. (현 빌드 기준: RPC는 사용하지 않으므로 포함하지 않습니다.)
 
 ```sql
--- =====================================================
--- 0. 사전: 기존 announcements/update_info 유지하되 점진적 마이그레이션
---    앱은 우선 rpc_get_app_popup → 없으면 app_policy → 없으면 기존 테이블 폴백
--- =====================================================
-
 -- 1. 정책 테이블 생성
 CREATE TABLE IF NOT EXISTS public.app_policy (
   id BIGSERIAL PRIMARY KEY,
@@ -246,8 +202,7 @@ CREATE TABLE IF NOT EXISTS public.app_policy (
   notice_content TEXT NULL
 );
 
--- 2. 앱당 1행 제약
--- 재실행 가능하게 UNIQUE 인덱스로 보장
+-- 2. 앱당 1행 제약 (UNIQUE 인덱스)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_app_policy_app_id_unique
   ON public.app_policy(app_id);
 
@@ -260,16 +215,141 @@ DROP POLICY IF EXISTS "read active policy" ON public.app_policy;
 CREATE POLICY "read active policy"
 ON public.app_policy FOR SELECT
 USING (is_active = TRUE);
+```
 
--- (선택) 관리자 쓰기 정책: 이메일 화이트리스트 적용 시
--- DROP POLICY IF EXISTS "admin can write" ON public.app_policy;
--- CREATE POLICY "admin can write"
--- ON public.app_policy FOR ALL TO authenticated
--- USING (EXISTS (SELECT 1 FROM auth.users u WHERE u.id = auth.uid() AND u.email = ANY ('{"admin@example.com"}'::text[])))
--- WITH CHECK (EXISTS (SELECT 1 FROM auth.users u WHERE u.id = auth.uid() AND u.email = ANY ('{"admin@example.com"}'::text[])));
+### 운영 절차 (SOP)
+- 긴급 공지 켜기: emergency_is_active=true, emergency_title/content 입력 (필요시 redirect/dismissible)
+- 강제 업데이트: min_supported_version를 현재 앱 버전보다 크게 설정
+- 선택적 업데이트: update_is_active=true, latest_version_code를 현재 앱 버전보다 크게 설정, (선택) download_url
+- 일반 공지: notice_is_active=true, notice_title/notice_content 입력
+- 모두 끄기: 위 플래그 false 또는 is_active=false
 
--- 5. RPC: 단 1건 팝업 결정 (우선순위: 긴급 > 강제 > 선택 > 공지)
--- 반환 필드: type, title, content, dismissible, redirect_url, version_code, download_url, is_force
+### 업데이트(강제/선택적) 팝업 설정 상세
+업데이트 관련 컬럼은 이미 스키마에 있습니다:
+```
+min_supported_version INTEGER NULL        -- 강제 업데이트 기준
+latest_version_code   INTEGER NULL        -- 선택적 업데이트 최신 버전
+update_is_active      BOOLEAN NOT NULL    -- 선택적 업데이트 토글
+download_url          TEXT NULL           -- 마켓/링크 이동
+```
+앱 로직 요약:
+1. 강제(Force) 업데이트 조건: `min_supported_version IS NOT NULL AND current_version_code < min_supported_version`
+2. 선택적(Optional) 업데이트 조건: `update_is_active = true AND latest_version_code IS NOT NULL AND latest_version_code > current_version_code`
+3. 강제 조건이 만족하면 선택적 조건은 무시 (우선순위 상 Force가 더 높음)
+4. 사용자가 선택적 업데이트 팝업을 닫으면(디버그에서) `dismissed_version_code` 에 저장되어 같은 versionCode로 다시 뜨지 않음.
+
+#### 강제 업데이트 설정 예시 (현재 앱 VERSION_CODE = 2 가정)
+```sql
+UPDATE public.app_policy
+SET min_supported_version = 3,       -- 2보다 크면 앱이 강제 업데이트 팝업 노출
+    download_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord'
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+```
+표시 후 다시 해제하려면:
+```sql
+UPDATE public.app_policy
+SET min_supported_version = NULL
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+```
+
+#### 선택적 업데이트 설정 예시
+```sql
+UPDATE public.app_policy
+SET latest_version_code = 3,   -- 현재 2보다 커야 함
+    update_is_active = TRUE,
+    download_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord'
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+```
+닫은 후 다시 같은 버전을 띄우고 싶다면 앱 데이터(SharedPreferences) 초기화 또는 version code를 4로 올려 재설정:
+```sql
+UPDATE public.app_policy
+SET latest_version_code = 4
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+```
+선택적 업데이트 비활성화:
+```sql
+UPDATE public.app_policy
+SET update_is_active = FALSE,
+    latest_version_code = NULL
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+```
+
+#### download_url
+- 설정 시 팝업 ‘지금 업데이트’ 버튼이 해당 링크 또는 마켓 scheme (`market://`) 을 엽니다.
+- 미설정이면 기본 마켓 패키지 링크를 앱이 구성.
+
+#### 자주 헷갈리는 포인트
+- 강제 업데이트는 `min_supported_version` 하나만 보면 됨 (latest_version_code와 무관).
+- 선택적 업데이트는 `update_is_active=true` 와 `latest_version_code > current_version_code` 두 조건 모두 필요.
+- 두 조건을 동시에 만족하게 설정할 경우(예: min_supported_version=3, latest_version_code=4): 먼저 강제 팝업이 뜨고 선택적 팝업은 표시되지 않음.
+- 선택적 팝업이 안 뜰 때: (a) update_is_active=false (b) latest_version_code <= current_version_code (c) 사용자가 동일 latest_version_code를 이미 dismiss (d) 정책 행 비활성.
+- 디버그/릴리즈 빌드의 BuildConfig.VERSION_CODE 값이 다르면 테스트 전 꼭 확인.
+
+#### 테스트 순서 추천 (디버그 빌드)
+1. 모든 업데이트 관련 컬럼 NULL/false → 어떤 업데이트 팝업도 안 뜸.
+2. 선택적 업데이트만 활성: latest_version_code=3, update_is_active=true → Optional 팝업 확인 후 닫기.
+3. 동일 버전 재확인 → 닫힌 후 다시 안 나옴.
+4. latest_version_code=4로 변경 → 새 Optional 팝업 뜸.
+5. 강제 업데이트 설정: min_supported_version=5 → 바로 Force 팝업 뜨며 뒤로가기 차단.
+6. 강제 해제: min_supported_version=NULL → Optional 로직 복귀.
+
+#### 초기화 스크립트 (모든 팝업 비활성化)
+```sql
+UPDATE public.app_policy
+SET min_supported_version = NULL,
+    latest_version_code = NULL,
+    update_is_active = FALSE,
+    download_url = NULL,
+    emergency_is_active = FALSE,
+    emergency_title = NULL,
+    emergency_content = NULL,
+    notice_is_active = NULL,
+    notice_title = NULL,
+    notice_content = NULL
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+```
+
+### 검증/조회 쿼리
+```sql
+SELECT app_id, is_active, emergency_is_active, emergency_title, emergency_content
+FROM public.app_policy
+WHERE app_id = 'com.sweetapps.pocketchord.debug' AND is_active = TRUE;
+```
+
+### 클라이언트 연동 (현 빌드 기준: app_policy 직접 조회)
+- RLS가 is_active = TRUE 조건을 보장하므로, 클라이언트 쿼리에서 eq('is_active', true)를 중복 적용하지 마세요. 특정 환경에서 결과가 0건이 될 수 있습니다(실제 사례 반영).
+- Kotlin 예시:
+
+```kotlin
+val policy = supabase.postgrest
+    .from("app_policy")
+    .select {
+        filter { eq("app_id", BuildConfig.SUPABASE_APP_ID) }
+        limit(1)
+    }
+    .decodeList<AppPolicy>()
+    .firstOrNull()
+```
+
+### 트러블슈팅 체크리스트
+1) app_id 불일치/디버그-릴리즈 혼동: 디버그 기본값은 `com.sweetapps.pocketchord.debug`, 릴리즈는 `com.sweetapps.pocketchord`.
+2) 숨은 공백/오타: `SELECT app_id, length(app_id) FROM app_policy;`로 확인 후 `UPDATE ... SET app_id = trim(app_id)`로 정리.
+3) RLS 정책 부재: `read active policy (USING is_active = TRUE)` 존재 확인.
+4) 프로젝트 URL/키 오기: 앱 로그(PocketChordApp: Supabase URL (debug)=...)로 현재 프로젝트 확인.
+5) REST로 실제 조회 확인(anon 키):
+```bash
+curl -s "https://<PROJECT>.supabase.co/rest/v1/app_policy?app_id=eq.com.sweetapps.pocketchord.debug&is_active=eq.true&select=app_id,emergency_is_active,emergency_title,emergency_content" \
+  -H "apikey: <ANON_KEY>" \
+  -H "Authorization: Bearer <ANON_KEY>"
+```
+6) 선택적 업데이트가 안 뜨면: 사용자가 닫은 `dismissed_version_code` 때문일 수 있음(앱 데이터 삭제로 초기화).
+
+---
+
+## (옵션) RPC 함수 사용 시
+현재 빌드에서는 RPC를 사용하지 않지만, 서버 쪽 일관 로직을 선호한다면 아래 함수를 추가로 배포해 사용할 수 있습니다.
+
+```sql
 CREATE OR REPLACE FUNCTION public.rpc_get_app_popup(
   p_app_id TEXT,
   p_current_version INTEGER
@@ -287,7 +367,7 @@ BEGIN
   LIMIT 1;
 
   IF v_policy IS NULL THEN
-    RETURN NULL; -- 정책 없음 → 클라이언트 폴백 동작
+    RETURN NULL;
   END IF;
 
   -- 1) 긴급 공지
@@ -342,48 +422,40 @@ BEGIN
      RETURN v_result;
   END IF;
 
-  RETURN NULL; -- 아무 것도 없음
+  RETURN NULL;
 END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.rpc_get_app_popup(TEXT, INTEGER) TO anon, authenticated;
 ```
 
-## RPC 결과 JSON 구조
-```json
-{
-  "type": "emergency | force_update | optional_update | notice",
-  "title": "문자열 (emergency/notice)",
-  "content": "문자열 (emergency/notice)",
-  "dismissible": true,
-  "redirect_url": "https://...",
-  "is_force": true,
-  "version_code": 123,
-  "download_url": "https://play.google.com/..."
-}
-```
-누락될 수 있는 필드는 상황(type)에 따라 존재하지 않을 수 있습니다.
+(참고) RPC를 사용할 경우에도 클라이언트에서는 app_id만 전달하고, is_active 필터는 RLS에 맡기는 것을 권장합니다.
 
-## 마이그레이션 단계 제안
-1. 테이블+RPC 배포 (위 스크립트 실행)
-2. 각 앱별 app_id 행 시드
-3. 클라이언트: RPC 호출 추가 후 정책/기존 테이블 폴백 유지
-4. 일정 기간 모니터링(Log: type별 카운트)
-5. 안정화 후 announcements/update_info 비활성화 또는 제거(선택)
+---
 
 ## 클라이언트 호출 예시 (Kotlin)
+현 빌드 기본 방식(Postgrest 직접 조회) 예시를 우선 제시합니다.
+
 ```kotlin
-val decision = supabase.postgrest.rpc(
-    "rpc_get_app_popup",
-    mapOf(
-        "p_app_id" to BuildConfig.SUPABASE_APP_ID,
-        "p_current_version" to BuildConfig.VERSION_CODE
-    )
-).decodeOrNull<PopupDecision>()
+val policy = supabase.postgrest
+    .from("app_policy")
+    .select {
+        filter { eq("app_id", BuildConfig.SUPABASE_APP_ID) }
+        limit(1)
+    }
+    .decodeList<AppPolicy>()
+    .firstOrNull()
 ```
 
-## 운영 체크리스트
-- 긴급 공지 설정 후 강제/선택 버전 플래그를 동시에 켜지 말 것 (긴급이 가장 먼저 소비되므로 다른 것들은 숨겨짐)
-- 강제 업데이트 해제 시: min_supported_version를 현재 버전 이하로 조정하거나 NULL
-- 선택적 업데이트 일시 중지: update_is_active=false
-- 일반 공지 교체: notice_title/content 교체 후 notice_is_active=true
+(옵션) RPC 사용 시:
+```kotlin
+val result = supabase.postgrest.rpc(
+    "rpc_get_app_popup",
+    kotlinx.serialization.json.JsonObject(mapOf(
+        "p_app_id" to kotlinx.serialization.json.JsonPrimitive(BuildConfig.SUPABASE_APP_ID),
+        "p_current_version" to kotlinx.serialization.json.JsonPrimitive(BuildConfig.VERSION_CODE)
+    ))
+)
+val json = result.data?.toString()
+// json을 PopupDecision으로 디코드하여 분기
+```
