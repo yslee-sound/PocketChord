@@ -101,6 +101,15 @@ class MainActivity : ComponentActivity() {
         // 전면광고 매니저 초기화
         interstitialAdManager = InterstitialAdManager(this)
 
+        // 디버그 빌드에서만: Supabase 연결 테스트
+        if (BuildConfig.DEBUG) {
+            try {
+                com.sweetapps.pocketchord.debug.SupabaseDebugTest.testConnection(this)
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Debug test failed", e)
+            }
+        }
+
         setContent {
             PocketChordTheme {
                 val navController = rememberNavController()
@@ -113,7 +122,7 @@ class MainActivity : ComponentActivity() {
                 val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", MODE_PRIVATE) }
                 val isBannerEnabled = remember(adPrefsVersion) { adPrefs.getBoolean("banner_ads_enabled", true) }
 
-                // 앱 오프닝 광고 표시 상태 관찰
+                // 앱 정책 체크는 HomeScreen에서 처리 (중복 제거)
                 val app = context.applicationContext as PocketChordApplication
                 val isShowingAppOpenAd by app.isShowingAppOpenAd.collectAsState()
 

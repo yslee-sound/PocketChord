@@ -4,72 +4,74 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * 중앙 정책 테이블 모델 (선택지 B)
- * - 앱 전역 팝업/업데이트 정책을 단일 레코드로 제어합니다.
+ * 앱 정책 테이블 모델 (하이브리드 방식)
+ * - 운영 테이블과 히스토리 테이블로 분리된 구조
+ * - RLS로 is_active = TRUE인 정책만 조회 가능
  *
- * 예상 테이블: app_policy
+ * 테이블: app_policy
  * 주요 컬럼:
- *  - app_id (TEXT)
- *  - is_active (BOOLEAN)
- *  - created_at (TIMESTAMPTZ)
- *  - min_supported_version (INT) : 현재 버전보다 작으면 강제X, 크면 강제 업데이트
- *  - latest_version_code (INT)   : 선택적 업데이트 비교 기준
- *  - update_is_active (BOOLEAN)  : 선택적 업데이트 토글
- *  - download_url (TEXT)         : 업데이트 버튼 이동 URL (선택)
- *  - emergency_is_active (BOOLEAN)
- *  - emergency_title (TEXT)
- *  - emergency_content (TEXT)
- *  - emergency_dismissible (BOOLEAN)
- *  - emergency_redirect_url (TEXT)
- *  - notice_is_active (BOOLEAN)  : (옵션) 공지를 정책에서 직접 노출하고 싶을 때
- *  - notice_title (TEXT)
- *  - notice_content (TEXT)
+ *  - app_id (TEXT UNIQUE): 앱 식별자
+ *  - is_active (BOOLEAN): 팝업 활성화 여부
+ *  - active_popup_type (popup_type ENUM): 팝업 타입
+ *    - 'emergency': 긴급 공지 (X 버튼 없음)
+ *    - 'force_update': 강제 업데이트 (뒤로가기 차단)
+ *    - 'optional_update': 선택적 업데이트 (닫기 가능)
+ *    - 'notice': 일반 공지
+ *    - 'none': 팝업 없음
+ *  - content (TEXT): 팝업 메시지
+ *  - download_url (TEXT): 다운로드/이동 URL
+ *  - min_supported_version (INT): 강제 업데이트 기준 버전 (force_update 전용)
+ *  - latest_version_code (INT): 권장 업데이트 버전 (optional_update 전용)
  */
 @Serializable
 data class AppPolicy(
     @SerialName("id")
     val id: Long? = null,
+
     @SerialName("created_at")
     val createdAt: String? = null,
 
     @SerialName("app_id")
     val appId: String,
-    @SerialName("is_active")
-    val isActive: Boolean = true,
 
-    // 업데이트 관련
-    @SerialName("min_supported_version")
-    val minSupportedVersion: Int? = null,
-    @SerialName("latest_version_code")
-    val latestVersionCode: Int? = null,
-    @SerialName("update_is_active")
-    val updateIsActive: Boolean = false,
+    @SerialName("is_active")
+    val isActive: Boolean = false,
+
+    @SerialName("active_popup_type")
+    val activePopupType: String = "none",  // 'emergency', 'force_update', 'optional_update', 'notice', 'none'
+
+    @SerialName("content")
+    val content: String? = null,
+
     @SerialName("download_url")
     val downloadUrl: String? = null,
 
-    // 긴급 공지
-    @SerialName("emergency_is_active")
-    val emergencyIsActive: Boolean = false,
-    @SerialName("emergency_title")
-    val emergencyTitle: String? = null,
-    @SerialName("emergency_content")
-    val emergencyContent: String? = null,
-    @SerialName("emergency_dismissible")
-    val emergencyDismissible: Boolean = false,
-    @SerialName("emergency_redirect_url")
-    val emergencyRedirectUrl: String? = null,
+    @SerialName("min_supported_version")
+    val minSupportedVersion: Int? = null,
 
-    // (선택) 정책 기반 공지
-    @SerialName("notice_is_active")
-    val noticeIsActive: Boolean? = null,
-    @SerialName("notice_title")
-    val noticeTitle: String? = null,
-    @SerialName("notice_content")
-    val noticeContent: String? = null
+    @SerialName("latest_version_code")
+    val latestVersionCode: Int? = null
 ) {
+    /**
+     * 강제 업데이트가 필요한지 확인
+     * @param currentVersionCode 현재 앱 버전 코드
+     * @return true: 강제 업데이트 필요, false: 업데이트 불필요
+     */
     fun requiresForceUpdate(currentVersionCode: Int): Boolean {
+        if (activePopupType != "force_update") return false
         val min = minSupportedVersion ?: return false
         return currentVersionCode < min
+    }
+
+    /**
+     * 선택적 업데이트 권장 여부 확인
+     * @param currentVersionCode 현재 앱 버전 코드
+     * @return true: 업데이트 권장, false: 권장하지 않음
+     */
+    fun recommendsUpdate(currentVersionCode: Int): Boolean {
+        if (activePopupType != "optional_update") return false
+        val latest = latestVersionCode ?: return false
+        return currentVersionCode < latest
     }
 }
 

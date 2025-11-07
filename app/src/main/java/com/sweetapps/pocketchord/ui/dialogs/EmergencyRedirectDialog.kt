@@ -38,16 +38,16 @@ import com.sweetapps.pocketchord.R
  */
 @Composable
 fun EmergencyRedirectDialog(
-    title: String = "중요 안내",
+    title: String = "공지",
     description: String,
     newAppPackage: String,
-    redirectUrl: String? = null, // 추가: URL 리디렉트 지원
-    buttonText: String = "새 앱 설치하기",
+    redirectUrl: String? = null,
+    buttonText: String = "확인",
     supportUrl: String? = null,
-    supportButtonText: String = "자세한 내용 보기",
+    supportButtonText: String = "자세히 보기",
     isDismissible: Boolean = false,
     onDismiss: (() -> Unit)? = null,
-    badgeText: String? = "서비스 종료"
+    badgeText: String? = null  // 기본값을 null로 변경 (배지 안 보임)
 ) {
     val context = LocalContext.current
     Dialog(
@@ -95,31 +95,16 @@ fun EmergencyRedirectDialog(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // 제목
+                        // 제목 (이모티콘 제거)
                         Text(
-                            text = title,
+                            text = title.replace("🚨", "").trim(),
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF1A1A1A),
                             textAlign = TextAlign.Center
                         )
 
-                        // 배지(옵션) — "서비스 종료" 등
-                        badgeText?.let {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Surface(
-                                color = Color(0xFFFFEBEE), // 연한 레드
-                                shape = RoundedCornerShape(999.dp)
-                            ) {
-                                Text(
-                                    text = it,
-                                    color = Color(0xFFD32F2F),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
+                        // 배지 삭제 (badgeText 무시)
 
                         Spacer(modifier = Modifier.height(14.dp))
 
@@ -138,7 +123,7 @@ fun EmergencyRedirectDialog(
                         // 파란 안내 박스 및 관련 여백 제거
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // 설치 버튼
+                        // 설치 버튼 (전체 너비)
                         Button(
                             onClick = {
                                 if (!redirectUrl.isNullOrBlank()) {

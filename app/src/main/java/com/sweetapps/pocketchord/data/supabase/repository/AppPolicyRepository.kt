@@ -5,34 +5,49 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 
 /**
- * AppPolicy Repository: 단일 정책 레코드 조회
+ * AppPolicy Repository: 앱 정책 조회
+ * - RLS 정책에 의해 is_active = TRUE인 정책만 조회 가능
  */
 class AppPolicyRepository(
     private val client: SupabaseClient,
     private val appId: String = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID
 ) {
+    /**
+     * 현재 활성화된 앱 정책 조회
+     * @return 정책이 있으면 AppPolicy, 없으면 null
+     */
     suspend fun getPolicy(): Result<AppPolicy?> = runCatching {
-        val filtered = client.from("app_policy")
-            .select {
-                filter {
-                    eq("app_id", appId)
-                    // RLS가 is_active = TRUE 만 허용하므로 별도 boolean 필터는 생략
-                }
-                limit(1)
-            }
+        android.util.Log.d("AppPolicyRepo", "===== Policy Fetch Started =====")
+        android.util.Log.d("AppPolicyRepo", "Target app_id: $appId")
+        
+        // Supabase filter가 작동하지 않는 문제로 인해 전체 조회 후 클라이언트에서 필터링
+        val allPolicies = client.from("app_policy")
+            .select()
             .decodeList<AppPolicy>()
-        android.util.Log.d("AppPolicyRepo", "Filtered (by app_id only) count=${filtered.size} for appId='${appId}'")
-        if (filtered.isNotEmpty()) return@runCatching filtered.first()
 
-        val all = client.from("app_policy").select().decodeList<AppPolicy>()
-        val ids = all.joinToString { p -> "${p.appId}(active=${p.isActive},len=${p.appId.length})" }
-        android.util.Log.d("AppPolicyRepo", "Fallback scan total=${all.size} ids=[${ids}] target='${appId}' len=${appId.length}")
-        val local = all.firstOrNull { it.appId == appId && it.isActive }
-        if (local == null) {
-            android.util.Log.d("AppPolicyRepo", "No matching row even after local filter. Check app_id exact text & hidden spaces.")
+        android.util.Log.d("AppPolicyRepo", "Total rows fetched: ${allPolicies.size}")
+
+        // 클라이언트에서 필터링
+        val policy = allPolicies.firstOrNull { it.appId == appId && it.isActive }
+
+        if (policy != null) {
+            android.util.Log.d("AppPolicyRepo", "✅ Policy found:")
+            android.util.Log.d("AppPolicyRepo", "  - id: ${policy.id}")
+            android.util.Log.d("AppPolicyRepo", "  - app_id: ${policy.appId}")
+            android.util.Log.d("AppPolicyRepo", "  - is_active: ${policy.isActive}")
+            android.util.Log.d("AppPolicyRepo", "  - active_popup_type: ${policy.activePopupType}")
+            android.util.Log.d("AppPolicyRepo", "  - content: ${policy.content?.take(50)}...")
+            android.util.Log.d("AppPolicyRepo", "  - download_url: ${policy.downloadUrl}")
         } else {
-            android.util.Log.d("AppPolicyRepo", "Local match found after fallback: appId='${local.appId}'")
+            android.util.Log.w("AppPolicyRepo", "❌ No policy found!")
+            android.util.Log.w("AppPolicyRepo", "All app_ids in database:")
+            allPolicies.forEach {
+                android.util.Log.w("AppPolicyRepo", "  - '${it.appId}' (active=${it.isActive})")
+            }
+            android.util.Log.w("AppPolicyRepo", "Looking for: '$appId'")
         }
-        local
+        
+        android.util.Log.d("AppPolicyRepo", "===== Policy Fetch Completed =====")
+        policy
     }
 }
