@@ -31,6 +31,9 @@ import com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog
 import android.content.Intent
 import android.content.ActivityNotFoundException
 import android.content.SharedPreferences
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.provider.Settings
 import com.sweetapps.pocketchord.PocketChordApplication
 
 /**
@@ -54,6 +57,30 @@ fun MainScreen(navController: NavHostController) {
     val updatePrefs: SharedPreferences = remember { context.getSharedPreferences("update_prefs", android.content.Context.MODE_PRIVATE) }
     val dismissedVersionCode = remember { mutableStateOf(updatePrefs.getInt("dismissed_version_code", -1)) }
     val gson = remember { Gson() }
+    var showNetworkHelpDialog by remember { mutableStateOf(false) }
+
+    // 스토어 열기 시도(보통/권장 UX 포함): 오프라인이면 도움말, market:// → https:// 폴백
+    fun tryOpenStore(info: UpdateInfo) {
+        if (!isOnline(context)) {
+            showNetworkHelpDialog = true
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = (info.downloadUrl ?: "market://details?id=${context.packageName}").toUri()
+        }
+        try {
+            context.startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            val webIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = "https://play.google.com/store/apps/details?id=${context.packageName}".toUri()
+            }
+            try {
+                context.startActivity(webIntent)
+            } catch (_: Exception) {
+                showNetworkHelpDialog = true
+            }
+        }
+    }
 
     // 강제 업데이트가 표시 중일 때 시스템 뒤로가기를 차단 (이중 안전장치)
     if (showUpdateDialog && (updateInfo?.isForce == true)) {
@@ -204,20 +231,7 @@ fun MainScreen(navController: NavHostController) {
             version = updateInfo!!.versionName,
             features = if (features.isNotEmpty()) features else null,
             onUpdateClick = {
-                // Play Store로 이동
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = (updateInfo!!.downloadUrl
-                        ?: "market://details?id=${context.packageName}").toUri()
-                }
-                try {
-                    context.startActivity(intent)
-                } catch (_: ActivityNotFoundException) {
-                    // Play Store 앱이 없으면 웹 브라우저로 열기
-                    val webIntent = Intent(Intent.ACTION_VIEW).apply {
-                        data = "https://play.google.com/store/apps/details?id=${context.packageName}".toUri()
-                    }
-                    context.startActivity(webIntent)
-                }
+                tryOpenStore(updateInfo!!)
             },
             onLaterClick = if (updateInfo!!.isForce) null else {
                 {
@@ -256,6 +270,30 @@ fun MainScreen(navController: NavHostController) {
                     Log.d("HomeScreen", "📋 Total viewed announcements: ${viewedIds.size}")
                 }
                 showAnnouncementDialog = false
+            }
+        )
+    }
+
+    // 네트워크 도움말 다이얼로그(보통/권장 UX)
+    if (showNetworkHelpDialog) {
+        AlertDialog(
+            onDismissRequest = { /* 강제 업데이트 맥락에서도 닫기 버튼 제공하지 않음 */ },
+            title = { Text("네트워크 문제") },
+            text = {
+                Text("인터넷에 연결되어 있지 않아 스토어를 열 수 없어요. 네트워크 설정을 확인한 뒤 다시 시도해 주세요.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNetworkHelpDialog = false
+                    // 네트워크 설정 화면 열기
+                    runCatching { context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) }
+                }) { Text("네트워크 설정 열기") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showNetworkHelpDialog = false
+                    updateInfo?.let { tryOpenStore(it) }
+                }) { Text("다시 시도") }
             }
         )
     }
@@ -378,4 +416,14 @@ private fun ChordGrid(navController: NavHostController) {
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
+}
+
+fun isOnline(context: android.content.Context): Boolean {
+    val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val network = cm.activeNetwork ?: return false
+    val caps = cm.getNetworkCapabilities(network) ?: return false
+    return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+           (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
 }
