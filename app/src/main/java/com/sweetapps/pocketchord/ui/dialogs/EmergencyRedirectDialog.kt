@@ -3,7 +3,6 @@ package com.sweetapps.pocketchord.ui.dialogs
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,7 +40,6 @@ import com.sweetapps.pocketchord.R
 fun EmergencyRedirectDialog(
     title: String = "중요 안내",
     description: String,
-    newAppName: String,
     newAppPackage: String,
     redirectUrl: String? = null, // 추가: URL 리디렉트 지원
     buttonText: String = "새 앱 설치하기",
@@ -49,8 +47,7 @@ fun EmergencyRedirectDialog(
     supportButtonText: String = "자세한 내용 보기",
     isDismissible: Boolean = false,
     onDismiss: (() -> Unit)? = null,
-    badgeText: String? = "서비스 종료",
-    migrationMessage: String? = null
+    badgeText: String? = "서비스 종료"
 ) {
     val context = LocalContext.current
     Dialog(
@@ -131,32 +128,15 @@ fun EmergencyRedirectDialog(
                             text = description,
                             fontSize = 15.sp,
                             color = Color(0xFF666666),
-                            textAlign = TextAlign.Center,
+                            textAlign = TextAlign.Start, // 좌측 정렬
                             lineHeight = 22.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        // 파란 안내 박스 — 데이터 이전 메시지
-                        val infoText = migrationMessage ?: "${newAppName}에서 기존 계정과 데이터를 그대로 사용할 수 있습니다."
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFFD6E4FF),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = infoText,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF1F2A44),
-                                textAlign = TextAlign.Center,
-                                lineHeight = 22.sp,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
+                        // 파란 안내 박스 및 관련 여백 제거
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // 설치 버튼
                         Button(

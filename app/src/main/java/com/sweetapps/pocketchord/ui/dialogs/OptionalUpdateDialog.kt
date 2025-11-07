@@ -40,7 +40,6 @@ fun OptionalUpdateDialog(
     updateButtonText: String = "지금 업데이트",
     laterButtonText: String = "나중에",
     features: List<String>? = null,
-    version: String? = null,
     estimatedTime: String? = null,
     onUpdateClick: () -> Unit,
     onLaterClick: (() -> Unit)? = null
@@ -98,22 +97,6 @@ fun OptionalUpdateDialog(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // 버전 배지 (옵션)
-                        version?.let {
-                            Surface(
-                                color = Color(0xFFE3F2FD),
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                Text(
-                                    text = "v$it",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF1976D2),
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
 
                         // 제목
                         Text(

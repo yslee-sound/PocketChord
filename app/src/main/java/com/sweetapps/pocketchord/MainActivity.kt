@@ -207,7 +207,7 @@ class MainActivity : ComponentActivity() {
                                         title = "앱 업데이트",
                                         updateButtonText = "지금 업데이트",
                                         laterButtonText = "나중에",
-                                        version = null,
+                                        features = null,
                                         onUpdateClick = { navController.popBackStack() },
                                         onLaterClick = { navController.popBackStack() }
                                     )
@@ -219,7 +219,6 @@ class MainActivity : ComponentActivity() {
                                     com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog(
                                         title = "중요 안내",
                                         description = "현재 앱의 서비스가 종료되어 더 이상 사용할 수 없습니다. 새로운 앱을 설치하여 계속 이용해주세요.",
-                                        newAppName = "PocketChord 2",
                                         newAppPackage = "com.sweetapps.pocketchord2",
                                         buttonText = "새 앱 설치하기",
                                         supportUrl = "https://example.com/faq",
