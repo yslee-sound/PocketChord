@@ -12,10 +12,27 @@ class AppPolicyRepository(
     private val appId: String = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID
 ) {
     suspend fun getPolicy(): Result<AppPolicy?> = runCatching {
-        client.from("app_policy")
-            .select()
+        val filtered = client.from("app_policy")
+            .select {
+                filter {
+                    eq("app_id", appId)
+                    // RLS가 is_active = TRUE 만 허용하므로 별도 boolean 필터는 생략
+                }
+                limit(1)
+            }
             .decodeList<AppPolicy>()
-            .firstOrNull { it.appId == appId && it.isActive }
+        android.util.Log.d("AppPolicyRepo", "Filtered (by app_id only) count=${filtered.size} for appId='${appId}'")
+        if (filtered.isNotEmpty()) return@runCatching filtered.first()
+
+        val all = client.from("app_policy").select().decodeList<AppPolicy>()
+        val ids = all.joinToString { p -> "${p.appId}(active=${p.isActive},len=${p.appId.length})" }
+        android.util.Log.d("AppPolicyRepo", "Fallback scan total=${all.size} ids=[${ids}] target='${appId}' len=${appId.length}")
+        val local = all.firstOrNull { it.appId == appId && it.isActive }
+        if (local == null) {
+            android.util.Log.d("AppPolicyRepo", "No matching row even after local filter. Check app_id exact text & hidden spaces.")
+        } else {
+            android.util.Log.d("AppPolicyRepo", "Local match found after fallback: appId='${local.appId}'")
+        }
+        local
     }
 }
-

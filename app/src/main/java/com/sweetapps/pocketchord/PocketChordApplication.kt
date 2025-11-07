@@ -69,5 +69,9 @@ class PocketChordApplication : Application() {
         ) {
             install(Postgrest)
         }
+
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("PocketChordApp", "Supabase URL (debug)='${url}'")
+        }
     }
 }
