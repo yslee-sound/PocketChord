@@ -53,7 +53,7 @@ fun MainScreen(navController: NavHostController) {
     val dismissedVersionCode = remember { mutableStateOf(updatePrefs.getInt("dismissed_version_code", -1)) }
 
     // Flutter의 initState + addPostFrameCallback과 동일
-    // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > update > notice)
+    // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > 강제업데이트 > 공지 > 선택적 업데이트)
     LaunchedEffect(Unit) {
         try {
             if (!app.isSupabaseConfigured) {
@@ -61,53 +61,63 @@ fun MainScreen(navController: NavHostController) {
                 return@LaunchedEffect
             }
             val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
+            val viewedIds = prefs.getStringSet("viewed_announcements", setOf()) ?: setOf()
 
             val announcementRepository = AnnouncementRepository(
                 supabaseClient,
                 com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID
             )
 
-            // 1) 긴급 공지 우선
+            // 1) 긴급 공지 조회
+            var emergency: Announcement? = null
             announcementRepository.getActiveEmergency()
-                .onSuccess { emergency ->
-                    if (emergency != null) {
-                        announcement = emergency
-                        showEmergencyDialog = true
-                        return@LaunchedEffect
-                    }
-                }
+                .onSuccess { emergency = it }
                 .onFailure { e -> Log.e("HomeScreen", "Failed to load emergency", e) }
 
-            // 2) 업데이트 확인
-            val updateRepository = UpdateInfoRepository(supabaseClient)
-            updateRepository.checkUpdateRequired(com.sweetapps.pocketchord.BuildConfig.VERSION_CODE)
-                .onSuccess { update ->
-                    val isUpdate = update != null
-                    Log.d("HomeScreen", "isUpdate=$isUpdate localCode=${com.sweetapps.pocketchord.BuildConfig.VERSION_CODE} remoteCode=${update?.versionCode}")
-
-                    if (update != null && update.versionCode != dismissedVersionCode.value) {
-                        updateInfo = update
-                        showUpdateDialog = true
-                        return@LaunchedEffect
-                    } else if (update != null) {
-                        Log.d("HomeScreen", "Update already dismissed earlier (code matched)")
-                    }
-                }
+            // 2) 업데이트 확인 (versionCode 상승 시 객체 반환)
+            var update: UpdateInfo? = null
+            UpdateInfoRepository(supabaseClient)
+                .checkUpdateRequired(com.sweetapps.pocketchord.BuildConfig.VERSION_CODE)
+                .onSuccess { update = it }
                 .onFailure { error -> Log.e("HomeScreen", "Failed to check update", error) }
 
-            // 3) 일반 공지
+            // 3) 일반 공지 조회 (emergency 제외)
+            var latestAnn: Announcement? = null
             announcementRepository.getLatestAnnouncement()
-                .onSuccess { result ->
-                    result?.let { ann ->
-                        val viewedIds = prefs.getStringSet("viewed_announcements", setOf()) ?: setOf()
-                        if (!viewedIds.contains(ann.id.toString())) {
-                            announcement = ann
-                            showAnnouncementDialog = true
-                            Log.d("HomeScreen", "✅ Showing new announcement: ${ann.title} (id=${ann.id})")
-                        }
-                    }
-                }
+                .onSuccess { result -> latestAnn = result }
                 .onFailure { error -> Log.e("HomeScreen", "Failed to load announcement", error) }
+
+            // 우선순위 결정
+            val isForced = update?.isForce == true
+            val optionalUpdateAllowed = update != null && update!!.versionCode != dismissedVersionCode.value
+            val hasNewAnnouncement = latestAnn?.let { ann -> !viewedIds.contains(ann.id.toString()) } == true
+
+            Log.d(
+                "HomeScreen",
+                "popup-state emergency=${emergency != null} forced=${isForced} hasNewAnnouncement=${hasNewAnnouncement} optionalUpdate=${optionalUpdateAllowed}"
+            )
+
+            when {
+                emergency != null -> {
+                    announcement = emergency
+                    showEmergencyDialog = true
+                }
+                isForced -> {
+                    updateInfo = update
+                    showUpdateDialog = true
+                }
+                hasNewAnnouncement -> {
+                    announcement = latestAnn
+                    showAnnouncementDialog = true
+                }
+                optionalUpdateAllowed -> {
+                    updateInfo = update
+                    showUpdateDialog = true
+                }
+                else -> {
+                    // 아무 팝업도 없음
+                }
+            }
         } catch (e: Exception) {
             Log.e("HomeScreen", "Exception while loading popups", e)
         }
