@@ -59,8 +59,10 @@ CREATE TABLE IF NOT EXISTS public.app_policy (
 );
 
 -- 2) 앱당 1건 정책 보장 (운영 단순화)
-ALTER TABLE public.app_policy
-  ADD CONSTRAINT app_policy_app_id_unique UNIQUE (app_id);
+-- NOTE: PostgreSQL은 ADD CONSTRAINT IF NOT EXISTS를 지원하지 않으므로,
+--       재실행 가능한 스크립트를 위해 UNIQUE 인덱스를 사용합니다.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_app_policy_app_id_unique
+  ON public.app_policy(app_id);
 
 -- 3) 성능 인덱스 (선택)
 CREATE INDEX IF NOT EXISTS idx_app_policy_active ON public.app_policy (is_active);
@@ -245,8 +247,9 @@ CREATE TABLE IF NOT EXISTS public.app_policy (
 );
 
 -- 2. 앱당 1행 제약
-ALTER TABLE public.app_policy
-  ADD CONSTRAINT IF NOT EXISTS app_policy_app_id_unique UNIQUE (app_id);
+-- 재실행 가능하게 UNIQUE 인덱스로 보장
+CREATE UNIQUE INDEX IF NOT EXISTS idx_app_policy_app_id_unique
+  ON public.app_policy(app_id);
 
 -- 3. 인덱스(활성 행 빠른 조회)
 CREATE INDEX IF NOT EXISTS idx_app_policy_active ON public.app_policy (is_active);
