@@ -61,6 +61,7 @@ import kotlinx.coroutines.launch
 import com.sweetapps.pocketchord.ads.InterstitialAdManager
 import com.sweetapps.pocketchord.ui.screens.setupSplashScreen
 import com.sweetapps.pocketchord.ui.screens.MainScreen
+import com.sweetapps.pocketchord.ui.screens.keepOnScreenWhile
 
 class MainActivity : ComponentActivity() {
     // 전면광고 매니저
@@ -68,7 +69,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 스플래시 화면 설정 (ui/screens/SplashScreen.kt 참고)
-        setupSplashScreen()
+        val splash = setupSplashScreen()
+
+        // 스플래시 단계에서 강제 업데이트 복원 상태를 먼저 체크하여 초기 깜빡임 방지
+        var keepSplash = true
+        splash.keepOnScreenWhile { keepSplash }
+        runCatching {
+            val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
+            val storedForceVersion = prefs.getInt("force_required_version", -1)
+            // 여기서는 판단만 수행(SharedPreferences 복원은 HomeScreen에서 즉시 실행됨)
+            // 조건 확인 자체가 매우 빠르므로 Splash는 몇 ms 내 해제됩니다.
+            if (storedForceVersion != -1) {
+                android.util.Log.d("Splash", "pref has forced version=$storedForceVersion (> ${BuildConfig.VERSION_CODE} ?) ")
+            }
+        }.onFailure { e -> android.util.Log.w("Splash", "force check failed", e) }
+        keepSplash = false
 
         super.onCreate(savedInstanceState)
 

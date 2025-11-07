@@ -2,6 +2,7 @@ package com.sweetapps.pocketchord.ui.screens
 
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import com.google.gson.Gson
 import com.sweetapps.pocketchord.data.supabase.model.Announcement
 import com.sweetapps.pocketchord.data.supabase.model.UpdateInfo
 import com.sweetapps.pocketchord.data.supabase.repository.AnnouncementRepository
@@ -51,15 +53,47 @@ fun MainScreen(navController: NavHostController) {
     val supabaseClient = app.supabase
     val updatePrefs: SharedPreferences = remember { context.getSharedPreferences("update_prefs", android.content.Context.MODE_PRIVATE) }
     val dismissedVersionCode = remember { mutableStateOf(updatePrefs.getInt("dismissed_version_code", -1)) }
+    val gson = remember { Gson() }
 
-    // Flutter의 initState + addPostFrameCallback과 동일
-    // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > 강제업데이트 > 공지 > 선택적 업데이트)
+    // 강제 업데이트가 표시 중일 때 시스템 뒤로가기를 차단 (이중 안전장치)
+    if (showUpdateDialog && (updateInfo?.isForce == true)) {
+        BackHandler(enabled = true) { }
+    }
+
+    // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > 강제업데이트 > 선택적 업데이트 > 공지)
     LaunchedEffect(Unit) {
         try {
+            // 0) 로컬에 저장된 강제 업데이트 복원(오프라인/프로세스 재시작 대비)
+            val storedForceVersion = updatePrefs.getInt("force_required_version", -1)
+            if (storedForceVersion != -1 && storedForceVersion > com.sweetapps.pocketchord.BuildConfig.VERSION_CODE) {
+                val json = updatePrefs.getString("force_update_info", null)
+                val cached = runCatching { json?.let { gson.fromJson(it, com.sweetapps.pocketchord.data.supabase.model.UpdateInfo::class.java) } }.getOrNull()
+                updateInfo = cached ?: com.sweetapps.pocketchord.data.supabase.model.UpdateInfo(
+                    id = null,
+                    versionCode = storedForceVersion,
+                    versionName = "",
+                    appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                    isForce = true,
+                    releaseNotes = "",
+                    releasedAt = null,
+                    downloadUrl = null
+                )
+                showUpdateDialog = true
+                Log.d("HomeScreen", "Restored forced update from prefs: version=$storedForceVersion")
+                return@LaunchedEffect
+            } else if (storedForceVersion != -1 && storedForceVersion <= com.sweetapps.pocketchord.BuildConfig.VERSION_CODE) {
+                // 앱이 업데이트되어 강제 조건 해제: 정리
+                updatePrefs.edit {
+                    remove("force_required_version")
+                    remove("force_update_info")
+                }
+            }
+
             if (!app.isSupabaseConfigured) {
                 Log.w("HomeScreen", "Supabase 미설정: 업데이트/공지 네트워크 호출 생략")
                 return@LaunchedEffect
             }
+
             val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
             val viewedIds = prefs.getStringSet("viewed_announcements", setOf()) ?: setOf()
 
@@ -94,28 +128,39 @@ fun MainScreen(navController: NavHostController) {
 
             Log.d(
                 "HomeScreen",
-                "popup-state emergency=${emergency != null} forced=${isForced} hasNewAnnouncement=${hasNewAnnouncement} optionalUpdate=${optionalUpdateAllowed}"
+                "popup-state emergency=${emergency != null} forced=${isForced} optionalUpdate=${optionalUpdateAllowed} hasNewAnnouncement=${hasNewAnnouncement}"
             )
 
             when {
+                // 1) 긴급 공지
                 emergency != null -> {
                     announcement = emergency
                     showEmergencyDialog = true
                 }
+                // 2) 강제 업데이트
                 isForced -> {
                     updateInfo = update
                     showUpdateDialog = true
+                    // 강제 업데이트 캐시 저장(오프라인/복원 대비)
+                    update?.let { info ->
+                        updatePrefs.edit {
+                            putInt("force_required_version", info.versionCode)
+                            putString("force_update_info", gson.toJson(info))
+                        }
+                    }
                 }
-                hasNewAnnouncement -> {
-                    announcement = latestAnn
-                    showAnnouncementDialog = true
-                }
+                // 3) 선택적 업데이트
                 optionalUpdateAllowed -> {
                     updateInfo = update
                     showUpdateDialog = true
                 }
+                // 4) 공지(새로운 것만)
+                hasNewAnnouncement -> {
+                    announcement = latestAnn
+                    showAnnouncementDialog = true
+                }
                 else -> {
-                    // 아무 팝업도 없음
+                    // 아무 것도 표시하지 않음
                 }
             }
         } catch (e: Exception) {

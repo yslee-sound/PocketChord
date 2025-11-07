@@ -57,5 +57,9 @@ data class UpdateInfo(
 
     /** 다운로드 URL (선택, Play Store 또는 직접 링크) */
     @SerialName("download_url")
-    val downloadUrl: String? = null
+    val downloadUrl: String? = null,
+
+    /** 선택적: 업데이트 행 활성 여부 (컬럼이 없으면 기본 true) */
+    @SerialName("is_active")
+    val isActive: Boolean = true
 )
