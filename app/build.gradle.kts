@@ -121,6 +121,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Fragment 라이브러리 (최신 버전으로 명시적 선언)
+    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.fragment.ktx)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

@@ -150,11 +150,17 @@ fun MainScreen(navController: NavHostController) {
                 android.util.Log.w("HomeScreen", "  2. is_active=TRUE in Supabase")
                 android.util.Log.w("HomeScreen", "  3. RLS policy allows read (check 'allow_read_policy')")
                 android.util.Log.w("HomeScreen", "  4. SUPABASE_ANON_KEY is valid")
-                // 정책 없음 → 복원 강제 업데이트가 있으면 표시, 아니면 아무 것도 없음
-                restoredForcedUpdate?.let { upd ->
-                    updateInfo = upd
-                    showUpdateDialog = true
+
+                // ⚠️ 정책이 없거나 비활성화됨 → 로컬 캐시된 강제 업데이트도 삭제
+                if (storedForceVersion != -1) {
+                    android.util.Log.w("HomeScreen", "⚠️ Clearing cached force update (no active policy)")
+                    updatePrefs.edit {
+                        remove("force_required_version")
+                        remove("force_update_info")
+                    }
                 }
+
+                // 정책 없음 → 팝업 없음
                 return@LaunchedEffect
             }
 
