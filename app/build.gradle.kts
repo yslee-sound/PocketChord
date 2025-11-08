@@ -80,6 +80,9 @@ android {
                 "\"com.sweetapps.pocketchord.debug\""
             )
 
+            // 빌드 타입 정보
+            buildConfigField("String", "BUILD_TYPE", "\"debug\"")
+
             // 디버그 식별자 추가 (선택사항)
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-DEBUG"
@@ -92,6 +95,9 @@ android {
                 "SUPABASE_APP_ID",
                 "\"com.sweetapps.pocketchord\""
             )
+
+            // 빌드 타입 정보
+            buildConfigField("String", "BUILD_TYPE", "\"release\"")
 
             // 서명 설정 적용 (환경변수가 있을 때만, 없으면 디버그 서명 사용)
             signingConfig = signingConfigs.findByName("release")
