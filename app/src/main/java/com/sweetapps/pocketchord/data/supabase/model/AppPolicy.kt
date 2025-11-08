@@ -71,10 +71,10 @@ data class AppPolicy(
 
     // ===== 광고 빈도 제어 필드 =====
     @SerialName("ad_interstitial_max_per_hour")
-    val adInterstitialMaxPerHour: Int = 3,
+    val adInterstitialMaxPerHour: Int = 2,
 
     @SerialName("ad_interstitial_max_per_day")
-    val adInterstitialMaxPerDay: Int = 20
+    val adInterstitialMaxPerDay: Int = 15
 ) {
     /**
      * 강제 업데이트가 필요한지 확인

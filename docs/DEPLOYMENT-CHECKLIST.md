@@ -41,8 +41,8 @@
   ✅ ad_app_open_enabled = true
   ✅ ad_interstitial_enabled = true
   ✅ ad_banner_enabled = true
-  ✅ ad_interstitial_max_per_hour = 3
-  ✅ ad_interstitial_max_per_day = 20
+  ✅ ad_interstitial_max_per_hour = 2
+  ✅ ad_interstitial_max_per_day = 15
   ```
 
 - [ ] **RLS 정책 확인**

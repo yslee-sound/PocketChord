@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS ad_policy (
   ad_banner_enabled BOOLEAN DEFAULT true NOT NULL,
 
   -- 빈도 제한
-  ad_interstitial_max_per_hour INT DEFAULT 3 NOT NULL,
-  ad_interstitial_max_per_day INT DEFAULT 20 NOT NULL
+  ad_interstitial_max_per_hour INT DEFAULT 2 NOT NULL,
+  ad_interstitial_max_per_day INT DEFAULT 15 NOT NULL
 );
 
 -- 2. RLS (Row Level Security) 활성화
@@ -34,7 +34,7 @@ CREATE POLICY "ad_policy_select" ON ad_policy
 CREATE INDEX IF NOT EXISTS idx_ad_policy_app_id ON ad_policy(app_id);
 CREATE INDEX IF NOT EXISTS idx_ad_policy_is_active ON ad_policy(is_active);
 
--- 5. 초기 데이터 삽입 (PocketChord 앱)
+-- 5. 초기 데이터 삽입 (Release 및 Debug 빌드)
 INSERT INTO ad_policy (
   app_id,
   is_active,
@@ -43,14 +43,26 @@ INSERT INTO ad_policy (
   ad_banner_enabled,
   ad_interstitial_max_per_hour,
   ad_interstitial_max_per_day
-) VALUES (
+) VALUES
+-- Release 빌드 (실제 운영)
+(
   'com.sweetapps.pocketchord',
   true,    -- 광고 정책 활성화
   true,    -- 앱 오픈 광고 ON
   true,    -- 전면 광고 ON
   true,    -- 배너 광고 ON
-  3,       -- 시간당 최대 3회
-  20       -- 하루 최대 20회
+  2,       -- 시간당 최대 2회 (보수적)
+  15       -- 하루 최대 15회 (보수적)
+),
+-- Debug 빌드 (개발/테스트)
+(
+  'com.sweetapps.pocketchord.debug',
+  true,    -- 광고 정책 활성화
+  true,    -- 앱 오픈 광고 ON
+  true,    -- 전면 광고 ON
+  true,    -- 배너 광고 ON
+  2,       -- 시간당 최대 2회 (보수적)
+  15       -- 하루 최대 15회 (보수적)
 )
 ON CONFLICT (app_id) DO UPDATE
 SET
@@ -68,6 +80,7 @@ SET
 -- ORDER BY ordinal_position;
 
 -- 7. 데이터 확인
+-- Release 빌드
 SELECT
   app_id,
   is_active,
@@ -79,6 +92,31 @@ SELECT
   created_at
 FROM ad_policy
 WHERE app_id = 'com.sweetapps.pocketchord';
+
+-- Debug 빌드
+SELECT
+  app_id,
+  is_active,
+  ad_app_open_enabled,
+  ad_interstitial_enabled,
+  ad_banner_enabled,
+  ad_interstitial_max_per_hour,
+  ad_interstitial_max_per_day,
+  created_at
+FROM ad_policy
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+
+-- 모든 데이터 확인
+SELECT
+  app_id,
+  is_active,
+  ad_app_open_enabled,
+  ad_interstitial_enabled,
+  ad_banner_enabled,
+  ad_interstitial_max_per_hour,
+  ad_interstitial_max_per_day
+FROM ad_policy
+ORDER BY app_id;
 
 -- ============================================
 -- 운영 시나리오 예제

@@ -14,19 +14,20 @@
 ### SQL 실행
 `docs/ad-policy-table-creation.sql` 파일 내용 복사 → 붙여넣기 → **RUN** 클릭
 
+**중요**: 이 SQL은 Release와 Debug 빌드 데이터를 모두 생성합니다!
+
 ### 확인
 ```sql
-SELECT * FROM ad_policy 
-WHERE app_id = 'com.sweetapps.pocketchord';
+SELECT * FROM ad_policy ORDER BY app_id;
 ```
 
 **예상 결과:**
 ```
-✅ 1개 행이 반환됨
-✅ is_active = true
-✅ ad_app_open_enabled = true
-✅ ad_interstitial_enabled = true
-✅ ad_banner_enabled = true
+✅ 2개 행이 반환됨
+✅ com.sweetapps.pocketchord (Release)
+✅ com.sweetapps.pocketchord.debug (Debug)
+✅ 모두 is_active = true
+✅ 모두 광고 활성화 상태
 ```
 
 ---

@@ -57,9 +57,9 @@ data class AdPolicy(
 
     // ===== 광고 빈도 제어 =====
     @SerialName("ad_interstitial_max_per_hour")
-    val adInterstitialMaxPerHour: Int = 3,
+    val adInterstitialMaxPerHour: Int = 2,
 
     @SerialName("ad_interstitial_max_per_day")
-    val adInterstitialMaxPerDay: Int = 20
+    val adInterstitialMaxPerDay: Int = 15
 )
 

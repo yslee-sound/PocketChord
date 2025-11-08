@@ -38,8 +38,8 @@ SET
   ad_app_open_enabled = COALESCE(ad_app_open_enabled, true),
   ad_interstitial_enabled = COALESCE(ad_interstitial_enabled, true),
   ad_banner_enabled = COALESCE(ad_banner_enabled, true),
-  ad_interstitial_max_per_hour = COALESCE(ad_interstitial_max_per_hour, 3),
-  ad_interstitial_max_per_day = COALESCE(ad_interstitial_max_per_day, 20)
+  ad_interstitial_max_per_hour = COALESCE(ad_interstitial_max_per_hour, 2),
+  ad_interstitial_max_per_day = COALESCE(ad_interstitial_max_per_day, 15)
 WHERE ad_app_open_enabled IS NULL
    OR ad_interstitial_enabled IS NULL
    OR ad_banner_enabled IS NULL
