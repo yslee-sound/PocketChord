@@ -56,6 +56,7 @@ fun MainScreen(navController: NavHostController) {
 
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var announcement by remember { mutableStateOf<Announcement?>(null) }
+    var currentNoticeVersion by remember { mutableStateOf<Int?>(null) }  // 현재 표시 중인 notice 버전
     val context = LocalContext.current
     val app = context.applicationContext as PocketChordApplication
     val supabaseClient = app.supabase
@@ -240,20 +241,22 @@ fun MainScreen(navController: NavHostController) {
                     Log.d("HomeScreen", "Notice already viewed (version=${n.noticeVersion}), skipping")
                 } else {
                     Log.d("HomeScreen", "Decision: NOTICE from notice_policy (version=${n.noticeVersion})")
+
+                    // notice 버전을 state에 저장 (onDismiss에서 사용)
+                    currentNoticeVersion = n.noticeVersion
+
                     announcement = Announcement(
                         id = n.id,
                         createdAt = n.createdAt,
                         appId = n.appId,
                         title = n.title ?: "공지사항",
                         content = n.content,
-                        imageUrl = n.imageUrl,
-                        link = n.actionUrl,
                         isActive = true,
                         kind = "announcement",
+                        redirectUrl = n.actionUrl,
                         dismissible = true
                     )
                     showAnnouncementDialog = true
-                    return@LaunchedEffect  // 공지 표시하면 app_policy 건너뜀
                 }
             }
         } catch (e: Exception) {
@@ -323,26 +326,21 @@ fun MainScreen(navController: NavHostController) {
         AnnouncementDialog(
             announcement = announcement!!,
             onDismiss = {
-                // ===== Phase 3: notice_policy 버전 저장 (신규) =====
-                // notice_policy에서 온 경우 버전 기반 추적
-                NoticePolicyRepository(supabaseClient)
-                    .getActiveNotice()
-                    .onSuccess { notice ->
-                        notice?.let { n ->
-                            val prefs = context.getSharedPreferences("notice_prefs", android.content.Context.MODE_PRIVATE)
-                            val viewedVersions = prefs.getStringSet("viewed_notices", setOf())
-                                ?.toMutableSet() ?: mutableSetOf()
+                // ===== Phase 3: notice_policy 버전 저장 =====
+                currentNoticeVersion?.let { version ->
+                    val prefs = context.getSharedPreferences("notice_prefs", android.content.Context.MODE_PRIVATE)
+                    val viewedVersions = prefs.getStringSet("viewed_notices", setOf())
+                        ?.toMutableSet() ?: mutableSetOf()
 
-                            val identifier = "notice_v${n.noticeVersion}"
-                            viewedVersions.add(identifier)
+                    val identifier = "notice_v${version}"
+                    viewedVersions.add(identifier)
 
-                            prefs.edit {
-                                putStringSet("viewed_notices", viewedVersions)
-                            }
-
-                            Log.d("HomeScreen", "Marked notice version ${n.noticeVersion} as viewed")
-                        }
+                    prefs.edit {
+                        putStringSet("viewed_notices", viewedVersions)
                     }
+
+                    Log.d("HomeScreen", "Marked notice version $version as viewed")
+                }
 
                 showAnnouncementDialog = false
             }
