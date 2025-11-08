@@ -102,8 +102,8 @@ class InterstitialAdManager(private val context: Context) {
 
         // 광고 정책에서 최대값 가져오기
         val adPolicy = adPolicyRepository.getPolicy().getOrNull()
-        val maxPerHour = adPolicy?.adInterstitialMaxPerHour ?: 3
-        val maxPerDay = adPolicy?.adInterstitialMaxPerDay ?: 20
+        val maxPerHour = adPolicy?.adInterstitialMaxPerHour ?: 2  // 보수적 기본값
+        val maxPerDay = adPolicy?.adInterstitialMaxPerDay ?: 15   // 보수적 기본값
 
         // 시간당 제한 체크
         if (sharedPreferences.getInt("ad_count_hourly", 0) >= maxPerHour) {

@@ -124,7 +124,7 @@ AppPolicyRepo: ❌ No policy found!
    ```
    InterstitialAdManager: 📊 광고 카운트 증가: 시간당 1, 일일 1
    ```
-4. 시간당 3회 제한 테스트
+4. 시간당 2회 제한 테스트 (보수적 기본값)
 5. Supabase에서 OFF 설정:
    ```sql
    UPDATE app_policy 
@@ -328,7 +328,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 - [ ] Logcat에서 정책 조회 로그 확인
 - [ ] Supabase에서 광고 OFF → 반영 확인
 - [ ] 캐싱 동작 확인 (5분 이내 캐시 사용)
-- [ ] 빈도 제한 동작 확인 (시간당 3회)
+- [ ] 빈도 제한 동작 확인 (시간당 2회, 일일 15회 - 보수적 기본값)
 
 ---
 

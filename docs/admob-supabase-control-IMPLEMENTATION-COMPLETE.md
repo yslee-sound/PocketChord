@@ -113,7 +113,7 @@ LaunchedEffect(Unit) {
   ↓
 Supabase 정책 체크 (ON/OFF)
   ↓
-빈도 제한 체크 (시간당 3회, 일일 20회)
+빈도 제한 체크 (시간당 2회, 일일 15회) ← 보수적 기본값
   ↓
 모두 통과 시 광고 표시
   ↓
@@ -175,12 +175,12 @@ Supabase 정책 체크 (ON/OFF)
 
 **시간당 제한**:
 ```kotlin
-ad_interstitial_max_per_hour = 3 (기본값)
+ad_interstitial_max_per_hour = 2 (기본값, 보수적)
 ```
 
 **일일 제한**:
 ```kotlin
-ad_interstitial_max_per_day = 20 (기본값)
+ad_interstitial_max_per_day = 15 (기본값, 보수적)
 ```
 
 **자동 리셋**:
@@ -310,8 +310,8 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ### 3. 전면 광고 테스트
 - [ ] 화면 전환 3회 + 60초 경과 → 광고 표시 확인
-- [ ] 시간당 3회 제한 확인
-- [ ] 일일 20회 제한 확인
+- [ ] 시간당 2회 제한 확인 (보수적 기본값)
+- [ ] 일일 15회 제한 확인 (보수적 기본값)
 - [ ] Supabase에서 OFF → 광고 표시 안 됨 확인
 - [ ] 빈도 제한 변경 → 반영 확인
 

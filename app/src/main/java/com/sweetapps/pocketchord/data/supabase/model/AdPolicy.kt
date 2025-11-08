@@ -23,7 +23,7 @@ import kotlinx.serialization.Serializable
  * val adPolicy = adPolicyRepository.getPolicy()
  * val bannerEnabled = adPolicy?.adBannerEnabled ?: true
  * val interstitialEnabled = adPolicy?.adInterstitialEnabled ?: true
- * val maxPerHour = adPolicy?.adInterstitialMaxPerHour ?: 3
+ * val maxPerHour = adPolicy?.adInterstitialMaxPerHour ?: 2  // 보수적 기본값
  * ```
  *
  * 특징:

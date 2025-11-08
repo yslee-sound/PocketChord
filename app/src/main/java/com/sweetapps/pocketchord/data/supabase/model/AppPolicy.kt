@@ -27,8 +27,8 @@ import kotlinx.serialization.Serializable
  *  - ad_app_open_enabled (BOOLEAN): 앱 오픈 광고 활성화 여부 (기본값: true)
  *  - ad_interstitial_enabled (BOOLEAN): 전면 광고 활성화 여부 (기본값: true)
  *  - ad_banner_enabled (BOOLEAN): 배너 광고 활성화 여부 (기본값: true)
- *  - ad_interstitial_max_per_hour (INT): 전면 광고 시간당 최대 횟수 (기본값: 3)
- *  - ad_interstitial_max_per_day (INT): 전면 광고 하루 최대 횟수 (기본값: 20)
+ *  - ad_interstitial_max_per_hour (INT): 전면 광고 시간당 최대 횟수 (기본값: 2, 보수적)
+ *  - ad_interstitial_max_per_day (INT): 전면 광고 하루 최대 횟수 (기본값: 15, 보수적)
  */
 @Serializable
 data class AppPolicy(
