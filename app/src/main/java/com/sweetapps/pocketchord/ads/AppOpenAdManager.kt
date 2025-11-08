@@ -72,8 +72,6 @@ class AppOpenAdManager(
      * 앱 오프닝 광고를 로드합니다
      */
     private fun loadAd() {
-            return
-        }
 
         if (isLoadingAd || isAdAvailable()) {
             return
