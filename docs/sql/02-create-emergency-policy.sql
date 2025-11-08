@@ -18,8 +18,8 @@ CREATE TABLE public.emergency_policy (
 
     -- 긴급 메시지
     content TEXT NOT NULL,
-    redirect_url TEXT,
-    new_app_id TEXT,
+    redirect_url TEXT,          -- Play Store 링크 등
+    new_app_id TEXT,            -- 새 앱 패키지명 (예: com.sweetapps.pocketchord.v2)
 
     -- ===== Google Play 정책 준수 (핵심!) =====
     is_dismissible BOOLEAN NOT NULL DEFAULT TRUE,
@@ -47,6 +47,9 @@ USING (true);
 -- 4. 코멘트 추가
 COMMENT ON TABLE public.emergency_policy IS '긴급 상황 팝업 정책 (앱 차단, 서비스 종료 등)';
 COMMENT ON COLUMN public.emergency_policy.is_dismissible IS 'X 버튼 허용 여부 (기본값 true, false는 최후의 수단)';
+COMMENT ON COLUMN public.emergency_policy.new_app_id IS '새 앱 패키지명 (앱 이전 시 사용, 예: com.sweetapps.pocketchord.v2)';
+COMMENT ON COLUMN public.emergency_policy.redirect_url IS 'Play Store 링크 (새 앱 설치 유도)';
+COMMENT ON COLUMN public.emergency_policy.content IS '긴급 메시지 내용';
 
 -- 5. 테스트 데이터 삽입 (비활성화 상태)
 -- 실제 긴급 상황이 아니므로 is_active = false

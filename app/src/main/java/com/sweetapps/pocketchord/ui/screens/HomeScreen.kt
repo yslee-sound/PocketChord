@@ -276,7 +276,7 @@ fun MainScreen(navController: NavHostController) {
         com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog(
             title = "🚨 긴급공지",
             description = emergencyPolicy!!.content,
-            newAppPackage = emergencyPolicy!!.newAppId ?: "com.sweetapps.pocketchord",
+            newAppPackage = "com.sweetapps.pocketchord",  // 기본값 (redirect_url이 있으면 무시됨)
             redirectUrl = emergencyPolicy!!.redirectUrl,
             buttonText = "새 앱 설치하기",
             isDismissible = emergencyPolicy!!.isDismissible,  // ← DB에서 제어!

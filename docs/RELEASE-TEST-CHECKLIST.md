@@ -21,40 +21,136 @@
 
 ## ✅ 사전 준비
 
-### 1. Supabase 접속
+### 1. 테스트 환경 선택 ⭐
+
+**중요**: 어떤 환경을 테스트할지 먼저 결정하세요!
+
+#### 옵션 A: 프로덕션(릴리즈) 테스트 ✅ **권장**
+```
+app_id: 'com.sweetapps.pocketchord'
+목적: 실제 사용자가 받을 릴리즈 빌드 검증
+언제: 릴리즈 전 최종 검증
+SQL 파일: docs/sql/test-scripts-release.sql ⭐
+```
+
+#### 옵션 B: 개발(Debug) 테스트
+```
+app_id: 'com.sweetapps.pocketchord.debug'
+목적: 개발 중 빠른 테스트
+언제: 개발 단계, 빠른 검증
+SQL 파일: docs/sql/test-scripts-debug.sql ⭐
+```
+
+**빠른 시작**:
+1. 위의 SQL 파일 중 하나를 선택
+2. 파일 열기
+3. 필요한 SQL 복사해서 Supabase에서 실행
+
+**이 체크리스트의 기본값**: `'com.sweetapps.pocketchord'` (프로덕션)
+
+
+---
+
+### 2. Supabase 접속
 - [ ] Supabase 대시보드 접속
 - [ ] PocketChord 프로젝트 선택
 - [ ] SQL Editor 열기 준비
 
-### 2. Android Studio 준비
+### 3. Android Studio 준비
 - [ ] 프로젝트 열기
 - [ ] Logcat 준비 (필터: "HomeScreen")
 - [ ] 테스트 기기/에뮬레이터 연결 확인
+- [ ] **빌드 타입 확인**: Release 또는 Debug
 
-### 3. 초기 상태 확인
+---
+
+### 4. 초기 상태 확인
+
+**목적**: 테스트 시작 전 각 팝업의 현재 상태를 기록합니다.
+- ✅ 어떤 팝업이 활성화되어 있는지
+- ✅ 각 팝업의 설정 값 (버전, 강제 여부 등)
+- ✅ 테스트 후 원래대로 복구하기 위한 기준점
+
+#### 📋 릴리즈(프로덕션) 버전 ⭐ 권장
+
 ```sql
--- 현재 상태 확인
-SELECT 'emergency_policy' as table_name, is_active, 
+-- 현재 상태 확인 (릴리즈용)
+SELECT 'emergency_policy' as table_name, 
+       CAST(is_active AS TEXT) as is_active, 
        LEFT(content, 30) as content_preview 
 FROM emergency_policy 
 WHERE app_id = 'com.sweetapps.pocketchord'
 UNION ALL
-SELECT 'update_policy', CAST(is_active AS TEXT), 
+SELECT 'update_policy', 
+       CAST(is_active AS TEXT), 
        CONCAT('target:', target_version_code, ' force:', is_force_update)
 FROM update_policy 
 WHERE app_id = 'com.sweetapps.pocketchord'
 UNION ALL
-SELECT 'notice_policy', CAST(is_active AS TEXT), 
+SELECT 'notice_policy', 
+       CAST(is_active AS TEXT), 
        CONCAT('v', notice_version, ': ', LEFT(title, 20))
 FROM notice_policy 
+WHERE app_id = 'com.sweetapps.pocketchord'
+UNION ALL
+SELECT 'ad_policy', 
+       CAST(is_active AS TEXT), 
+       CONCAT('open:', ad_app_open_enabled, ' inter:', ad_interstitial_enabled, ' banner:', ad_banner_enabled)
+FROM ad_policy 
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
+
+#### 🔧 디버그 버전
+
+```sql
+-- 현재 상태 확인 (디버그용)
+SELECT 'emergency_policy' as table_name, 
+       CAST(is_active AS TEXT) as is_active, 
+       LEFT(content, 30) as content_preview 
+FROM emergency_policy 
+WHERE app_id = 'com.sweetapps.pocketchord.debug'
+UNION ALL
+SELECT 'update_policy', 
+       CAST(is_active AS TEXT), 
+       CONCAT('target:', target_version_code, ' force:', is_force_update)
+FROM update_policy 
+WHERE app_id = 'com.sweetapps.pocketchord.debug'
+UNION ALL
+SELECT 'notice_policy', 
+       CAST(is_active AS TEXT), 
+       CONCAT('v', notice_version, ': ', LEFT(title, 20))
+FROM notice_policy 
+WHERE app_id = 'com.sweetapps.pocketchord.debug'
+UNION ALL
+SELECT 'ad_policy', 
+       CAST(is_active AS TEXT), 
+       CONCAT('open:', ad_app_open_enabled, ' inter:', ad_interstitial_enabled, ' banner:', ad_banner_enabled)
+FROM ad_policy 
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+```
+
+**결과 예시**:
+```
+table_name          | is_active | content_preview
+--------------------+-----------+----------------------------------
+emergency_policy    | false     | ⚠️ [테스트] 이 앱은...
+update_policy       | true      | target:1 force:false
+notice_policy       | true      | v1: 환영합니다! 🎉
+ad_policy           | true      | open:true inter:true banner:true
+```
+
+**이것의 의미**:
+- `emergency: false` → 평상시 상태 (꺼져있음) ✅
+- `update: target:1` → 현재 버전과 같거나 낮음 (팝업 안 뜸) ✅  
+- `notice: v1` → 신규 사용자에게만 표시됨 ✅
+- `ad_policy: open/inter/banner` → 각 광고 타입 활성화 여부 ✅
 
 **기록**:
 ```
 emergency: is_active = _____
 update: is_active = _____, target = _____
 notice: is_active = _____, version = _____
+ad_policy: is_active = _____, open = _____, inter = _____, banner = _____
 ```
 
 ---
@@ -555,12 +651,15 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 ## 🎯 최종 확인
 
 ### 데이터베이스 상태 확인
+
+**목적**: 테스트 완료 후 모든 설정이 원래대로 복구되었는지 확인합니다.
+
 ```sql
 -- 최종 상태 확인
 SELECT 
     'emergency_policy' as policy,
-    is_active,
-    is_dismissible,
+    CAST(is_active AS TEXT) as is_active,
+    CAST(is_dismissible AS TEXT) as detail,
     LEFT(content, 30) as preview
 FROM emergency_policy 
 WHERE app_id = 'com.sweetapps.pocketchord'
@@ -576,17 +675,41 @@ UNION ALL
 SELECT 
     'notice_policy',
     CAST(is_active AS TEXT),
-    NULL,
+    CAST(NULL AS TEXT),
     CONCAT('v', notice_version, ': ', LEFT(title, 20))
 FROM notice_policy 
+WHERE app_id = 'com.sweetapps.pocketchord'
+UNION ALL
+SELECT 
+    'ad_policy',
+    CAST(is_active AS TEXT),
+    CAST(NULL AS TEXT),
+    CONCAT('open:', ad_app_open_enabled, ' inter:', ad_interstitial_enabled, ' banner:', ad_banner_enabled)
+FROM ad_policy 
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
+
+**프로덕션(평상시) 상태 기준**:
+```
+emergency: is_active = false (긴급 상황 없음)
+update: target = 1 (현재 버전과 같거나 낮음)
+notice: is_active = true, version = 1 (기본 환영 메시지)
+ad_policy: is_active = true, 광고 타입별 설정 (프로덕션 설정)
+```
+
+**확인 항목**:
+- [ ] emergency가 비활성화 되어 있는가?
+- [ ] update target이 1 (또는 현재 버전 이하)인가?
+- [ ] notice가 버전 1로 복구되었는가?
+- [ ] ad_policy 광고 설정이 프로덕션 상태인가?
+- [ ] 테스트용 메시지가 남아있지 않은가?
 
 **최종 상태 기록**:
 ```
 emergency: is_active = false (평상시)
 update: target = 1 (평상시)
 notice: is_active = true, version = 1 (평상시)
+ad_policy: is_active = true, 광고 설정 = 프로덕션 (평상시)
 ```
 
 ---

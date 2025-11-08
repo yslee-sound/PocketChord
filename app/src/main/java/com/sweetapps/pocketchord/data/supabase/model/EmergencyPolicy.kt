@@ -15,7 +15,6 @@ import kotlinx.serialization.Serializable
  *     is_active BOOLEAN NOT NULL DEFAULT TRUE,
  *     content TEXT NOT NULL,
  *     redirect_url TEXT,
- *     new_app_id TEXT,
  *     is_dismissible BOOLEAN NOT NULL DEFAULT TRUE,
  *     CONSTRAINT emergency_policy_pkey PRIMARY KEY (id)
  * )
@@ -94,14 +93,6 @@ data class EmergencyPolicy(
     @SerialName("redirect_url")
     val redirectUrl: String? = null,
 
-    /**
-     * 새 앱 ID (옵션)
-     *
-     * 마이그레이션할 새 앱의 패키지명
-     * 예: "com.sweetapps.pocketchord.v2"
-     */
-    @SerialName("new_app_id")
-    val newAppId: String? = null,
 
     // ===== Google Play 정책 준수 (핵심!) =====
 

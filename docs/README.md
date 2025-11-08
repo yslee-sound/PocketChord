@@ -2,51 +2,73 @@
 
 **프로젝트**: PocketChord  
 **업데이트**: 2025-11-09  
-**문서 개수**: 35개 (리팩토링 완료 + 테스트 가이드 추가)
+**문서 개수**: 정리 완료 ✅
 
 ---
 
-## 🎯 릴리즈 전 필수 확인
+## 🚀 빠른 시작
 
-### 📋 테스트 체크리스트
-- **[RELEASE-TEST-QUICK.md](RELEASE-TEST-QUICK.md)** ⭐⭐⭐ - 빠른 체크리스트 (15분)
-- **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** ⭐⭐ - 완전 체크리스트 (30-40분)
+### 1️⃣ 팝업 시스템 이해하기
+👉 **[POPUP-SYSTEM-GUIDE.md](POPUP-SYSTEM-GUIDE.md)** ⭐⭐⭐
 
-**테스트 항목**:
-```
-✅ emergency_policy (긴급 팝업)
-✅ update_policy (강제/선택적 업데이트)
-✅ notice_policy (공지사항 버전 관리)
-✅ 우선순위 로직 검증
-✅ 프로덕션 상태 확인
-```
+4개 테이블 구조, 우선순위, 빠른 참조 모두 포함!
 
 ---
 
-## 🚀 팝업 정책 시스템 (완료! ✅)
+### 2️⃣ 릴리즈 테스트 (필수!)
 
-### 빠른 시작
-- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** ⭐⭐⭐ - 빠른 참조 가이드
-- **[IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)** ⭐⭐ - 단계별 구현 계획
+**Phase별 상세 가이드** (노션 복사용):
+- **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Emergency 테스트
+- **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Update 테스트  
+- **[RELEASE-TEST-PHASE3-RELEASE.md](RELEASE-TEST-PHASE3-RELEASE.md)** - Notice 테스트
+- **[RELEASE-TEST-PHASE4-RELEASE.md](RELEASE-TEST-PHASE4-RELEASE.md)** - 우선순위 + 최종
 
-### 완료 문서
-- **[phase-complete-all.md](phase-complete-all.md)** ⭐ - 전체 완료 가이드
-- **[app-policy-removal-complete.md](app-policy-removal-complete.md)** - app_policy 제거 완료
+**빠른 체크리스트**:
+- **[RELEASE-TEST-QUICK.md](RELEASE-TEST-QUICK.md)** ⭐ (15분)
+- **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** (30-40분)
 
-### 분석 문서
-- [popup-tracking-analysis.md](popup-tracking-analysis.md) - 4가지 팝업 통합 분석
-- [update-policy-redesign.md](update-policy-redesign.md) - 업데이트 정책 재설계
-- [notice-policy-redesign.md](notice-policy-redesign.md) - 공지사항 정책 재설계
+---
 
-**최종 구조**:
-```
-✅ 3개 테이블 분리 완료
-  ├─ update_policy: target_version_code (단일 필드)
-  ├─ notice_policy: notice_version (버전 관리)
-  └─ emergency_policy: is_dismissible (Google Play 준수)
+### 3️⃣ SQL 스크립트
 
-✅ app_policy 제거 완료
-✅ 우선순위: emergency > update > notice
+**Supabase 테이블 생성**:
+- `sql/01-create-update-policy.sql`
+- `sql/02-create-emergency-policy.sql`
+- `sql/03-create-notice-policy.sql`
+
+**테스트용 SQL**:
+- `sql/test-scripts-release.sql` (릴리즈용)
+- `sql/test-scripts-debug.sql` (디버그용)
+
+---
+
+## 📖 기타 문서
+
+### Supabase
+- `supabase-guide-complete.md` - Supabase 완전 가이드
+- `SUPABASE-TABLE-CREATION-SUCCESS.md` - 테이블 생성 성공 기록
+
+### 배포 및 릴리즈
+- `DEPLOYMENT-CHECKLIST.md` - 배포 체크리스트
+- `release-guide.md` - 릴리즈 가이드
+- `a_RELEASE_SIGNING.md` - 릴리즈 서명
+
+### 기타
+- `TEST-ENVIRONMENT-GUIDE.md` - 테스트 환경 선택 가이드
+- `chords-db-architecture.md` - 코드 데이터베이스 아키텍처
+
+---
+
+## 🗂️ Archive
+
+더 이상 사용하지 않지만 참고용으로 보관:
+- `archive/` 폴더 참조
+
+---
+
+**최종 업데이트**: 2025-11-09  
+**주요 변경**: 문서 정리 및 통합 완료
+
 ```
 
 ---
