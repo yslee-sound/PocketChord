@@ -83,6 +83,32 @@ android {
             versionNameSuffix = "-DEBUG"
         }
 
+        // Release 테스트용 빌드 타입 (디버그 키스토어 사용)
+        create("releaseTest") {
+            initWith(getByName("debug"))
+
+            // Release Test 전용 Supabase app_id (실제 사용자에게 영향 없음!)
+            buildConfigField(
+                "String",
+                "SUPABASE_APP_ID",
+                "\"com.sweetapps.pocketchord.releasetest\""  // ✅ Release Test 전용!
+            )
+
+            // 디버그 키스토어로 서명 (별도 키스토어 불필요)
+            signingConfig = signingConfigs.getByName("debug")
+
+            // 난독화는 비활성화 (테스트 편의성)
+            isMinifyEnabled = false
+            isShrinkResources = false
+
+            // 식별자 추가하여 기존 앱과 구분
+            applicationIdSuffix = ".releasetest"
+            versionNameSuffix = "-RELEASE-TEST"
+
+            // 디버깅 가능하도록 설정
+            isDebuggable = true
+        }
+
         release {
             // 릴리즈 빌드용 Supabase app_id
             buildConfigField(

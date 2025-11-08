@@ -156,3 +156,46 @@ if (policy == null) {
 - **영향 범위**: Debug/Release 모든 빌드 타입
 - **관련 이슈**: Supabase `is_active=false` 설정 시 팝업 문제
 
+## Release 버전 테스트
+
+### releaseTest 빌드 타입
+Release 설정을 테스트하기 위한 `releaseTest` 빌드 타입이 추가되었습니다:
+- **SUPABASE_APP_ID**: `com.sweetapps.pocketchord` (Release와 동일)
+- **서명**: Debug keystore 사용 (별도 키스토어 불필요)
+- **난독화**: 비활성화 (테스트 편의성)
+- **디버깅**: 활성화
+
+**자세한 내용**: [release-test-guide.md](./release-test-guide.md) 참조
+
+### 빌드 및 테스트 명령
+```bash
+# releaseTest 빌드
+.\gradlew.bat assembleReleaseTest
+
+# 설치
+.\gradlew.bat installReleaseTest
+
+# 실행
+adb shell am start -n com.sweetapps.pocketchord.releasetest/com.sweetapps.pocketchord.MainActivity
+
+# 로그 확인
+adb logcat -d | Select-String "HomeScreen|AppPolicyRepo"
+```
+
+### Supabase 테이블 설정
+Release 테스트를 위해서는 `com.sweetapps.pocketchord` app_id로 테이블 데이터를 추가해야 합니다:
+
+```sql
+INSERT INTO app_policy (
+    app_id,
+    is_active,
+    active_popup_type,
+    content
+) VALUES (
+    'com.sweetapps.pocketchord',  -- Release용 app_id
+    true,
+    'force_update',
+    '새 버전이 출시되었습니다!'
+);
+```
+
