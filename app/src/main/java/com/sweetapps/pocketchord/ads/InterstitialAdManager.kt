@@ -12,7 +12,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.sweetapps.pocketchord.BuildConfig
 import com.sweetapps.pocketchord.PocketChordApplication
-import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
+import com.sweetapps.pocketchord.data.supabase.repository.AdPolicyRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,7 +23,7 @@ import kotlinx.coroutines.runBlocking
  * 전면광고 관리 클래스
  * - 광고 로딩과 노출 빈도를 자동으로 관리
  * - 사용자 경험을 위해 일정 간격을 두고 노출
- * - Supabase 정책으로 실시간 ON/OFF 및 빈도 제어
+ * - Supabase AdPolicy로 실시간 ON/OFF 및 빈도 제어
  */
 class InterstitialAdManager(private val context: Context) {
 
@@ -44,10 +44,10 @@ class InterstitialAdManager(private val context: Context) {
 
     private val sharedPreferences = context.getSharedPreferences("interstitial_ad_prefs", Context.MODE_PRIVATE)
 
-    // Supabase 정책 조회용
-    private val policyRepository: AppPolicyRepository by lazy {
+    // Supabase 광고 정책 조회용 (AdPolicy로 변경)
+    private val adPolicyRepository: AdPolicyRepository by lazy {
         val app = context.applicationContext as PocketChordApplication
-        AppPolicyRepository(app.supabase)
+        AdPolicyRepository(app.supabase)
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -59,10 +59,10 @@ class InterstitialAdManager(private val context: Context) {
     }
 
     /**
-     * Supabase 정책에서 전면 광고 활성화 여부 확인
+     * Supabase 광고 정책에서 전면 광고 활성화 여부 확인
      */
     private suspend fun isInterstitialEnabledFromPolicy(): Boolean {
-        return policyRepository.getPolicy()
+        return adPolicyRepository.getPolicy()
             .getOrNull()
             ?.adInterstitialEnabled
             ?: true  // 정책 조회 실패 시 기본값 true
@@ -100,10 +100,10 @@ class InterstitialAdManager(private val context: Context) {
             Log.d(TAG, "📅 일일 카운트 리셋")
         }
 
-        // 정책에서 최대값 가져오기
-        val policy = policyRepository.getPolicy().getOrNull()
-        val maxPerHour = policy?.adInterstitialMaxPerHour ?: 3
-        val maxPerDay = policy?.adInterstitialMaxPerDay ?: 20
+        // 광고 정책에서 최대값 가져오기
+        val adPolicy = adPolicyRepository.getPolicy().getOrNull()
+        val maxPerHour = adPolicy?.adInterstitialMaxPerHour ?: 3
+        val maxPerDay = adPolicy?.adInterstitialMaxPerDay ?: 20
 
         // 시간당 제한 체크
         if (sharedPreferences.getInt("ad_count_hourly", 0) >= maxPerHour) {

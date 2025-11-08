@@ -14,7 +14,7 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.sweetapps.pocketchord.BuildConfig
 import com.sweetapps.pocketchord.PocketChordApplication
-import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
+import com.sweetapps.pocketchord.data.supabase.repository.AdPolicyRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +25,7 @@ import java.util.Date
  * 앱 오프닝 광고 관리 클래스
  * - 앱 시작 시 또는 백그라운드에서 돌아올 때 광고 표시
  * - 콜드 스타트와 웜 스타트 모두 지원
- * - Supabase 정책으로 실시간 ON/OFF 제어
+ * - Supabase AdPolicy로 실시간 ON/OFF 제어
  */
 class AppOpenAdManager(
     private val application: Application
@@ -45,9 +45,9 @@ class AppOpenAdManager(
     private var currentActivity: Activity? = null
     private var isFirstLaunch = true // 첫 실행 여부
 
-    // Supabase 정책 조회용
-    private val policyRepository: AppPolicyRepository by lazy {
-        AppPolicyRepository((application as PocketChordApplication).supabase)
+    // Supabase 광고 정책 조회용 (AdPolicy로 변경)
+    private val adPolicyRepository: AdPolicyRepository by lazy {
+        AdPolicyRepository((application as PocketChordApplication).supabase)
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -59,10 +59,10 @@ class AppOpenAdManager(
     }
 
     /**
-     * Supabase 정책에서 앱 오픈 광고 활성화 여부 확인
+     * Supabase 광고 정책에서 앱 오픈 광고 활성화 여부 확인
      */
     private suspend fun isAppOpenEnabledFromPolicy(): Boolean {
-        return policyRepository.getPolicy()
+        return adPolicyRepository.getPolicy()
             .getOrNull()
             ?.adAppOpenEnabled
             ?: true  // 정책 조회 실패 시 기본값 true

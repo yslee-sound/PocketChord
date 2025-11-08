@@ -125,11 +125,11 @@ class MainActivity : ComponentActivity() {
 
                 // Supabase에서 배너 광고 정책 가져오기 (5분마다 자동 갱신)
                 LaunchedEffect(Unit) {
-                    val policyRepo = com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository(app.supabase)
+                    val adPolicyRepo = com.sweetapps.pocketchord.data.supabase.repository.AdPolicyRepository(app.supabase)
 
                     while (true) {
-                        val policy = policyRepo.getPolicy().getOrNull()
-                        val newBannerEnabled = policy?.adBannerEnabled ?: true
+                        val adPolicy = adPolicyRepo.getPolicy().getOrNull()
+                        val newBannerEnabled = adPolicy?.adBannerEnabled ?: true
 
                         if (isBannerEnabled != newBannerEnabled) {
                             android.util.Log.d("MainActivity", "🔄 배너 광고 정책 변경: ${if (isBannerEnabled) "활성화" else "비활성화"} → ${if (newBannerEnabled) "활성화" else "비활성화"}")
