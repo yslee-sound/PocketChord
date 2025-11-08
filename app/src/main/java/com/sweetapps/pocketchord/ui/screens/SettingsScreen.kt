@@ -1,7 +1,6 @@
 package com.sweetapps.pocketchord.ui.screens
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -119,14 +118,16 @@ fun SettingsScreen(navController: NavHostController) {
                     }
                 )
 
-                // 디버그 설정 진입 (하위 스크린)
-                SettingsItem(
-                    icon = Icons.Default.BugReport,
-                    title = "디버그 모드",
-                    subtitle = "광고/아이콘/업데이트 도구",
-                    showArrow = true,
-                    onClick = { navController.navigate("debug_settings") }
-                )
+                // 디버그 설정 진입 (디버그 빌드에서만 표시)
+                if (BuildConfig.DEBUG) {
+                    SettingsItem(
+                        icon = Icons.Default.BugReport,
+                        title = "디버그 모드",
+                        subtitle = "광고/아이콘/업데이트 도구",
+                        showArrow = true,
+                        onClick = { navController.navigate("debug_settings") }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

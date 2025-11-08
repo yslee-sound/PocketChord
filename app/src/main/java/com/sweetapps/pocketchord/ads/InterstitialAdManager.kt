@@ -10,6 +10,7 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.sweetapps.pocketchord.BuildConfig
 
 /**
  * 전면광고 관리 클래스
@@ -21,8 +22,6 @@ class InterstitialAdManager(private val context: Context) {
 
     companion object {
         private const val TAG = "InterstitialAdManager"
-        // AdMob 테스트 전면광고 ID
-        private const val TEST_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
 
         // 광고 노출 간격 (초 단위)
         private const val AD_INTERVAL_SECONDS = 60 // 1분마다
@@ -56,7 +55,7 @@ class InterstitialAdManager(private val context: Context) {
 
         InterstitialAd.load(
             context,
-            TEST_AD_UNIT_ID,
+            BuildConfig.INTERSTITIAL_AD_UNIT_ID,
             adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {

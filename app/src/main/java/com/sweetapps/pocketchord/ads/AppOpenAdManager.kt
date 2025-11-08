@@ -12,6 +12,7 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
+import com.sweetapps.pocketchord.BuildConfig
 import com.sweetapps.pocketchord.PocketChordApplication
 import java.util.Date
 
@@ -26,8 +27,6 @@ class AppOpenAdManager(
 
     companion object {
         private const val TAG = "AppOpenAdManager"
-        // AdMob 테스트 앱 오프닝 광고 ID
-        private const val TEST_AD_UNIT_ID = "ca-app-pub-3940256099942544/9257395921"
 
         // 광고 표시 간격 (밀리초)
         private const val AD_TIMEOUT_MS = 4 * 60 * 60 * 1000L // 4시간
@@ -72,7 +71,7 @@ class AppOpenAdManager(
 
         AppOpenAd.load(
             application,
-            TEST_AD_UNIT_ID,
+            BuildConfig.APP_OPEN_AD_UNIT_ID,
             request,
             AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT,
             object : AppOpenAd.AppOpenAdLoadCallback() {

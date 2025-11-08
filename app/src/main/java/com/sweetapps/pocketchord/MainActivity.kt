@@ -260,8 +260,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TopBannerAd() {
-    // Official AdMob test banner ad unit ID
-    val testAdUnitId = "ca-app-pub-3940256099942544/6300978111"
+    // BuildConfig에서 광고 ID 가져오기 (디버그: 테스트 ID, 릴리즈: 실제 ID)
+    val bannerAdUnitId = BuildConfig.BANNER_AD_UNIT_ID
     // Keep a reference to destroy AdView when disposed
     var adView by remember { mutableStateOf<com.google.android.gms.ads.AdView?>(null) }
     // 배너 광고의 표준 높이 (50dp)
@@ -284,7 +284,7 @@ fun TopBannerAd() {
                 factory = { context ->
                     com.google.android.gms.ads.AdView(context).apply {
                         setAdSize(AdSize.BANNER)
-                        setAdUnitId(testAdUnitId)
+                        setAdUnitId(bannerAdUnitId)
                         loadAd(AdRequest.Builder().build())
                         adView = this
                     }
