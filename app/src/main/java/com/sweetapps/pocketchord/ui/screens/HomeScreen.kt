@@ -24,7 +24,9 @@ import com.google.gson.Gson
 import com.sweetapps.pocketchord.data.supabase.model.Announcement
 import com.sweetapps.pocketchord.data.supabase.model.UpdateInfo
 import com.sweetapps.pocketchord.data.supabase.model.AppPolicy
+import com.sweetapps.pocketchord.data.supabase.model.UpdatePolicy
 import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
+import com.sweetapps.pocketchord.data.supabase.repository.UpdatePolicyRepository
 import com.sweetapps.pocketchord.ui.dialogs.AnnouncementDialog
 import com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog
 import com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog
@@ -123,8 +125,70 @@ fun MainScreen(navController: NavHostController) {
                 return@LaunchedEffect
             }
 
+            // ===== Phase 1: update_policy 조회 시도 (신규) =====
+            android.util.Log.d("HomeScreen", "===== Phase 1: Trying update_policy =====")
+            var updatePolicy: UpdatePolicy? = null
+            UpdatePolicyRepository(supabaseClient)
+                .getPolicy()
+                .onSuccess { policy ->
+                    updatePolicy = policy
+                    android.util.Log.d("HomeScreen", "✅ update_policy found: targetVersion=${policy?.targetVersionCode}, isForce=${policy?.isForceUpdate}")
+                }
+                .onFailure { e ->
+                    android.util.Log.w("HomeScreen", "⚠️ update_policy not found or error: ${e.message}")
+                }
+
+            // update_policy가 있으면 우선 처리
+            updatePolicy?.let { up ->
+                val currentVersion = com.sweetapps.pocketchord.BuildConfig.VERSION_CODE
+
+                when {
+                    up.requiresForceUpdate(currentVersion) -> {
+                        Log.d("HomeScreen", "Decision: FORCE UPDATE from update_policy (target=${up.targetVersionCode})")
+                        updateInfo = UpdateInfo(
+                            id = null,
+                            versionCode = up.targetVersionCode,
+                            versionName = "",
+                            appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                            isForce = true,
+                            releaseNotes = up.releaseNotes ?: up.message ?: "",
+                            releasedAt = null,
+                            downloadUrl = up.downloadUrl
+                        )
+                        showUpdateDialog = true
+                        updatePrefs.edit {
+                            putInt("force_required_version", updateInfo!!.versionCode)
+                            putString("force_update_info", gson.toJson(updateInfo!!))
+                        }
+                        return@LaunchedEffect  // 강제 업데이트면 다른 팝업 무시
+                    }
+
+                    up.recommendsOptionalUpdate(currentVersion) &&
+                        dismissedVersionCode.value != up.targetVersionCode -> {
+                        Log.d("HomeScreen", "Decision: OPTIONAL UPDATE from update_policy (target=${up.targetVersionCode})")
+                        updateInfo = UpdateInfo(
+                            id = null,
+                            versionCode = up.targetVersionCode,
+                            versionName = "",
+                            appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                            isForce = false,
+                            releaseNotes = up.releaseNotes ?: up.message ?: "",
+                            releasedAt = null,
+                            downloadUrl = up.downloadUrl
+                        )
+                        showUpdateDialog = true
+                        return@LaunchedEffect  // 선택적 업데이트면 다른 팝업 무시
+                    }
+
+                    else -> {
+                        Log.d("HomeScreen", "update_policy exists but no update needed (current=$currentVersion >= target=${up.targetVersionCode})")
+                    }
+                }
+            }
+
+            // ===== Fallback: app_policy 조회 (기존 로직 유지) =====
             // 단일 정책(app_policy) 조회 - 새로운 하이브리드 구조 사용
-            android.util.Log.d("HomeScreen", "===== Querying app_policy =====")
+            android.util.Log.d("HomeScreen", "===== Querying app_policy (fallback) =====")
             var policy: AppPolicy? = null
             var policyError: Throwable? = null
             AppPolicyRepository(supabaseClient)
