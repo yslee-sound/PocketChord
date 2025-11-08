@@ -234,18 +234,29 @@ fun MainScreen(navController: NavHostController) {
                 "notice" -> {
                     // 4) 일반 공지
                     Log.d("HomeScreen", "Decision: NOTICE popup")
-                    announcement = Announcement(
-                        id = null,
-                        createdAt = null,
-                        appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
-                        title = "공지사항",
-                        content = p.content ?: "",
-                        isActive = true,
-                        kind = "announcement",
-                        redirectUrl = null,
-                        dismissible = true
-                    )
-                    showAnnouncementDialog = true
+
+                    // 이미 본 공지사항인지 확인
+                    val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
+                    val viewedIds = prefs.getStringSet("viewed_announcements", setOf()) ?: setOf()
+                    val policyIdStr = p.id?.toString() ?: "null"
+
+                    if (viewedIds.contains(policyIdStr)) {
+                        Log.d("HomeScreen", "Notice already viewed (policy id=$policyIdStr), skipping")
+                    } else {
+                        Log.d("HomeScreen", "Showing new notice (policy id=$policyIdStr)")
+                        announcement = Announcement(
+                            id = p.id,  // policy ID를 announcement ID로 사용
+                            createdAt = null,
+                            appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                            title = "공지사항",
+                            content = p.content ?: "",
+                            isActive = true,
+                            kind = "announcement",
+                            redirectUrl = null,
+                            dismissible = true
+                        )
+                        showAnnouncementDialog = true
+                    }
                 }
 
                 "none" -> {
