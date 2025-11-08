@@ -114,16 +114,22 @@ class MainActivity : ComponentActivity() {
             PocketChordTheme {
                 val navController = rememberNavController()
 
-                // 아이콘/광고 프리퍼런스 버전 스테이트
+                // 아이콘 프리퍼런스 버전 스테이트
                 var iconPrefsVersion by remember { mutableStateOf(0) }
-                var adPrefsVersion by remember { mutableStateOf(0) }
                 val context = LocalContext.current
-                val adPrefs = remember(adPrefsVersion) { context.getSharedPreferences("ads_prefs", MODE_PRIVATE) }
-                val isBannerEnabled = remember(adPrefsVersion) { adPrefs.getBoolean("banner_ads_enabled", true) }
 
-                // 앱 정책 체크는 HomeScreen에서 처리 (중복 제거)
+                // 앱 정책 체크 (Supabase에서 광고 제어)
                 val app = context.applicationContext as PocketChordApplication
                 val isShowingAppOpenAd by app.isShowingAppOpenAd.collectAsState()
+                var isBannerEnabled by remember { mutableStateOf(true) }
+
+                // Supabase에서 배너 광고 정책 가져오기
+                LaunchedEffect(Unit) {
+                    val policyRepo = com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository(app.supabase)
+                    val policy = policyRepo.getPolicy().getOrNull()
+                    isBannerEnabled = policy?.adBannerEnabled ?: true
+                    android.util.Log.d("MainActivity", "🎯 배너 광고 정책: ${if (isBannerEnabled) "활성화" else "비활성화"}")
+                }
 
                 // 현재 라우트(광고/전면광고 표시 기준 등)
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -202,8 +208,7 @@ class MainActivity : ComponentActivity() {
                                 composable("debug_settings") {
                                     BasicSettingsScreen(
                                         navController,
-                                        onIconsChanged = { iconPrefsVersion++ },
-                                        onAdsPrefChanged = { adPrefsVersion++ }
+                                        onIconsChanged = { iconPrefsVersion++ }
                                     )
                                 }
                                 composable("icon_picker") { IconPickerScreen(onPicked = { iconPrefsVersion++ }, onBack = { navController.popBackStack() }) }
@@ -946,12 +951,8 @@ fun FretboardCard(
 }
 
 @Composable
-fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit, onAdsPrefChanged: () -> Unit) {
+fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> Unit) {
     val context = LocalContext.current
-    val adPrefs = remember { context.getSharedPreferences("ads_prefs", MODE_PRIVATE) }
-    var isBannerEnabled by remember { mutableStateOf(adPrefs.getBoolean("banner_ads_enabled", true)) }
-    var isInterstitialEnabled by remember { mutableStateOf(adPrefs.getBoolean("interstitial_ads_enabled", true)) }
-    var isAppOpenTestMode by remember { mutableStateOf(adPrefs.getBoolean("app_open_test_mode", false)) }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         // 헤더
@@ -981,79 +982,24 @@ fun BasicSettingsScreen(navController: NavHostController, onIconsChanged: () -> 
                 }
             }
 
-            // 광고 테스트 도구
             Spacer(modifier = Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "🛠️ 개발 도구", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B35))
+
+            // 광고 제어는 Supabase에서만
+            Text(
+                text = "💡 광고 제어",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF6B7C8C)
+            )
+
             Spacer(modifier = Modifier.height(12.dp))
-
-            // 배너 광고 토글
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "배너 광고 테스트")
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = if (isBannerEnabled) "활성화됨" else "비활성화됨",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7C8C)
-                    )
-                }
-                Switch(
-                    checked = isBannerEnabled,
-                    onCheckedChange = { checked ->
-                        adPrefs.edit { putBoolean("banner_ads_enabled", checked) }
-                        isBannerEnabled = checked
-                        onAdsPrefChanged()
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 전면 광고 토글
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "전면 광고 로그")
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = if (isInterstitialEnabled) "로그 활성화" else "로그 비활성화",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7C8C)
-                    )
-                }
-                Switch(
-                    checked = isInterstitialEnabled,
-                    onCheckedChange = { checked ->
-                        adPrefs.edit { putBoolean("interstitial_ads_enabled", checked) }
-                        isInterstitialEnabled = checked
-                        onAdsPrefChanged()
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 앱 오프닝 광고 테스트 모드 토글
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "앱 오프닝 광고")
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = if (isAppOpenTestMode) "ON: 앱 오프닝 광고 허용 (테스트)" else "OFF: 앱 오프닝 광고 비활성화",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7C8C)
-                    )
-                }
-                Switch(
-                    checked = isAppOpenTestMode,
-                    onCheckedChange = { checked ->
-                        adPrefs.edit { putBoolean("app_open_test_mode", checked) }
-                        isAppOpenTestMode = checked
-                        onAdsPrefChanged()
-                    }
-                )
-            }
+            Text(
+                text = "광고 ON/OFF는 Supabase 대시보드에서 실시간으로 제어됩니다.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF6B7C8C)
+            )
         }
     }
 }

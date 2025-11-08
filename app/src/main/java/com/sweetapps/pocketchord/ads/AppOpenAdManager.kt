@@ -14,12 +14,18 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.sweetapps.pocketchord.BuildConfig
 import com.sweetapps.pocketchord.PocketChordApplication
+import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.util.Date
 
 /**
  * 앱 오프닝 광고 관리 클래스
  * - 앱 시작 시 또는 백그라운드에서 돌아올 때 광고 표시
  * - 콜드 스타트와 웜 스타트 모두 지원
+ * - Supabase 정책으로 실시간 ON/OFF 제어
  */
 class AppOpenAdManager(
     private val application: Application
@@ -39,26 +45,33 @@ class AppOpenAdManager(
     private var currentActivity: Activity? = null
     private var isFirstLaunch = true // 첫 실행 여부
 
+    // Supabase 정책 조회용
+    private val policyRepository: AppPolicyRepository by lazy {
+        AppPolicyRepository((application as PocketChordApplication).supabase)
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     init {
         application.registerActivityLifecycleCallbacks(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        // 앱 시작 시 광고 미리 로드 (스위치 ON/OFF 무관하게)
-        loadAd(force = true)
+        // 앱 시작 시 광고 미리 로드
+        loadAd()
     }
 
-    private fun isAppOpenEnabled(): Boolean {
-        val adPrefs = application.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE)
-        return adPrefs.getBoolean("app_open_test_mode", false)
+    /**
+     * Supabase 정책에서 앱 오픈 광고 활성화 여부 확인
+     */
+    private suspend fun isAppOpenEnabledFromPolicy(): Boolean {
+        return policyRepository.getPolicy()
+            .getOrNull()
+            ?.adAppOpenEnabled
+            ?: true  // 정책 조회 실패 시 기본값 true
     }
 
     /**
      * 앱 오프닝 광고를 로드합니다
-     * @param force true이면 스위치 상태와 무관하게 로드 시도
      */
-    private fun loadAd(force: Boolean = false) {
-        // 스위치가 꺼져 있으면 로드하지 않음 (단, 강제 로드시에는 예외)
-        if (!force && !isAppOpenEnabled()) {
-            Log.d(TAG, "앱 오프닝 광고 비활성화됨: 로드하지 않음")
+    private fun loadAd() {
             return
         }
 
@@ -109,47 +122,49 @@ class AppOpenAdManager(
 
     /**
      * 광고를 표시합니다
+     * - Supabase 정책 확인 후 표시 여부 결정
      */
     fun showAdIfAvailable(activity: Activity, onAdDismissed: () -> Unit = {}) {
-        // 스위치가 꺼져 있으면 표시하지 않음 (미리 로드된 광고는 보존)
-        if (!isAppOpenEnabled()) {
-            Log.d(TAG, "앱 오프닝 광고 비활성화됨: 표시하지 않음")
-            onAdDismissed()
-            return
-        }
-
-        // 테스트 모드 확인 (ON일 때 정책 무시)
-        val adPrefs = application.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE)
-        val isTestMode = adPrefs.getBoolean("app_open_test_mode", false)
-
         // 이미 광고를 표시 중이면 무시
         if (isShowingAd) {
             Log.d(TAG, "이미 광고를 표시 중입니다")
             return
         }
 
-        // 테스트 모드일 때는 정책 무시하고 광고 강제 표시
-        if (isTestMode) {
-            Log.d(TAG, "🧪 테스트 모드: 정책 무시하고 광고 강제 표시")
-            if (appOpenAd != null) {
+        // Supabase 정책 확인
+        scope.launch {
+            try {
+                val isEnabledFromPolicy = isAppOpenEnabledFromPolicy()
+
+                Log.d(TAG, "🔍 앱 오픈 광고 정책 확인:")
+                Log.d(TAG, "  - Supabase 정책: ${if (isEnabledFromPolicy) "활성화" else "비활성화"}")
+
+                // Supabase 정책에서 비활성화되어 있으면 표시하지 않음
+                if (!isEnabledFromPolicy) {
+                    Log.d(TAG, "❌ Supabase 정책: 앱 오픈 광고 비활성화")
+                    onAdDismissed()
+                    return@launch
+                }
+
+                // 정책에서 활성화되어 있으면 광고 표시
+                if (!isAdAvailable()) {
+                    Log.d(TAG, "광고를 사용할 수 없습니다. 로드를 시도합니다")
+                    loadAd()
+                    onAdDismissed()
+                    return@launch
+                }
+
                 showAdNow(activity, onAdDismissed)
-            } else {
-                Log.d(TAG, "광고가 로드되지 않았습니다. 로드를 시도합니다")
-                loadAd()
-                onAdDismissed()
+            } catch (e: Exception) {
+                Log.e(TAG, "광고 정책 확인 중 오류: ${e.message}")
+                // 오류 발생 시 기본값(활성화)으로 동작
+                if (isAdAvailable()) {
+                    showAdNow(activity, onAdDismissed)
+                } else {
+                    onAdDismissed()
+                }
             }
-            return
         }
-
-        // 일반 모드: 정책에 맞춰 표시
-        if (!isAdAvailable()) {
-            Log.d(TAG, "광고를 사용할 수 없습니다. 로드를 시도합니다")
-            loadAd()
-            onAdDismissed()
-            return
-        }
-
-        showAdNow(activity, onAdDismissed)
     }
 
     /**
@@ -194,32 +209,15 @@ class AppOpenAdManager(
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
 
-        // 스위치가 꺼져 있으면 아무 것도 하지 않음 (미리 로드된 광고는 보존)
-        if (!isAppOpenEnabled()) {
-            Log.d(TAG, "앱 오프닝 광고 비활성화됨: onStart에서 작업 없음")
-            isFirstLaunch = false
-            return
-        }
-
-        // 테스트 모드 확인
-        val adPrefs = application.getSharedPreferences("ads_prefs", android.content.Context.MODE_PRIVATE)
-        val isTestMode = adPrefs.getBoolean("app_open_test_mode", false)
-
-        // 테스트 모드가 아닐 때만 첫 실행 체크
-        if (!isTestMode && isFirstLaunch) {
+        // 첫 실행 체크 (콜드 스타트 시 광고 표시하지 않음)
+        if (isFirstLaunch) {
             Log.d(TAG, "첫 실행이므로 광고를 표시하지 않습니다")
             isFirstLaunch = false
-            // 필요 시 다음을 위한 로드 (스위치가 ON일 때만)
-            loadAd()
+            loadAd() // 다음을 위한 로드
             return
         }
 
-        // 테스트 모드일 때는 첫 실행도 무시
-        if (isTestMode && isFirstLaunch) {
-            Log.d(TAG, "🧪 테스트 모드: 첫 실행이지만 광고를 시도합니다")
-            isFirstLaunch = false
-        }
-
+        // 백그라운드에서 복귀 시 광고 표시
         currentActivity?.let { activity ->
             Log.d(TAG, "앱이 포그라운드로 왔습니다 (백그라운드에서 복귀)")
             showAdIfAvailable(activity)

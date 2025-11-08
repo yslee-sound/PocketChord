@@ -11,12 +11,19 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.sweetapps.pocketchord.BuildConfig
+import com.sweetapps.pocketchord.PocketChordApplication
+import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 /**
  * 전면광고 관리 클래스
  * - 광고 로딩과 노출 빈도를 자동으로 관리
  * - 사용자 경험을 위해 일정 간격을 두고 노출
- * - 릴리즈 빌드에서는 항상 활성화됨
+ * - Supabase 정책으로 실시간 ON/OFF 및 빈도 제어
  */
 class InterstitialAdManager(private val context: Context) {
 
@@ -37,9 +44,94 @@ class InterstitialAdManager(private val context: Context) {
 
     private val sharedPreferences = context.getSharedPreferences("interstitial_ad_prefs", Context.MODE_PRIVATE)
 
+    // Supabase 정책 조회용
+    private val policyRepository: AppPolicyRepository by lazy {
+        val app = context.applicationContext as PocketChordApplication
+        AppPolicyRepository(app.supabase)
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     init {
         // 앱 시작 시 광고 미리 로드
         loadAd()
+        // 마지막 광고 표시 시간 복원
+        lastAdShowTime = sharedPreferences.getLong("last_ad_show_time", 0)
+    }
+
+    /**
+     * Supabase 정책에서 전면 광고 활성화 여부 확인
+     */
+    private suspend fun isInterstitialEnabledFromPolicy(): Boolean {
+        return policyRepository.getPolicy()
+            .getOrNull()
+            ?.adInterstitialEnabled
+            ?: true  // 정책 조회 실패 시 기본값 true
+    }
+
+    /**
+     * 빈도 제한 체크 (시간당/일일)
+     */
+    private suspend fun checkFrequencyLimit(): Boolean {
+        val currentTime = System.currentTimeMillis()
+
+        // 시간당 카운트 체크
+        val hourlyCount = sharedPreferences.getInt("ad_count_hourly", 0)
+        val lastHourReset = sharedPreferences.getLong("last_hour_reset", 0)
+
+        // 1시간(3600초)이 지났으면 리셋
+        if (currentTime - lastHourReset > 3600000) {
+            sharedPreferences.edit {
+                putInt("ad_count_hourly", 0)
+                putLong("last_hour_reset", currentTime)
+            }
+            Log.d(TAG, "⏰ 시간당 카운트 리셋")
+        }
+
+        // 일일 카운트 체크
+        val dailyCount = sharedPreferences.getInt("ad_count_daily", 0)
+        val lastDayReset = sharedPreferences.getLong("last_day_reset", 0)
+
+        // 24시간이 지났으면 리셋
+        if (currentTime - lastDayReset > 86400000) {
+            sharedPreferences.edit {
+                putInt("ad_count_daily", 0)
+                putLong("last_day_reset", currentTime)
+            }
+            Log.d(TAG, "📅 일일 카운트 리셋")
+        }
+
+        // 정책에서 최대값 가져오기
+        val policy = policyRepository.getPolicy().getOrNull()
+        val maxPerHour = policy?.adInterstitialMaxPerHour ?: 3
+        val maxPerDay = policy?.adInterstitialMaxPerDay ?: 20
+
+        // 시간당 제한 체크
+        if (sharedPreferences.getInt("ad_count_hourly", 0) >= maxPerHour) {
+            Log.d(TAG, "⚠️ 시간당 빈도 제한 초과: ${hourlyCount}/${maxPerHour}")
+            return false
+        }
+
+        // 일일 제한 체크
+        if (sharedPreferences.getInt("ad_count_daily", 0) >= maxPerDay) {
+            Log.d(TAG, "⚠️ 일일 빈도 제한 초과: ${dailyCount}/${maxPerDay}")
+            return false
+        }
+
+        Log.d(TAG, "✅ 빈도 제한 통과: 시간당 ${hourlyCount}/${maxPerHour}, 일일 ${dailyCount}/${maxPerDay}")
+        return true
+    }
+
+    /**
+     * 빈도 카운트 증가
+     */
+    private fun incrementFrequencyCount() {
+        val hourlyCount = sharedPreferences.getInt("ad_count_hourly", 0)
+        val dailyCount = sharedPreferences.getInt("ad_count_daily", 0)
+        sharedPreferences.edit {
+            putInt("ad_count_hourly", hourlyCount + 1)
+            putInt("ad_count_daily", dailyCount + 1)
+        }
+        Log.d(TAG, "📊 광고 카운트 증가: 시간당 ${hourlyCount + 1}, 일일 ${dailyCount + 1}")
     }
 
     /**
@@ -141,12 +233,38 @@ class InterstitialAdManager(private val context: Context) {
      * @return 광고가 표시되었는지 여부
      */
     fun showAd(activity: Activity): Boolean {
+        // 기존 조건 체크
         if (!shouldShowAd()) {
             return false
         }
 
+        // Supabase 정책 및 빈도 제한 체크 (블로킹)
+        var shouldShow = false
+        runBlocking {
+            // 1. 정책 확인
+            val enabled = isInterstitialEnabledFromPolicy()
+            if (!enabled) {
+                Log.d(TAG, "❌ Supabase 정책: 전면 광고 비활성화")
+                return@runBlocking
+            }
+
+            // 2. 빈도 제한 확인
+            if (!checkFrequencyLimit()) {
+                Log.d(TAG, "⚠️ 빈도 제한: 광고 표시 안 함")
+                return@runBlocking
+            }
+
+            shouldShow = true
+        }
+
+        if (!shouldShow) {
+            return false
+        }
+
+        // 광고 표시
         interstitialAd?.show(activity)
         screenTransitionCount = 0 // 카운터 리셋
+        incrementFrequencyCount() // 빈도 카운트 증가
         return true
     }
 

@@ -22,6 +22,13 @@ import kotlinx.serialization.Serializable
  *  - download_url (TEXT): 다운로드/이동 URL
  *  - min_supported_version (INT): 강제 업데이트 기준 버전 (force_update 전용)
  *  - latest_version_code (INT): 권장 업데이트 버전 (optional_update 전용)
+ *
+ *  ===== 광고 제어 필드 =====
+ *  - ad_app_open_enabled (BOOLEAN): 앱 오픈 광고 활성화 여부 (기본값: true)
+ *  - ad_interstitial_enabled (BOOLEAN): 전면 광고 활성화 여부 (기본값: true)
+ *  - ad_banner_enabled (BOOLEAN): 배너 광고 활성화 여부 (기본값: true)
+ *  - ad_interstitial_max_per_hour (INT): 전면 광고 시간당 최대 횟수 (기본값: 3)
+ *  - ad_interstitial_max_per_day (INT): 전면 광고 하루 최대 횟수 (기본값: 20)
  */
 @Serializable
 data class AppPolicy(
@@ -50,7 +57,24 @@ data class AppPolicy(
     val minSupportedVersion: Int? = null,
 
     @SerialName("latest_version_code")
-    val latestVersionCode: Int? = null
+    val latestVersionCode: Int? = null,
+
+    // ===== 광고 제어 필드 =====
+    @SerialName("ad_app_open_enabled")
+    val adAppOpenEnabled: Boolean = true,
+
+    @SerialName("ad_interstitial_enabled")
+    val adInterstitialEnabled: Boolean = true,
+
+    @SerialName("ad_banner_enabled")
+    val adBannerEnabled: Boolean = true,
+
+    // ===== 광고 빈도 제어 필드 =====
+    @SerialName("ad_interstitial_max_per_hour")
+    val adInterstitialMaxPerHour: Int = 3,
+
+    @SerialName("ad_interstitial_max_per_day")
+    val adInterstitialMaxPerDay: Int = 20
 ) {
     /**
      * 강제 업데이트가 필요한지 확인
