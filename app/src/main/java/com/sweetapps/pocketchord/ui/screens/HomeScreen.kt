@@ -25,8 +25,10 @@ import com.sweetapps.pocketchord.data.supabase.model.Announcement
 import com.sweetapps.pocketchord.data.supabase.model.UpdateInfo
 import com.sweetapps.pocketchord.data.supabase.model.AppPolicy
 import com.sweetapps.pocketchord.data.supabase.model.UpdatePolicy
+import com.sweetapps.pocketchord.data.supabase.model.EmergencyPolicy
 import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
 import com.sweetapps.pocketchord.data.supabase.repository.UpdatePolicyRepository
+import com.sweetapps.pocketchord.data.supabase.repository.EmergencyPolicyRepository
 import com.sweetapps.pocketchord.ui.dialogs.AnnouncementDialog
 import com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog
 import com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog
@@ -50,7 +52,8 @@ fun MainScreen(navController: NavHostController) {
     var showEmergencyDialog by remember { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
     var showAnnouncementDialog by remember { mutableStateOf(false) }
-    var appPolicy by remember { mutableStateOf<AppPolicy?>(null) }  // 정책 저장용
+    var appPolicy by remember { mutableStateOf<AppPolicy?>(null) }  // 정책 저장용 (기존 app_policy)
+    var emergencyPolicy by remember { mutableStateOf<EmergencyPolicy?>(null) }  // 긴급 정책 저장용 (신규)
 
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var announcement by remember { mutableStateOf<Announcement?>(null) }
@@ -123,6 +126,34 @@ fun MainScreen(navController: NavHostController) {
                     showUpdateDialog = true
                 }
                 return@LaunchedEffect
+            }
+
+            // ===== Phase 2: emergency_policy 조회 시도 (최우선순위!) =====
+            android.util.Log.d("HomeScreen", "===== Phase 2: Checking emergency_policy =====")
+            var emergency: EmergencyPolicy? = null
+            EmergencyPolicyRepository(supabaseClient)
+                .getActiveEmergency()
+                .onSuccess { policy ->
+                    emergency = policy
+                    android.util.Log.d("HomeScreen", "✅ emergency_policy found: isDismissible=${policy?.isDismissible}")
+                }
+                .onFailure { e ->
+                    android.util.Log.w("HomeScreen", "⚠️ emergency_policy not found or error: ${e.message}")
+                }
+
+            // emergency가 있으면 최우선 처리 (다른 팝업 무시)
+            emergency?.let { ep ->
+                Log.d("HomeScreen", "Decision: EMERGENCY from emergency_policy")
+                emergencyPolicy = ep
+                showEmergencyDialog = true
+                // 강제 업데이트 캐시 정리
+                if (storedForceVersion != -1) {
+                    updatePrefs.edit {
+                        remove("force_required_version")
+                        remove("force_update_info")
+                    }
+                }
+                return@LaunchedEffect  // 긴급 상황이면 다른 팝업 무시
             }
 
             // ===== Phase 1: update_policy 조회 시도 (신규) =====
@@ -350,9 +381,27 @@ fun MainScreen(navController: NavHostController) {
     android.util.Log.d("HomeScreen", "showUpdateDialog: $showUpdateDialog")
     android.util.Log.d("HomeScreen", "showAnnouncementDialog: $showAnnouncementDialog")
 
-    // 1순위: Emergency - 기존 EmergencyRedirectDialog 사용
-    if (showEmergencyDialog && appPolicy != null) {
-        android.util.Log.d("HomeScreen", "✅ Displaying EmergencyRedirectDialog")
+    // 1순위: Emergency - emergency_policy 사용 (Phase 2)
+    if (showEmergencyDialog && emergencyPolicy != null) {
+        android.util.Log.d("HomeScreen", "✅ Displaying EmergencyRedirectDialog from emergency_policy")
+        com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog(
+            title = "🚨 긴급공지",
+            description = emergencyPolicy!!.content,
+            newAppPackage = emergencyPolicy!!.newAppId ?: "com.sweetapps.pocketchord",
+            redirectUrl = emergencyPolicy!!.redirectUrl,
+            buttonText = "새 앱 설치하기",
+            isDismissible = emergencyPolicy!!.isDismissible,  // ← DB에서 제어!
+            onDismiss = if (emergencyPolicy!!.isDismissible) {
+                { showEmergencyDialog = false }
+            } else {
+                { /* X 버튼 없음 */ }
+            },
+            badgeText = "긴급"
+        )
+    }
+    // 1순위 Fallback: Emergency - 기존 app_policy 사용 (호환성)
+    else if (showEmergencyDialog && appPolicy != null) {
+        android.util.Log.d("HomeScreen", "✅ Displaying EmergencyRedirectDialog from app_policy (fallback)")
         com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog(
             title = "🚨 긴급공지",
             description = appPolicy!!.content ?: "",
