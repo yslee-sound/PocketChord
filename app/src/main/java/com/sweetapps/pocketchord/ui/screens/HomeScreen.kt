@@ -23,11 +23,9 @@ import androidx.core.net.toUri
 import com.google.gson.Gson
 import com.sweetapps.pocketchord.data.supabase.model.Announcement
 import com.sweetapps.pocketchord.data.supabase.model.UpdateInfo
-import com.sweetapps.pocketchord.data.supabase.model.AppPolicy
 import com.sweetapps.pocketchord.data.supabase.model.UpdatePolicy
 import com.sweetapps.pocketchord.data.supabase.model.EmergencyPolicy
 import com.sweetapps.pocketchord.data.supabase.model.NoticePolicy
-import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
 import com.sweetapps.pocketchord.data.supabase.repository.UpdatePolicyRepository
 import com.sweetapps.pocketchord.data.supabase.repository.EmergencyPolicyRepository
 import com.sweetapps.pocketchord.data.supabase.repository.NoticePolicyRepository
@@ -54,8 +52,7 @@ fun MainScreen(navController: NavHostController) {
     var showEmergencyDialog by remember { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
     var showAnnouncementDialog by remember { mutableStateOf(false) }
-    var appPolicy by remember { mutableStateOf<AppPolicy?>(null) }  // 정책 저장용 (기존 app_policy)
-    var emergencyPolicy by remember { mutableStateOf<EmergencyPolicy?>(null) }  // 긴급 정책 저장용 (신규)
+    var emergencyPolicy by remember { mutableStateOf<EmergencyPolicy?>(null) }  // 긴급 정책 저장용
 
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var announcement by remember { mutableStateOf<Announcement?>(null) }
@@ -259,158 +256,6 @@ fun MainScreen(navController: NavHostController) {
                     return@LaunchedEffect  // 공지 표시하면 app_policy 건너뜀
                 }
             }
-
-            // ===== Fallback: app_policy 조회 (기존 로직 유지) =====
-            // 단일 정책(app_policy) 조회 - 새로운 하이브리드 구조 사용
-            android.util.Log.d("HomeScreen", "===== Querying app_policy (fallback) =====")
-            var policy: AppPolicy? = null
-            var policyError: Throwable? = null
-            AppPolicyRepository(supabaseClient)
-                .getPolicy()
-                .onSuccess {
-                    policy = it
-                    android.util.Log.d("HomeScreen", "Policy fetch success: ${policy?.let { p -> 
-                        "id=${p.id} appId=${p.appId} active=${p.isActive} type=${p.activePopupType} " +
-                        "minSupported=${p.minSupportedVersion} latest=${p.latestVersionCode}"
-                    } ?: "null"}")
-                }
-                .onFailure { e ->
-                    policyError = e
-                    android.util.Log.e("HomeScreen", "❌ Policy fetch failure: ${e.message}", e)
-                    android.util.Log.e("HomeScreen", "Error class: ${e.javaClass.simpleName}")
-                }
-
-            if (policy == null) {
-                android.util.Log.w("HomeScreen", "===== No Policy Loaded =====")
-                android.util.Log.w("HomeScreen", "No active policy row for app_id='${com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID}'.")
-                android.util.Log.w("HomeScreen", "Check:")
-                android.util.Log.w("HomeScreen", "  1. app_policy.app_id matches BuildConfig.SUPABASE_APP_ID")
-                android.util.Log.w("HomeScreen", "  2. is_active=TRUE in Supabase")
-                android.util.Log.w("HomeScreen", "  3. RLS policy allows read (check 'allow_read_policy')")
-                android.util.Log.w("HomeScreen", "  4. SUPABASE_ANON_KEY is valid")
-
-                // ⚠️ 정책이 없거나 비활성화됨 → 로컬 캐시된 강제 업데이트도 삭제
-                if (storedForceVersion != -1) {
-                    android.util.Log.w("HomeScreen", "⚠️ Clearing cached force update (no active policy)")
-                    updatePrefs.edit {
-                        remove("force_required_version")
-                        remove("force_update_info")
-                    }
-                }
-
-                // 정책 없음 → 팝업 없음
-                return@LaunchedEffect
-            }
-
-            android.util.Log.d("HomeScreen", "===== Policy Loaded Successfully =====")
-            val p = policy!!
-            val currentVersion = com.sweetapps.pocketchord.BuildConfig.VERSION_CODE
-            android.util.Log.d("HomeScreen", "Current app version: $currentVersion")
-            android.util.Log.d("HomeScreen", "Policy active_popup_type: ${p.activePopupType}")
-
-            // 새로운 activePopupType 기반 로직
-            when (p.activePopupType) {
-                "emergency" -> {
-                    // 1) 긴급 공지
-                    Log.d("HomeScreen", "Decision: EMERGENCY popup will show")
-                    appPolicy = p  // 정책 객체 저장
-                    showEmergencyDialog = true
-                    // 정책이 유효하므로 이전 강제 캐시 정리
-                    if (storedForceVersion != -1) updatePrefs.edit {
-                        remove("force_required_version")
-                        remove("force_update_info")
-                    }
-                }
-
-                "force_update" -> {
-                    // 2) 강제 업데이트
-                    if (p.requiresForceUpdate(currentVersion)) {
-                        Log.d("HomeScreen", "Decision: FORCE UPDATE popup (minSupported=${p.minSupportedVersion})")
-                        updateInfo = UpdateInfo(
-                            id = null,
-                            versionCode = p.minSupportedVersion ?: (currentVersion + 1),
-                            versionName = "",
-                            appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
-                            isForce = true,
-                            releaseNotes = p.content ?: "",
-                            releasedAt = null,
-                            downloadUrl = p.downloadUrl
-                        )
-                        showUpdateDialog = true
-                        updatePrefs.edit {
-                            putInt("force_required_version", updateInfo!!.versionCode)
-                            putString("force_update_info", gson.toJson(updateInfo!!))
-                        }
-                    } else {
-                        // 강제 업데이트 조건 해제 → 캐시 제거
-                        if (storedForceVersion != -1) updatePrefs.edit {
-                            remove("force_required_version")
-                            remove("force_update_info")
-                        }
-                    }
-                }
-
-                "optional_update" -> {
-                    // 3) 선택적 업데이트
-                    if (p.recommendsUpdate(currentVersion) &&
-                        dismissedVersionCode.value != (p.latestVersionCode ?: -1)) {
-                        Log.d("HomeScreen", "Decision: OPTIONAL UPDATE popup (latest=${p.latestVersionCode})")
-                        updateInfo = UpdateInfo(
-                            id = null,
-                            versionCode = p.latestVersionCode!!,
-                            versionName = "",
-                            appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
-                            isForce = false,
-                            releaseNotes = p.content ?: "",
-                            releasedAt = null,
-                            downloadUrl = p.downloadUrl
-                        )
-                        showUpdateDialog = true
-                    }
-                }
-
-                "notice" -> {
-                    // 4) 일반 공지
-                    Log.d("HomeScreen", "Decision: NOTICE popup")
-
-                    // 이미 본 공지사항인지 확인
-                    val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
-                    val viewedIds = prefs.getStringSet("viewed_announcements", setOf()) ?: setOf()
-                    val policyIdStr = p.id?.toString() ?: "null"
-
-                    if (viewedIds.contains(policyIdStr)) {
-                        Log.d("HomeScreen", "Notice already viewed (policy id=$policyIdStr), skipping")
-                    } else {
-                        Log.d("HomeScreen", "Showing new notice (policy id=$policyIdStr)")
-                        announcement = Announcement(
-                            id = p.id,  // policy ID를 announcement ID로 사용
-                            createdAt = null,
-                            appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
-                            title = "공지사항",
-                            content = p.content ?: "",
-                            isActive = true,
-                            kind = "announcement",
-                            redirectUrl = null,
-                            dismissible = true
-                        )
-                        showAnnouncementDialog = true
-                    }
-                }
-
-                "none" -> {
-                    // 팝업 없음
-                    Log.d("HomeScreen", "Decision: No popup (type=none)")
-                    // 강제 업데이트 캐시가 있으면 정리
-                    if (storedForceVersion != -1) updatePrefs.edit {
-                        remove("force_required_version")
-                        remove("force_update_info")
-                    }
-                }
-
-                else -> {
-                    Log.w("HomeScreen", "Unknown popup type: ${p.activePopupType}")
-                }
-            }
         } catch (e: Exception) {
             Log.e("HomeScreen", "Exception while loading policy", e)
         }
@@ -420,8 +265,6 @@ fun MainScreen(navController: NavHostController) {
 
     android.util.Log.d("HomeScreen", "===== Popup Display Check =====")
     android.util.Log.d("HomeScreen", "showEmergencyDialog: $showEmergencyDialog")
-    android.util.Log.d("HomeScreen", "appPolicy: ${appPolicy?.activePopupType}")
-    android.util.Log.d("HomeScreen", "showUpdateDialog: $showUpdateDialog")
     android.util.Log.d("HomeScreen", "showAnnouncementDialog: $showAnnouncementDialog")
 
     // 1순위: Emergency - emergency_policy 사용 (Phase 2)
@@ -439,20 +282,6 @@ fun MainScreen(navController: NavHostController) {
             } else {
                 { /* X 버튼 없음 */ }
             },
-            badgeText = "긴급"
-        )
-    }
-    // 1순위 Fallback: Emergency - 기존 app_policy 사용 (호환성)
-    else if (showEmergencyDialog && appPolicy != null) {
-        android.util.Log.d("HomeScreen", "✅ Displaying EmergencyRedirectDialog from app_policy (fallback)")
-        com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog(
-            title = "🚨 긴급공지",
-            description = appPolicy!!.content ?: "",
-            newAppPackage = "com.sweetapps.pocketchord",
-            redirectUrl = appPolicy!!.downloadUrl,
-            buttonText = "새 앱 설치하기",
-            isDismissible = false,
-            onDismiss = { /* X 버튼 없음 */ },
             badgeText = "긴급"
         )
     }
@@ -515,24 +344,6 @@ fun MainScreen(navController: NavHostController) {
                         }
                     }
 
-                // ===== Fallback: 기존 app_policy ID 기반 추적 =====
-                announcement?.id?.let { id ->
-                    val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
-
-                    // 1. 기존의 공지사항 ID를 가져온다
-                    val viewedIds = prefs.getStringSet("viewed_announcements", setOf())?.toMutableSet() ?: mutableSetOf()
-
-                    // 2. 새 ID 추가 (contains 체크는 Set이 자동으로 처리)
-                    viewedIds.add(id.toString())
-
-                    // 3. 변경된 목록을 저장
-                    prefs.edit {
-                        putStringSet("viewed_announcements", viewedIds)
-                    }
-
-                    Log.d("HomeScreen", "✅ Marked announcement as viewed: id=$id")
-                    Log.d("HomeScreen", "📋 Total viewed announcements: ${viewedIds.size}")
-                }
                 showAnnouncementDialog = false
             }
         )
