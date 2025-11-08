@@ -26,7 +26,10 @@ import androidx.core.net.toUri
 @Composable
 fun SettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
-    val appVersion = BuildConfig.VERSION_NAME
+
+    // 빌드 타입 정보 추가
+    val buildType = if (BuildConfig.DEBUG) "debug" else "release"
+    val appVersionWithBuildType = "${BuildConfig.VERSION_NAME}.$buildType"
 
     Box(
         modifier = Modifier
@@ -77,7 +80,7 @@ fun SettingsScreen(navController: NavHostController) {
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "앱 버전",
-                    subtitle = appVersion,
+                    subtitle = appVersionWithBuildType,
                     showArrow = false,
                     onClick = null
                 )
@@ -119,14 +122,16 @@ fun SettingsScreen(navController: NavHostController) {
                     }
                 )
 
-                // 디버그 설정 진입 (하위 스크린)
-                SettingsItem(
-                    icon = Icons.Default.BugReport,
-                    title = "디버그 모드",
-                    subtitle = "광고/아이콘/업데이트 도구",
-                    showArrow = true,
-                    onClick = { navController.navigate("debug_settings") }
-                )
+                // 디버그 설정 진입 (DEBUG 빌드에서만 표시)
+                if (BuildConfig.DEBUG) {
+                    SettingsItem(
+                        icon = Icons.Default.BugReport,
+                        title = "디버그 모드",
+                        subtitle = "광고/아이콘/업데이트 도구",
+                        showArrow = true,
+                        onClick = { navController.navigate("debug_settings") }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
