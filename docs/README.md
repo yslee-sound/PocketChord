@@ -1,277 +1,356 @@
 # 📚 PocketChord 문서 가이드
 
 **프로젝트**: PocketChord  
-**업데이트**: 2025-11-08
+**업데이트**: 2025-11-09  
+**문서 개수**: 33개 (리팩토링 계획 추가)
 
 ---
 
-## 📋 문서 분류
+## 🚀 최신 구현 계획 (2025-11-09)
 
-### 🎯 핵심 구현 가이드 (읽어야 할 문서)
+### 팝업 정책 리팩토링 (3-5일 예상)
 
-#### 1. 광고 정책 분리 (최신)
-- **`ad-policy-separation-implementation-complete.md`** ⭐ 메인 가이드
-  - 방안 1(테이블 분리) 전체 구현 가이드
-  - 배포 절차 포함
-  - **"complete"**: 구현이 완료되었다는 의미 (작업 완료 보고서)
-  
-- **`QUICKSTART-AD-POLICY-SEPARATION.md`**
-  - 5분 빠른 시작
-  
-- **`IMPLEMENTATION-SUMMARY.md`**
-  - 전체 요약
+**빠른 시작**:
+- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** ⭐⭐⭐ - 빠른 참조 가이드 (시작은 여기서!)
+- **[IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)** ⭐⭐ - 단계별 구현 계획 (상세)
 
-#### 2. Supabase 관련
-- **`SUPABASE-ID-COLUMN-GUIDE.md`**
-  - id 컬럼 이해하기
-  
-- **`SUPABASE-TABLE-CREATION-SUCCESS.md`**
-  - 테이블 생성 확인 및 운영 가이드
+**분석 문서**:
+- [popup-tracking-analysis.md](popup-tracking-analysis.md) - 4가지 팝업 통합 분석
+- [update-policy-redesign.md](update-policy-redesign.md) - 업데이트 정책 재설계
+- [notice-policy-redesign.md](notice-policy-redesign.md) - 공지사항 정책 재설계
 
-#### 3. 배포 관련
-- **`DEPLOYMENT-CHECKLIST.md`**
-  - 배포 전 체크리스트
-
-#### 4. 레거시 (참고용)
-- **`admob-supabase-control-IMPLEMENTATION-COMPLETE.md`**
-  - AdMob Supabase 제어 구현 완료 보고서 (구버전)
-  - **"COMPLETE"**: 해당 작업이 완료되었음을 표시
-  
-- **`admob-banner-auto-refresh-COMPLETE.md`**
-  - 배너 광고 자동 새로고침 구현 완료 (구버전)
-
----
-
-### 📌 "complete" 문서란?
-
-**의미**: "구현 완료 보고서"
-
-**용도**:
-1. ✅ 작업이 완료되었음을 명시
-2. 📋 구현 내용 정리
-3. 🔍 나중에 변경 이력 추적
-4. 📚 다른 개발자 참고용
-
-**예시**:
-- `ad-policy-separation-implementation-complete.md`
-  → "광고 정책 분리 구현 완료"
-  
-- `admob-supabase-control-IMPLEMENTATION-COMPLETE.md`
-  → "AdMob Supabase 제어 구현 완료"
-
-**vs 다른 문서**:
-- `QUICKSTART`: 빠른 시작 (5분)
-- `SUMMARY`: 요약 (5분)
-- `complete`: 상세 가이드 (15-30분) + 완료 보고서
-
----
-
-### 📄 SQL 스크립트
-
-#### 광고 정책 (ad_policy)
-- **`ad-policy-table-creation.sql`** ⭐ 메인 스크립트
-  - Release + Debug 데이터 포함
-  - 기본값: 시간당 2회, 일일 15회
-  
-- **`ad-policy-add-debug-build.sql`**
-  - Debug 데이터만 추가
-
-#### 앱 정책 정리 (선택사항)
-- **`app-policy-remove-ad-columns.sql`**
-  - app_policy에서 광고 컬럼 제거
-  - 가이드: `APP-POLICY-CLEANUP-GUIDE.md`
-
-#### 기존 스키마 (참고용)
-- `supabase-ad-control-schema.sql` - app_policy 광고 컬럼 추가 (구버전)
-- `supabase-ad-control-add-not-null.sql` - NOT NULL 추가 (구버전)
-
----
-
-### 🔧 기타 가이드
-
-#### 정리 가이드
-- **`APP-POLICY-CLEANUP-GUIDE.md`**
-  - app_policy 테이블 정리 (선택사항)
-
-#### 광고 설정 (레거시)
-- `admob-supabase-control-IMPLEMENTATION-COMPLETE.md` - 구현 완료 (구버전)
-- `admob-supabase-control-plan.md` - 계획 문서
-- `admob-supabase-control-NEXT-STEPS.md` - 다음 단계
-
-#### 앱 정책 분석
-- `app-policy-ad-policy-separation-analysis.md` - 분리 분석 문서
-
----
-
-## 🚀 빠른 시작
-
-### 1. 신규 개발자 온보딩
+**핵심 변경사항**:
 ```
-1. IMPLEMENTATION-SUMMARY.md 읽기 (5분)
-2. ad-policy-separation-implementation-complete.md 읽기 (15분)
-3. SUPABASE-ID-COLUMN-GUIDE.md 읽기 (10분)
-```
+✅ 3개 테이블 분리 (책임 분리 원칙)
+  ├─ update_policy: 업데이트 전용 (단순화!)
+  ├─ notice_policy: 공지 전용 (버전 관리!)
+  └─ emergency_policy: 긴급 전용 (Google Play 준수!)
 
-### 2. Supabase 테이블 생성
-```
-1. QUICKSTART-AD-POLICY-SEPARATION.md 참고
-2. ad-policy-table-creation.sql 실행
-3. SUPABASE-TABLE-CREATION-SUCCESS.md로 확인
-```
-
-### 3. 배포 준비
-```
-1. DEPLOYMENT-CHECKLIST.md 체크
-2. 모든 항목 확인 후 배포
+✅ 업데이트: target_version_code (단일 필드)
+✅ 공지사항: notice_version (명시적 제어)
+✅ 긴급: is_dismissible (X 버튼 제어)
 ```
 
 ---
 
-## 📊 문서 맵
+## 🎯 빠른 시작
 
+### 신규 개발자
 ```
-방안 1 구현
-├── ad-policy-separation-implementation-complete.md (메인)
-├── QUICKSTART-AD-POLICY-SEPARATION.md (빠른 시작)
-└── IMPLEMENTATION-SUMMARY.md (요약)
+1. ads-guide.md 읽기 (광고 시스템 이해)
+2. supabase-guide-complete.md 읽기 (Supabase 설정)
+3. QUICKSTART-AD-POLICY-SEPARATION.md (광고 정책 배포)
+```
 
-Supabase
-├── ad-policy-table-creation.sql (테이블 생성)
-├── SUPABASE-ID-COLUMN-GUIDE.md (id 이해)
-└── SUPABASE-TABLE-CREATION-SUCCESS.md (확인 가이드)
-
-배포
-└── DEPLOYMENT-CHECKLIST.md (체크리스트)
-
-선택사항
-├── APP-POLICY-CLEANUP-GUIDE.md (정리 가이드)
-└── app-policy-remove-ad-columns.sql (정리 SQL)
-
-참고용 (레거시)
-├── app-policy-ad-policy-separation-analysis.md
-├── admob-supabase-control-*.md
-└── supabase-ad-control-*.sql
+### 배포 담당자
+```
+1. release-guide.md (Release 빌드)
+2. DEPLOYMENT-CHECKLIST.md (배포 체크리스트)
 ```
 
 ---
 
-## 🎯 시나리오별 문서
+## 📋 핵심 문서
 
-### 시나리오 1: 처음 시작하는 경우
-1. `IMPLEMENTATION-SUMMARY.md` - 전체 이해
-2. `ad-policy-separation-implementation-complete.md` - 상세 가이드
-3. `QUICKSTART-AD-POLICY-SEPARATION.md` - 실행
+### 🎯 광고 시스템 (최신)
 
-### 시나리오 2: Supabase 설정
-1. `QUICKSTART-AD-POLICY-SEPARATION.md` - 빠른 실행
-2. `ad-policy-table-creation.sql` - SQL 실행
-3. `SUPABASE-TABLE-CREATION-SUCCESS.md` - 확인
+#### 통합 가이드
+**`ads-guide.md`** ⭐ 
+- App Open, Interstitial, Banner 광고 통합 가이드
+- Supabase 제어 방법
+- 빈도 제한
+- 문제 해결
 
-### 시나리오 3: 배포 준비
-1. `DEPLOYMENT-CHECKLIST.md` - 체크리스트 확인
-2. 모든 항목 체크 후 배포
+#### 광고 정책 분리
+**`ad-policy-separation-implementation-complete.md`**
+- 방안 1(테이블 분리) 구현 가이드
+- 팝업과 광고 독립 제어
 
-### 시나리오 4: 테이블 정리 (선택)
-1. `APP-POLICY-CLEANUP-GUIDE.md` - 가이드 읽기
-2. 시나리오 선택
-3. `app-policy-remove-ad-columns.sql` - SQL 실행 (필요시)
+**`QUICKSTART-AD-POLICY-SEPARATION.md`**
+- 5분 빠른 시작
 
-### 시나리오 5: 궁금한 게 있을 때
-- **id가 뭔가요?** → `SUPABASE-ID-COLUMN-GUIDE.md`
-- **app_id와 차이는?** → `SUPABASE-ID-COLUMN-GUIDE.md`
-- **빈도 제한 기본값은?** → `ad-policy-table-creation.sql` 주석 참고
+**`IMPLEMENTATION-SUMMARY.md`**
+- 전체 요약
 
----
+#### SQL 스크립트
+**`ad-policy-table-creation.sql`** ⭐
+- ad_policy 테이블 생성 (Release + Debug)
 
-## 🗂️ 문서 네이밍 규칙
+**`ad-policy-add-debug-build.sql`**
+- Debug 데이터만 추가
 
-### 대문자 파일 (핵심 문서)
-- `IMPLEMENTATION-SUMMARY.md` - 전체 요약
-- `QUICKSTART-*.md` - 빠른 시작
-- `DEPLOYMENT-CHECKLIST.md` - 체크리스트
-- `SUPABASE-*.md` - Supabase 관련
-- `APP-POLICY-*.md` - 앱 정책 관련
+**`app-policy-remove-ad-columns.sql`**
+- app_policy 정리 (선택사항)
 
-### 소문자 파일 (상세 가이드)
-- `ad-policy-*.md` - 광고 정책 관련
-- `admob-*.md` - AdMob 관련 (레거시)
-- `supabase-*.md` - Supabase 관련 (레거시)
-
-### SQL 파일
-- `*-table-creation.sql` - 테이블 생성
-- `*-add-*.sql` - 데이터 추가
-- `*-remove-*.sql` - 정리
+**`supabase-ad-control-schema.sql`**
+- app_policy 광고 컬럼 추가 (레거시 참고용)
 
 ---
 
-## 🔄 문서 버전
+### 🗄️ Supabase
 
-### 최신 (2025-11-08)
-- ✅ 광고 정책 분리 (방안 1)
-- ✅ 빈도 제한 기본값: 시간당 2회, 일일 15회
-- ✅ Release + Debug 빌드 지원
+#### 통합 가이드
+**`supabase-guide-complete.md`** ⭐
+- Supabase 설정 및 사용
+- app_policy, ad_policy 테이블
+- RLS 설정
+- 문제 해결
 
-### 레거시 (참고용)
-- 📦 app_policy 통합 방식 (구버전)
-- 📦 빈도 제한 기본값: 시간당 3회, 일일 20회 (구버전)
+#### 공지사항
+**`supabase-announcement-dialog.md`**
+- 공지사항 다이얼로그
+
+**`supabase-announcement-management.md`**
+- 공지사항 관리
+
+**`supabase-announcement-viewed-tracking.md`**
+- 읽음 여부 추적
+
+#### 참고
+**`SUPABASE-ID-COLUMN-GUIDE.md`**
+- id 컬럼 이해하기
+
+**`SUPABASE-TABLE-CREATION-SUCCESS.md`**
+- 테이블 생성 확인 및 운영 가이드
+
+**`force-update-logic-analysis.md`**
+- 강제 업데이트 로직
+
+---
+
+### 🚀 배포
+
+#### 통합 가이드
+**`release-guide.md`** ⭐
+- Release 빌드 방법
+- Keystore 설정
+- Play Store 업로드
+- 문제 해결
+
+#### 체크리스트
+**`DEPLOYMENT-CHECKLIST.md`**
+- 배포 전 체크리스트
+
+---
+
+### 🎨 코드/화음
+
+**`chords-db-architecture.md`**
+- 화음 DB 구조
+
+**`chords-db-implementation-plan.md`**
+- 구현 계획
+
+**`chords-seed-format.md`**
+- 시드 데이터 형식
+
+**`chords-owner-decisions.md`**
+- 설계 결정 사항
+
+---
+
+### 🔧 기타
+
+**`app-policy-ad-policy-separation-analysis.md`**
+- 광고 정책 분리 분석
+
+**`APP-POLICY-CLEANUP-GUIDE.md`**
+- app_policy 정리 가이드 (선택사항)
+
+**`string-numbering.md`**
+- 문자열 넘버링
+
+**`app-version-with-build-type.md`**
+- 앱 버전 표시
+
+**`update-checklist.md`**
+- 업데이트 체크리스트
+
+**`update-dialog-integration.md`**
+- 업데이트 다이얼로그
+
+---
+
+## 📁 archive 폴더
+
+정리된 레거시 문서들:
+- `archive/admob/` - AdMob 관련 구버전
+- `archive/emergency-popup/` - 긴급 팝업 관련
+- `archive/release-test/` - Release 테스트 관련
+- `archive/debug-fixes/` - 디버그 수정 관련
+- `archive/supabase-app-policy/` - app_policy 구버전
+- `archive/rls/` - RLS 임시 문제 관련
+
+**용도**: 변경 이력 추적, 참고용
+
+---
+
+## 🎯 시나리오별 가이드
+
+### 처음 시작
+```
+1. README.md 읽기 (이 문서)
+2. ads-guide.md (광고 시스템)
+3. supabase-guide-complete.md (Supabase)
+```
+
+### Supabase 설정
+```
+1. supabase-guide-complete.md (설정 방법)
+2. ad-policy-table-creation.sql (테이블 생성)
+3. SUPABASE-TABLE-CREATION-SUCCESS.md (확인)
+```
+
+### Release 배포
+```
+1. release-guide.md (빌드 방법)
+2. DEPLOYMENT-CHECKLIST.md (체크리스트)
+```
+
+### 문제 해결
+```
+1. 해당 가이드의 "문제 해결" 섹션 참고
+2. archive 폴더에서 관련 문서 검색
+```
+
+---
+
+## 📊 문서 구조
+
+```
+docs/
+├── README.md (이 문서)
+│
+├── 🎯 광고 시스템
+│   ├── ads-guide.md (통합 가이드) ⭐
+│   ├── ad-policy-separation-implementation-complete.md
+│   ├── QUICKSTART-AD-POLICY-SEPARATION.md
+│   ├── IMPLEMENTATION-SUMMARY.md
+│   ├── ad-policy-table-creation.sql ⭐
+│   ├── ad-policy-add-debug-build.sql
+│   ├── app-policy-remove-ad-columns.sql
+│   └── supabase-ad-control-schema.sql (참고)
+│
+├── 🗄️ Supabase
+│   ├── supabase-guide-complete.md (통합 가이드) ⭐
+│   ├── SUPABASE-ID-COLUMN-GUIDE.md
+│   ├── SUPABASE-TABLE-CREATION-SUCCESS.md
+│   ├── supabase-announcement-*.md (3개)
+│   └── force-update-logic-analysis.md
+│
+├── 🚀 배포
+│   ├── release-guide.md (통합 가이드) ⭐
+│   └── DEPLOYMENT-CHECKLIST.md
+│
+├── 🎨 코드/화음
+│   ├── chords-db-architecture.md
+│   ├── chords-db-implementation-plan.md
+│   ├── chords-seed-format.md
+│   └── chords-owner-decisions.md
+│
+├── 🔧 기타
+│   ├── app-policy-ad-policy-separation-analysis.md
+│   ├── APP-POLICY-CLEANUP-GUIDE.md
+│   ├── string-numbering.md
+│   ├── app-version-with-build-type.md
+│   ├── update-checklist.md
+│   └── update-dialog-integration.md
+│
+└── 📦 archive/ (레거시)
+    ├── admob/
+    ├── emergency-popup/
+    ├── release-test/
+    ├── debug-fixes/
+    ├── supabase-app-policy/
+    └── rls/
+```
+
+---
+
+## 🔍 문서 찾기
+
+### 광고 관련
+→ `ads-guide.md`
+
+### Supabase 관련
+→ `supabase-guide-complete.md`
+
+### Release 빌드
+→ `release-guide.md`
+
+### 배포 준비
+→ `DEPLOYMENT-CHECKLIST.md`
+
+### id 컬럼이 뭔가요?
+→ `SUPABASE-ID-COLUMN-GUIDE.md`
+
+### 구버전 문서
+→ `archive/` 폴더
 
 ---
 
 ## ❓ FAQ
 
-### Q: 어느 문서부터 읽어야 하나요?
-**A**: `IMPLEMENTATION-SUMMARY.md` → `QUICKSTART-AD-POLICY-SEPARATION.md`
-
-### Q: SQL은 어떤 걸 실행하나요?
-**A**: `ad-policy-table-creation.sql` 하나만 실행하면 됩니다.
-
-### Q: 레거시 문서는 삭제해도 되나요?
-**A**: 아니요. 참고용으로 남겨두세요. 나중에 변경 이력 추적 시 유용합니다.
-
 ### Q: 문서가 너무 많아요!
 **A**: 핵심 3개만 보세요:
-1. `IMPLEMENTATION-SUMMARY.md`
-2. `QUICKSTART-AD-POLICY-SEPARATION.md`
-3. `DEPLOYMENT-CHECKLIST.md`
+1. `ads-guide.md` (광고)
+2. `supabase-guide-complete.md` (Supabase)
+3. `release-guide.md` (배포)
 
-### Q: "complete" 문서는 뭔가요?
-**A**: **"구현 완료 보고서"** 입니다.
+### Q: 어느 문서부터 읽어야 하나요?
+**A**: 역할에 따라:
+- 개발자: `ads-guide.md` → `supabase-guide-complete.md`
+- 배포자: `release-guide.md` → `DEPLOYMENT-CHECKLIST.md`
 
-**특징**:
-- 📝 해당 작업이 완료되었음을 명시
-- 📋 구현 내용 상세 정리
-- 🔍 변경 이력 추적용
-- 📚 다른 개발자 참고용
+### Q: archive 폴더는 뭔가요?
+**A**: 정리된 레거시 문서들입니다. 삭제하지 말고 참고용으로 보관하세요.
 
-**예시**:
-```
-ad-policy-separation-implementation-complete.md
-→ "광고 정책 분리 구현이 완료되었습니다"
-→ 어떻게 구현했는지, 무엇을 했는지 상세히 기록
-```
+### Q: SQL 파일은 어떤 걸 실행하나요?
+**A**: `ad-policy-table-creation.sql` 하나만 실행하면 됩니다.
 
-**언제 만드나요?**:
-- 큰 작업이 끝났을 때
-- 나중에 참고할 가치가 있을 때
-- 팀원들에게 공유할 때
-
-**vs 다른 문서**:
-- `SUMMARY`: 간단 요약 (5분)
-- `QUICKSTART`: 빠른 실행 (5분)
-- `complete`: 상세 + 완료 증명 (15-30분)
+### Q: 통합 가이드가 뭔가요?
+**A**: 여러 개별 문서를 하나로 합친 최신 가이드입니다.
+- `ads-guide.md`: 광고 관련 통합
+- `supabase-guide-complete.md`: Supabase 통합
+- `release-guide.md`: Release 통합
 
 ---
 
-## 📞 도움이 필요하면
+## 📝 정리 내역 (2025-11-08)
 
-1. **먼저 읽기**: `IMPLEMENTATION-SUMMARY.md`
-2. **빠른 시작**: `QUICKSTART-AD-POLICY-SEPARATION.md`
-3. **상세 가이드**: `ad-policy-separation-implementation-complete.md`
-4. **체크리스트**: `DEPLOYMENT-CHECKLIST.md`
+### 변경 사항
+- 87개 → 30개 문서로 축소
+- 중복/레거시 문서 archive 이동
+- 통합 가이드 3개 생성
+
+### 통합된 문서
+1. **광고 가이드** → `ads-guide.md`
+   - app-open-ads-guide.md
+   - interstitial-ads-guide.md
+   - admob-setup-guide.md
+
+2. **Supabase 가이드** → `supabase-guide-complete.md`
+   - supabase-guide.md
+   - supabase-implementation.md
+   - supabase-test-guide.md
+
+3. **Release 가이드** → `release-guide.md`
+   - release-build-guide.md
+   - a_RELEASE_SIGNING.md
+   - release-signing-setup-complete.md
+
+### archive로 이동 (57개)
+- AdMob 관련: 8개
+- 긴급 팝업: 7개
+- Release 테스트: 7개
+- 디버그 수정: 9개
+- Supabase 앱 정책: 10개
+- RLS: 3개
+- 기타: 13개
 
 ---
 
 **작성일**: 2025-11-08  
-**마지막 업데이트**: 2025-11-08  
-**버전**: 1.0
+**마지막 정리**: 2025-11-08  
+**버전**: 2.0 (대규모 정리 완료)
 
