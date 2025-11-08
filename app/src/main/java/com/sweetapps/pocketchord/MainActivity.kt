@@ -123,12 +123,24 @@ class MainActivity : ComponentActivity() {
                 val isShowingAppOpenAd by app.isShowingAppOpenAd.collectAsState()
                 var isBannerEnabled by remember { mutableStateOf(true) }
 
-                // Supabase에서 배너 광고 정책 가져오기
+                // Supabase에서 배너 광고 정책 가져오기 (5분마다 자동 갱신)
                 LaunchedEffect(Unit) {
                     val policyRepo = com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository(app.supabase)
-                    val policy = policyRepo.getPolicy().getOrNull()
-                    isBannerEnabled = policy?.adBannerEnabled ?: true
-                    android.util.Log.d("MainActivity", "🎯 배너 광고 정책: ${if (isBannerEnabled) "활성화" else "비활성화"}")
+
+                    while (true) {
+                        val policy = policyRepo.getPolicy().getOrNull()
+                        val newBannerEnabled = policy?.adBannerEnabled ?: true
+
+                        if (isBannerEnabled != newBannerEnabled) {
+                            android.util.Log.d("MainActivity", "🔄 배너 광고 정책 변경: ${if (isBannerEnabled) "활성화" else "비활성화"} → ${if (newBannerEnabled) "활성화" else "비활성화"}")
+                            isBannerEnabled = newBannerEnabled
+                        } else {
+                            android.util.Log.d("MainActivity", "🎯 배너 광고 정책: ${if (isBannerEnabled) "활성화" else "비활성화"}")
+                        }
+
+                        // 5분마다 체크 (캐시 만료 주기와 동일)
+                        kotlinx.coroutines.delay(5 * 60 * 1000L)
+                    }
                 }
 
                 // 현재 라우트(광고/전면광고 표시 기준 등)

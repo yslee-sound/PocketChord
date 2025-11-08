@@ -106,8 +106,16 @@ AppPolicyRepo: ❌ No policy found!
    SET ad_banner_enabled = false 
    WHERE app_id = 'com.sweetapps.pocketchord';
    ```
-4. 앱 재시작 (또는 5분 대기)
-5. 배너 광고 숨김 확인 ✅
+4. **앱을 끄지 말고 5분 대기** (또는 캐시 만료 후)
+5. Logcat에서 변경 로그 확인:
+   ```
+   MainActivity: 🔄 배너 광고 정책 변경: 활성화 → 비활성화
+   ```
+6. 배너 광고 자동으로 숨김 확인 ✅
+7. Supabase에서 다시 ON 설정
+8. 5분 대기 후 배너 광고 자동으로 표시 확인 ✅
+
+**중요**: 앱을 재시작하지 않아도 5분 이내에 자동으로 반영됩니다!
 
 #### 테스트 2: 전면 광고
 1. 홈 → 코드 → 홈 (3회 반복, 60초 간격)

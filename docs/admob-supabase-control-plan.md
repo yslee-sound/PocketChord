@@ -604,7 +604,8 @@ fun showAd(activity: Activity, callback: (Boolean) -> Unit) {
 
 **변경 사항:**
 1. 하드코딩된 `isBannerEnabled` 제거
-2. HomeScreen에서 정책을 읽어 배너 표시 여부 결정
+2. Supabase 정책을 5분마다 자동 갱신
+3. 정책 변경 시 즉시 UI 반영
 
 **의사 코드:**
 ```kotlin
@@ -612,9 +613,23 @@ fun showAd(activity: Activity, callback: (Boolean) -> Unit) {
 fun MainContent() {
     var isBannerEnabled by remember { mutableStateOf(true) }
     
+    // 5분마다 자동 갱신
     LaunchedEffect(Unit) {
-        val policy = policyRepository.getPolicy().getOrNull()
-        isBannerEnabled = policy?.adBannerEnabled ?: true
+        val policyRepo = AppPolicyRepository(supabase)
+        
+        while (true) {
+            val policy = policyRepo.getPolicy().getOrNull()
+            val newBannerEnabled = policy?.adBannerEnabled ?: true
+            
+            // 변경 감지 및 UI 업데이트
+            if (isBannerEnabled != newBannerEnabled) {
+                Log.d(TAG, "🔄 배너 광고 정책 변경: $isBannerEnabled → $newBannerEnabled")
+                isBannerEnabled = newBannerEnabled
+            }
+            
+            // 5분 대기 (캐시 만료 주기와 동일)
+            delay(5 * 60 * 1000L)
+        }
     }
     
     Column {
@@ -626,6 +641,13 @@ fun MainContent() {
         // ...content...
     }
 }
+```
+
+**동작 방식:**
+```
+앱 시작 → 정책 조회 (캐시 없음) → 배너 표시/숨김
+5분 경과 → 정책 재조회 (캐시 만료) → 변경 감지 → 배너 업데이트
+5분 경과 → 정책 재조회 (캐시 만료) → 변경 없음 → 유지
 ```
 
 

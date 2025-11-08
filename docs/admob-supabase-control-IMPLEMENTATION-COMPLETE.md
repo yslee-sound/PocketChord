@@ -65,17 +65,32 @@ Supabase를 통해 AdMob 광고(App Open, Interstitial, Banner)를 실시간으�
 변경 사항:
 - SharedPreferences 제거
 - Supabase 정책 기반으로 변경
-- LaunchedEffect로 정책 조회
+- **5분마다 자동 갱신** (앱 재시작 없이도 반영)
+- 정책 변경 감지 및 로그
 - 디버그 화면에서 광고 스위치 제거
 - 안내 메시지 추가: "광고 ON/OFF는 Supabase 대시보드에서 실시간으로 제어됩니다."
 
 **동작**:
 ```kotlin
 LaunchedEffect(Unit) {
-    val policy = policyRepository.getPolicy().getOrNull()
-    isBannerEnabled = policy?.adBannerEnabled ?: true
+    while (true) {
+        val policy = policyRepository.getPolicy().getOrNull()
+        val newBannerEnabled = policy?.adBannerEnabled ?: true
+        
+        if (isBannerEnabled != newBannerEnabled) {
+            // 변경 감지 시 UI 업데이트
+            isBannerEnabled = newBannerEnabled
+        }
+        
+        delay(5 * 60 * 1000L) // 5분마다 체크
+    }
 }
 ```
+
+**특징**:
+- 앱을 끄지 않아도 최대 5분 이내 정책 반영
+- Supabase에서 변경 → 5분 내 자동 반영
+- 캐시 만료 주기와 동일한 간격으로 체크
 
 ---
 
