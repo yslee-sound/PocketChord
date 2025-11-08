@@ -26,9 +26,11 @@ import com.sweetapps.pocketchord.data.supabase.model.UpdateInfo
 import com.sweetapps.pocketchord.data.supabase.model.AppPolicy
 import com.sweetapps.pocketchord.data.supabase.model.UpdatePolicy
 import com.sweetapps.pocketchord.data.supabase.model.EmergencyPolicy
+import com.sweetapps.pocketchord.data.supabase.model.NoticePolicy
 import com.sweetapps.pocketchord.data.supabase.repository.AppPolicyRepository
 import com.sweetapps.pocketchord.data.supabase.repository.UpdatePolicyRepository
 import com.sweetapps.pocketchord.data.supabase.repository.EmergencyPolicyRepository
+import com.sweetapps.pocketchord.data.supabase.repository.NoticePolicyRepository
 import com.sweetapps.pocketchord.ui.dialogs.AnnouncementDialog
 import com.sweetapps.pocketchord.ui.dialogs.OptionalUpdateDialog
 import com.sweetapps.pocketchord.ui.dialogs.EmergencyRedirectDialog
@@ -214,6 +216,47 @@ fun MainScreen(navController: NavHostController) {
                     else -> {
                         Log.d("HomeScreen", "update_policy exists but no update needed (current=$currentVersion >= target=${up.targetVersionCode})")
                     }
+                }
+            }
+
+            // ===== Phase 3: notice_policy 조회 시도 (우선순위 3) =====
+            android.util.Log.d("HomeScreen", "===== Phase 3: Checking notice_policy =====")
+            var notice: NoticePolicy? = null
+            NoticePolicyRepository(supabaseClient)
+                .getActiveNotice()
+                .onSuccess { policy ->
+                    notice = policy
+                    android.util.Log.d("HomeScreen", "✅ notice_policy found: version=${policy?.noticeVersion}, title=${policy?.title}")
+                }
+                .onFailure { e ->
+                    android.util.Log.w("HomeScreen", "⚠️ notice_policy not found or error: ${e.message}")
+                }
+
+            // notice가 있으면 버전 기반 추적 확인
+            notice?.let { n ->
+                // 버전 기반 추적
+                val prefs = context.getSharedPreferences("notice_prefs", android.content.Context.MODE_PRIVATE)
+                val viewedVersions = prefs.getStringSet("viewed_notices", setOf()) ?: setOf()
+                val identifier = "notice_v${n.noticeVersion}"
+
+                if (viewedVersions.contains(identifier)) {
+                    Log.d("HomeScreen", "Notice already viewed (version=${n.noticeVersion}), skipping")
+                } else {
+                    Log.d("HomeScreen", "Decision: NOTICE from notice_policy (version=${n.noticeVersion})")
+                    announcement = Announcement(
+                        id = n.id,
+                        createdAt = n.createdAt,
+                        appId = n.appId,
+                        title = n.title ?: "공지사항",
+                        content = n.content,
+                        imageUrl = n.imageUrl,
+                        link = n.actionUrl,
+                        isActive = true,
+                        kind = "announcement",
+                        dismissible = true
+                    )
+                    showAnnouncementDialog = true
+                    return@LaunchedEffect  // 공지 표시하면 app_policy 건너뜀
                 }
             }
 
@@ -451,7 +494,28 @@ fun MainScreen(navController: NavHostController) {
         AnnouncementDialog(
             announcement = announcement!!,
             onDismiss = {
-                // ==================== Flutter의 _setViewed() 로직 적용 ====================
+                // ===== Phase 3: notice_policy 버전 저장 (신규) =====
+                // notice_policy에서 온 경우 버전 기반 추적
+                NoticePolicyRepository(supabaseClient)
+                    .getActiveNotice()
+                    .onSuccess { notice ->
+                        notice?.let { n ->
+                            val prefs = context.getSharedPreferences("notice_prefs", android.content.Context.MODE_PRIVATE)
+                            val viewedVersions = prefs.getStringSet("viewed_notices", setOf())
+                                ?.toMutableSet() ?: mutableSetOf()
+
+                            val identifier = "notice_v${n.noticeVersion}"
+                            viewedVersions.add(identifier)
+
+                            prefs.edit {
+                                putStringSet("viewed_notices", viewedVersions)
+                            }
+
+                            Log.d("HomeScreen", "Marked notice version ${n.noticeVersion} as viewed")
+                        }
+                    }
+
+                // ===== Fallback: 기존 app_policy ID 기반 추적 =====
                 announcement?.id?.let { id ->
                     val prefs = context.getSharedPreferences("announcement_prefs", android.content.Context.MODE_PRIVATE)
 
