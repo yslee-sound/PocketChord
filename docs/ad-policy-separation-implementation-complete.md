@@ -328,7 +328,9 @@ UPDATE ad_policy SET is_active = true;
 
 ### Option 1: app_policy에서 광고 컬럼 제거
 
-**목적:** 완전한 분리
+**목적:** 완전한 분리, 테이블 정리
+
+**파일:** `app-policy-remove-ad-columns.sql`
 
 **SQL:**
 ```sql
@@ -343,13 +345,20 @@ DROP COLUMN IF EXISTS ad_interstitial_max_per_day;
 **장점:**
 - 테이블 책임이 더 명확해짐
 - 혼란 방지
+- 데이터베이스 정리
 
 **단점:**
-- 이전 버전 앱과 호환성 문제 (구버전 사용자가 있다면)
+- 되돌릴 수 없음 (백업 필수!)
+- 구버전 앱과 호환성 문제
 
-**권장:** 신규 버전 배포 후 일정 기간(1-2주) 지나서 제거
+**권장 시기:**
+- **즉시**: 개발/테스트 단계 (사용자 없음)
+- **1-2주 후**: 운영 중 (새 버전 배포 후)
+- **나중에 또는 안 함**: 급하지 않음 (기능적으로 문제 없음)
 
-### Option 2: AppPolicy 모델에서 광고 필드 제거
+**상세 가이드:** `APP-POLICY-CLEANUP-GUIDE.md` 참조
+
+### Option 2: AppPolicy 모델에서 광고 필드 제거 (Option 1 이후)
 
 **파일:** `AppPolicy.kt`
 

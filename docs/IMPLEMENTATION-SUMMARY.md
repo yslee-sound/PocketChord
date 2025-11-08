@@ -55,13 +55,16 @@
 
 ---
 
-## 📁 생성된 파일
+## 📝 생성된 파일
 
 ```
 PocketChord/
 ├── docs/
 │   ├── ad-policy-table-creation.sql                      ⭐ NEW
+│   ├── ad-policy-add-debug-build.sql                     ⭐ NEW
+│   ├── app-policy-remove-ad-columns.sql                  ⭐ NEW (선택)
 │   ├── ad-policy-separation-implementation-complete.md   ⭐ NEW
+│   ├── APP-POLICY-CLEANUP-GUIDE.md                       ⭐ NEW
 │   └── QUICKSTART-AD-POLICY-SEPARATION.md                ⭐ NEW
 │
 └── app/src/main/java/com/sweetapps/pocketchord/
@@ -115,6 +118,19 @@ UPDATE ad_policy SET ad_banner_enabled = false;
 ```bash
 gradlew assembleRelease
 ```
+
+### 6. app_policy 정리 (선택사항, 급하지 않음)
+**시기**: 앱 배포 1-2주 후 또는 나중에
+
+**파일**: `app-policy-remove-ad-columns.sql`
+
+**가이드**: `APP-POLICY-CLEANUP-GUIDE.md` 참조
+
+**요약**:
+- app_policy에서 광고 관련 컬럼 제거
+- 테이블 정리 및 명확성 향상
+- 기능적으로 필수 아님 (하지 않아도 정상 작동)
+- 백업 필수!
 
 ---
 
