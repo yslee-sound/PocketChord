@@ -45,27 +45,29 @@ android {
 
     // 서명 설정 (환경변수 기반)
     signingConfigs {
-        create("release") {
-            // 환경변수에서 서명 정보 읽기
-            val keystorePath = System.getenv("KEYSTORE_PATH")
-            val keystoreStorePw = System.getenv("KEYSTORE_STORE_PW")
-            val keyAlias = System.getenv("KEY_ALIAS")
-            val keyPw = System.getenv("KEY_PASSWORD")
+        // 환경변수에서 서명 정보 읽기
+        val keystorePath = System.getenv("KEYSTORE_PATH")
+        val keystoreStorePw = System.getenv("KEYSTORE_STORE_PW")
+        val keyAlias = System.getenv("KEY_ALIAS")
+        val keyPw = System.getenv("KEY_PASSWORD")
 
-            if (keystorePath != null && keystoreStorePw != null && keyAlias != null && keyPw != null) {
+        // 환경변수가 모두 있을 때만 release config 생성
+        if (keystorePath != null && keystoreStorePw != null && keyAlias != null && keyPw != null) {
+            create("release") {
                 storeFile = file(keystorePath)
                 storePassword = keystoreStorePw
                 this.keyAlias = keyAlias
                 keyPassword = keyPw
-            } else {
-                // 환경변수 누락 시 경고 (릴리즈 빌드 시 실패하도록)
-                println("⚠️ WARNING: Release signing config missing!")
-                println("Required environment variables:")
-                println("  - KEYSTORE_PATH")
-                println("  - KEYSTORE_STORE_PW")
-                println("  - KEY_ALIAS")
-                println("  - KEY_PASSWORD")
             }
+        } else {
+            // 환경변수 누락 시 경고
+            println("⚠️ WARNING: Release signing config not available!")
+            println("Required environment variables:")
+            println("  - KEYSTORE_PATH")
+            println("  - KEYSTORE_STORE_PW")
+            println("  - KEY_ALIAS")
+            println("  - KEY_PASSWORD")
+            println("Debug builds will work, but release builds will use debug signing.")
         }
     }
 
@@ -77,6 +79,14 @@ android {
                 "SUPABASE_APP_ID",
                 "\"com.sweetapps.pocketchord.debug\""
             )
+
+            // 빌드 타입 정보
+            buildConfigField("String", "BUILD_TYPE", "\"debug\"")
+
+            // 테스트 광고 ID (Google 제공)
+            buildConfigField("String", "BANNER_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/6300978111\"")
+            buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/1033173712\"")
+            buildConfigField("String", "APP_OPEN_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/9257395921\"")
 
             // 디버그 식별자 추가 (선택사항)
             applicationIdSuffix = ".debug"
@@ -91,8 +101,32 @@ android {
                 "\"com.sweetapps.pocketchord\""
             )
 
-            // 서명 설정 적용
-            signingConfig = signingConfigs.getByName("release")
+            // 빌드 타입 정보
+            buildConfigField("String", "BUILD_TYPE", "\"release\"")
+
+            // 실제 광고 ID (환경변수 또는 local.properties에서 설정)
+            // ⚠️ 출시 전 반드시 실제 AdMob 광고 ID로 교체해야 함!
+            val props = Properties().apply {
+                val f = rootProject.file("local.properties")
+                if (f.exists()) f.inputStream().use { load(it) }
+            }
+            val bannerAdId = System.getenv("BANNER_AD_UNIT_ID")
+                ?: props.getProperty("BANNER_AD_UNIT_ID")
+                ?: "ca-app-pub-3940256099942544/6300978111"  // 임시: 테스트 ID (교체 필요!)
+            val interstitialAdId = System.getenv("INTERSTITIAL_AD_UNIT_ID")
+                ?: props.getProperty("INTERSTITIAL_AD_UNIT_ID")
+                ?: "ca-app-pub-3940256099942544/1033173712"  // 임시: 테스트 ID (교체 필요!)
+            val appOpenAdId = System.getenv("APP_OPEN_AD_UNIT_ID")
+                ?: props.getProperty("APP_OPEN_AD_UNIT_ID")
+                ?: "ca-app-pub-3940256099942544/9257395921"  // 임시: 테스트 ID (교체 필요!)
+
+            buildConfigField("String", "BANNER_AD_UNIT_ID", "\"${bannerAdId}\"")
+            buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"${interstitialAdId}\"")
+            buildConfigField("String", "APP_OPEN_AD_UNIT_ID", "\"${appOpenAdId}\"")
+
+            // 서명 설정 적용 (환경변수가 있을 때만, 없으면 디버그 서명 사용)
+            signingConfig = signingConfigs.findByName("release")
+                ?: signingConfigs.getByName("debug")
 
             // 코드 난독화 및 최적화
             isMinifyEnabled = true
