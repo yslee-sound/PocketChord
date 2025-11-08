@@ -278,7 +278,7 @@ fun MainScreen(navController: NavHostController) {
             description = emergencyPolicy!!.content,
             newAppPackage = "com.sweetapps.pocketchord",  // 기본값 (redirect_url이 있으면 무시됨)
             redirectUrl = emergencyPolicy!!.redirectUrl,
-            buttonText = "새 앱 설치하기",
+            buttonText = emergencyPolicy!!.buttonText,  // ← DB에서 제어! (NOT NULL)
             isDismissible = emergencyPolicy!!.isDismissible,  // ← DB에서 제어!
             onDismiss = if (emergencyPolicy!!.isDismissible) {
                 { showEmergencyDialog = false }

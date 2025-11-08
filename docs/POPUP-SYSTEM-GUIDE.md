@@ -1,7 +1,29 @@
 # 🚀 PocketChord 팝업 시스템 가이드
 
-**최종 업데이트**: 2025-11-09  
+**버전**: v2.1.0  
+**최종 업데이트**: 2025-11-09 06:35 KST  
 **상태**: ✅ 구현 완료
+
+---
+
+## 📝 버전 히스토리
+
+### v2.1.0 (2025-11-09 06:35)
+- ✅ emergency_policy에 button_text 필드 추가
+- ✅ button_text NOT NULL 제약 조건 (기본값: "확인")
+- ✅ Supabase에서 버튼 텍스트 설정 가능
+
+### v2.0.0 (2025-11-09)
+- ✅ emergency_policy에서 new_app_id 필드 제거 (redirect_url만 사용)
+- ✅ update_policy 사용 가이드 작성 (UPDATE-POLICY-USAGE-GUIDE.md)
+- ✅ 테스트용 숫자(999, 1000) 가이드 제거
+- ✅ 실제 운영 방법만 문서화
+
+### v1.0.0 (2025-11-08)
+- ✅ 4개 테이블 분리 완료 (emergency, update, notice, ad)
+- ✅ app_policy 테이블 제거
+- ✅ 우선순위 로직 구현
+- ✅ Phase별 릴리즈 테스트 문서 작성
 
 ---
 
@@ -52,6 +74,7 @@ CREATE TABLE emergency_policy (
     is_active BOOLEAN DEFAULT FALSE,
     content TEXT NOT NULL,
     redirect_url TEXT,
+    button_text TEXT NOT NULL DEFAULT '확인',  -- ⭐ 버튼 텍스트 (필수)
     is_dismissible BOOLEAN DEFAULT TRUE  -- ⭐ Google Play 준수
 );
 ```
@@ -59,6 +82,7 @@ CREATE TABLE emergency_policy (
 **핵심 필드**:
 - `is_dismissible`: X 버튼 제어 (Google Play 정책 준수)
 - `redirect_url`: Play Store 링크 또는 웹 페이지
+- `button_text`: 버튼 텍스트 (필수, 기본값: "확인")
 - 추적 없음 (매번 표시)
 
 **사용 예시**:
@@ -68,7 +92,17 @@ UPDATE emergency_policy
 SET is_active = true,
     is_dismissible = true,
     content = '⚠️ 이 앱은 더 이상 지원되지 않습니다.',
-    redirect_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord.v2'
+    redirect_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord.v2',
+    button_text = '새 앱 다운로드'
+WHERE app_id = 'com.sweetapps.pocketchord';
+
+-- 단순 공지 (redirect_url 없음)
+UPDATE emergency_policy 
+SET is_active = true,
+    is_dismissible = true,
+    content = '✅ 시스템 점검이 완료되었습니다.',
+    redirect_url = NULL,
+    button_text = '확인'  -- 기본값
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 
@@ -248,4 +282,32 @@ WHERE app_id = 'your.app.id';
 모든 팝업 시스템이 구현되고 테스트 준비가 완료되었습니다!
 
 **다음 단계**: 릴리즈 테스트 문서를 따라 검증하세요!
+
+---
+
+## 📚 관련 문서
+
+### 상세 가이드
+- **[UPDATE-POLICY-USAGE-GUIDE.md](UPDATE-POLICY-USAGE-GUIDE.md)** - update_policy 실제 사용법
+- **[TEST-ENVIRONMENT-GUIDE.md](TEST-ENVIRONMENT-GUIDE.md)** - 테스트 환경 선택 가이드
+
+### 릴리즈 테스트
+- **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency
+- **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update
+- **[RELEASE-TEST-PHASE3-RELEASE.md](RELEASE-TEST-PHASE3-RELEASE.md)** - Phase 3: Notice
+- **[RELEASE-TEST-PHASE4-RELEASE.md](RELEASE-TEST-PHASE4-RELEASE.md)** - Phase 4: 우선순위
+
+### SQL 스크립트
+- **[sql/01-create-update-policy.sql](sql/01-create-update-policy.sql)** - update_policy 테이블
+- **[sql/02-create-emergency-policy.sql](sql/02-create-emergency-policy.sql)** - emergency_policy 테이블
+- **[sql/03-create-notice-policy.sql](sql/03-create-notice-policy.sql)** - notice_policy 테이블
+- **[sql/07-create-debug-test-data.sql](sql/07-create-debug-test-data.sql)** - 디버그 테스트 데이터
+
+### 변경 이력
+- **[archive/NEW-APP-ID-REMOVAL-HISTORY.md](archive/NEW-APP-ID-REMOVAL-HISTORY.md)** - new_app_id 제거 기록
+
+---
+
+**문서 버전**: v2.1.0  
+**마지막 수정**: 2025-11-09 06:35 KST
 

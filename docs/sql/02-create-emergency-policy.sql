@@ -19,7 +19,7 @@ CREATE TABLE public.emergency_policy (
     -- 긴급 메시지
     content TEXT NOT NULL,
     redirect_url TEXT,          -- Play Store 링크 등
-    new_app_id TEXT,            -- 새 앱 패키지명 (예: com.sweetapps.pocketchord.v2)
+    button_text TEXT NOT NULL DEFAULT '확인',  -- 버튼 텍스트
 
     -- ===== Google Play 정책 준수 (핵심!) =====
     is_dismissible BOOLEAN NOT NULL DEFAULT TRUE,
@@ -47,8 +47,8 @@ USING (true);
 -- 4. 코멘트 추가
 COMMENT ON TABLE public.emergency_policy IS '긴급 상황 팝업 정책 (앱 차단, 서비스 종료 등)';
 COMMENT ON COLUMN public.emergency_policy.is_dismissible IS 'X 버튼 허용 여부 (기본값 true, false는 최후의 수단)';
-COMMENT ON COLUMN public.emergency_policy.new_app_id IS '새 앱 패키지명 (앱 이전 시 사용, 예: com.sweetapps.pocketchord.v2)';
 COMMENT ON COLUMN public.emergency_policy.redirect_url IS 'Play Store 링크 (새 앱 설치 유도)';
+COMMENT ON COLUMN public.emergency_policy.button_text IS '버튼 텍스트 (예: "새 앱 설치하기", "확인", "자세히 보기")';
 COMMENT ON COLUMN public.emergency_policy.content IS '긴급 메시지 내용';
 
 -- 5. 테스트 데이터 삽입 (비활성화 상태)
@@ -58,12 +58,14 @@ INSERT INTO public.emergency_policy (
     is_active,
     content,
     redirect_url,
+    button_text,
     is_dismissible
 ) VALUES (
     'com.sweetapps.pocketchord',
     false,  -- 비활성화 (테스트용)
     '⚠️ [테스트] 이 앱은 더 이상 지원되지 않습니다.\n새 버전을 설치해주세요.',
     'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord',
+    '확인',
     true    -- X 버튼 허용 (Google Play 정책 준수)
 );
 
@@ -73,14 +75,14 @@ INSERT INTO public.emergency_policy (
     is_active,
     content,
     redirect_url,
-    new_app_id,
+    button_text,
     is_dismissible
 ) VALUES (
     'com.sweetapps.pocketchord.debug',
     false,  -- 비활성화 (테스트 시 수동으로 활성화)
     '🚨 [DEBUG] 긴급 테스트 메시지입니다.\n이것은 디버그용 팝업입니다.',
     'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord.debug',
-    'com.sweetapps.pocketchord.debug.v2',
+    '확인',
     true    -- X 버튼 허용
 );
 

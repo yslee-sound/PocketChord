@@ -1,7 +1,31 @@
 # 릴리즈 테스트 SQL 스크립트 - Phase 1 (릴리즈용)
 
+**버전**: v1.1.0  
+**최종 업데이트**: 2025-11-09 06:35 KST  
 **app_id**: `com.sweetapps.pocketchord` (프로덕션)  
 **포함 내용**: 초기 상태 확인 + Emergency 테스트
+
+---
+
+## 📝 변경 이력
+
+### v1.1.0 (2025-11-09 06:35)
+- ✅ emergency_policy에 button_text 필드 추가 반영
+- ✅ 검증 체크리스트 업데이트
+
+### v1.0.0 (2025-11-08)
+- ✅ 최초 작성
+- ✅ Phase 1 테스트 시나리오 작성
+
+---
+
+## ⚠️ 디버그 버전 사용 시 주의사항
+
+디버그 버전(🔧)을 테스트하기 전에 먼저 디버그 데이터를 생성해야 합니다!
+
+**1회만 실행**: `docs/sql/07-create-debug-test-data.sql`
+
+이미 생성했다면 건너뛰세요!
 
 ---
 
@@ -112,7 +136,8 @@ ad_policy: open = _____, inter = _____, banner = _____
 UPDATE emergency_policy 
 SET is_active = true,
     is_dismissible = true,
-    content = '🚨 [테스트] 긴급 테스트입니다. X 버튼으로 닫을 수 있습니다.'
+    content = '🚨 [테스트] 긴급 테스트입니다. X 버튼으로 닫을 수 있습니다.',
+    button_text = '확인'
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 
@@ -123,7 +148,8 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 UPDATE emergency_policy 
 SET is_active = true,
     is_dismissible = true,
-    content = '🚨 [DEBUG 테스트] 긴급 테스트입니다. X 버튼으로 닫을 수 있습니다.'
+    content = '🚨 [DEBUG 테스트] 긴급 테스트입니다. X 버튼으로 닫을 수 있습니다.',
+    button_text = '확인'
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
@@ -139,7 +165,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - [ ] ✅ 배지: "긴급" 표시
 - [ ] ✅ **X 버튼 있음** (우측 상단)
 - [ ] ✅ 내용: 설정한 content 표시
-- [ ] ✅ "새 앱 설치하기" 버튼 있음
+- [ ] ✅ "확인" 버튼 있음
 
 ### 2-3. X 버튼 클릭
 
@@ -181,7 +207,8 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 -- 1-2. Emergency 수정 (X 버튼 없음)
 UPDATE emergency_policy 
 SET is_dismissible = false,
-    content = '🚨 [테스트] 이 앱은 더 이상 지원되지 않습니다. 새 앱을 설치해야 합니다.'
+    content = '🚨 [테스트] 이 앱은 더 이상 지원되지 않습니다. 새 앱을 설치해야 합니다.',
+    button_text = '새 앱 설치하기'
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 
@@ -191,7 +218,8 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 -- 1-2. Emergency 수정 (X 버튼 없음)
 UPDATE emergency_policy 
 SET is_dismissible = false,
-    content = '🚨 [DEBUG 테스트] 이 앱은 더 이상 지원되지 않습니다. 새 앱을 설치해야 합니다.'
+    content = '🚨 [DEBUG 테스트] 이 앱은 더 이상 지원되지 않습니다. 새 앱을 설치해야 합니다.',
+    button_text = '새 앱 설치하기'
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
@@ -252,4 +280,9 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ---
 
 **Phase 1 완료!** 🎉
+
+---
+
+**문서 버전**: v1.1.0  
+**마지막 수정**: 2025-11-09 06:35 KST
 

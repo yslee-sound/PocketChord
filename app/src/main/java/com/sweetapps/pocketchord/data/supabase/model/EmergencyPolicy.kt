@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
  *     is_active BOOLEAN NOT NULL DEFAULT TRUE,
  *     content TEXT NOT NULL,
  *     redirect_url TEXT,
+ *     button_text TEXT,
  *     is_dismissible BOOLEAN NOT NULL DEFAULT TRUE,
  *     CONSTRAINT emergency_policy_pkey PRIMARY KEY (id)
  * )
@@ -93,6 +94,15 @@ data class EmergencyPolicy(
     @SerialName("redirect_url")
     val redirectUrl: String? = null,
 
+    /**
+     * 버튼 텍스트
+     *
+     * "확인" 버튼의 텍스트를 설정
+     * 예: "확인", "새 앱 설치하기", "자세히 보기"
+     * 기본값: "확인"
+     */
+    @SerialName("button_text")
+    val buttonText: String = "확인",
 
     // ===== Google Play 정책 준수 (핵심!) =====
 
