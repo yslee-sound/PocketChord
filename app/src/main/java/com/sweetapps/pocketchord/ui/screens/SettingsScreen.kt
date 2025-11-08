@@ -26,7 +26,7 @@ import androidx.core.net.toUri
 @Composable
 fun SettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
-    val appVersion = BuildConfig.VERSION_NAME
+    val appVersion = "${BuildConfig.VERSION_NAME}.${BuildConfig.BUILD_TYPE}"
 
     Box(
         modifier = Modifier
