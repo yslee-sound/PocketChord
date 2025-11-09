@@ -762,58 +762,6 @@ Phase 2.5 완료 조건:
 
 ### 테스트 전 초기 상태로 복구
 
-**디버그 버전 초기화** 🔧:
-```sql
--- 디버그 초기화 (테스트용 짧은 간격)
-UPDATE update_policy
-SET target_version_code = 10,
-    is_force_update = false,
-    reshow_interval_hours = 1,   -- 1시간 (미사용)
-    reshow_interval_minutes = NULL,  -- NULL (초 단위 우선)
-    reshow_interval_seconds = 60,    -- 60초 (1분 테스트)
-    max_later_count = 3,
-    is_active = true
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
-
--- 확인
-SELECT app_id, target_version_code, is_force_update, 
-       reshow_interval_hours, reshow_interval_minutes, reshow_interval_seconds, max_later_count, is_active
-FROM update_policy
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
-```
-
-**기대 결과**:
-
-| app_id | target_version_code | is_force_update | reshow_interval_hours | reshow_interval_minutes | reshow_interval_seconds | max_later_count | is_active |
-|--------|---------------------|-----------------|----------------------|------------------------|------------------------|-----------------|-----------|
-| com.sweetapps.pocketchord.debug | 10 | false | 1 | NULL | 60 | 3 | true |
-
-**릴리즈 버전 초기화** ⭐:
-```sql
--- 릴리즈 운영 기본값
-UPDATE update_policy
-SET target_version_code = 10,
-    is_force_update = false,
-    reshow_interval_hours = 24,  -- 24시간
-    reshow_interval_minutes = NULL,  -- 운영: 항상 NULL
-    reshow_interval_seconds = NULL,  -- 운영: 항상 NULL
-    max_later_count = 3,
-    is_active = true
-WHERE app_id = 'com.sweetapps.pocketchord';
-
--- 확인
-SELECT app_id, target_version_code, is_force_update,
-       reshow_interval_hours, reshow_interval_minutes, reshow_interval_seconds, max_later_count, is_active
-FROM update_policy
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-**기대 결과**:
-
-| app_id | target_version_code | is_force_update | reshow_interval_hours | reshow_interval_minutes | reshow_interval_seconds | max_later_count | is_active |
-|--------|---------------------|-----------------|----------------------|------------------------|------------------------|-----------------|-----------|
-| com.sweetapps.pocketchord | 10 | false | 24 | NULL | NULL | 3 | true |
-
 **두 버전 동시 초기화**:
 ```sql
 -- 디버그 초기화
