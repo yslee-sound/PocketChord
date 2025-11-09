@@ -58,16 +58,14 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 -- 2-1. 강제 업데이트 활성화
 UPDATE update_policy
 SET is_active = true,
-    target_version_code = 999,
+    target_version_code = 4,
     is_force_update = true,
-    message = '[DEBUG 테스트] 필수 업데이트가 있습니다',
     release_notes = '• [DEBUG] 중요 보안 패치\n• [DEBUG] 필수 기능 추가'
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 -- 2-2. 선택적 업데이트로 변경
 UPDATE update_policy
 SET is_force_update = false,
-    message = '[DEBUG 테스트] 새로운 기능이 추가되었습니다',
     release_notes = '• [DEBUG] 다크 모드 추가\n• [DEBUG] 성능 개선\n• [DEBUG] UI 업데이트'
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
@@ -78,12 +76,12 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 -- 2-3. 버전 더 높게 (추가 테스트)
 UPDATE update_policy
-SET target_version_code = 1000
+SET target_version_code = 5
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 -- 2-4. Update 정리 (원래대로)
 UPDATE update_policy
-SET target_version_code = 1
+SET target_version_code = 3
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 -- ===== Phase 3: Notice 테스트 =====
@@ -173,7 +171,7 @@ SET is_active = false
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 UPDATE update_policy
-SET target_version_code = 1,
+SET target_version_code = 3,
     is_force_update = false
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
@@ -183,4 +181,3 @@ SET is_active = true,
     content = '[DEBUG] PocketChord를 이용해 주셔서 감사합니다!',
     notice_version = 1
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
-

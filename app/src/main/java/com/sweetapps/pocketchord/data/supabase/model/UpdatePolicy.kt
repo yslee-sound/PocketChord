@@ -114,7 +114,63 @@ data class UpdatePolicy(
      * 기본값: https://play.google.com/
      */
     @SerialName("download_url")
-    val downloadUrl: String = "https://play.google.com/"
+    val downloadUrl: String = "https://play.google.com/",
+
+    // ===== Phase 2.5: 시간 기반 재표시 필드 =====
+
+    /**
+     * 재표시 간격 (시간 단위)
+     * "나중에" 클릭 후 다시 팝업을 표시할 때까지의 시간
+     * 기본값: 24시간
+     *
+     * 예시:
+     * - 24: 24시간(1일) 후 재표시
+     * - 1: 1시간 후 재표시 (테스트용)
+     */
+    @SerialName("reshow_interval_hours")
+    val reshowIntervalHours: Int? = 24,
+
+    /**
+     * 재표시 간격 (분 단위) - 테스트 전용
+     * 우선순위: reshow_interval_seconds > reshow_interval_minutes > reshow_interval_hours
+     * NULL이면 하위 단위 사용
+     *
+     * 사용 예시:
+     * - NULL: hours 사용 (운영 환경)
+     * - 5: 5분 후 재표시 (빠른 테스트용)
+     * - 30: 30분 후 재표시
+     *
+     * ⚠️ 주의: 운영 환경에서는 항상 NULL로 설정해야 함
+     */
+    @SerialName("reshow_interval_minutes")
+    val reshowIntervalMinutes: Int? = null,
+
+    /**
+     * 재표시 간격 (초 단위) - 초고속 테스트 전용
+     * 우선순위: 최우선 (seconds > minutes > hours)
+     * NULL이면 minutes 또는 hours 사용
+     *
+     * 사용 예시:
+     * - NULL: minutes/hours 사용 (운영 환경)
+     * - 30: 30초 후 재표시 (초고속 테스트용)
+     * - 60: 1분 후 재표시
+     *
+     * ⚠️ 주의: 운영 환경에서는 항상 NULL로 설정해야 함
+     */
+    @SerialName("reshow_interval_seconds")
+    val reshowIntervalSeconds: Int? = null,
+
+    /**
+     * 최대 "나중에" 허용 횟수
+     * 이 횟수에 도달하면 강제 업데이트로 전환
+     * 기본값: 3회
+     *
+     * 예시:
+     * - 3: "나중에" 3회 클릭 후 강제 전환
+     * - 1: "나중에" 1회만 허용
+     */
+    @SerialName("max_later_count")
+    val maxLaterCount: Int? = 3
 ) {
     /**
      * 업데이트가 필요한지 확인

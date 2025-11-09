@@ -1,330 +1,120 @@
 # 릴리즈 테스트 SQL 스크립트 - Phase 3 (릴리즈용)
 
-**버전**: v1.1.0  
-**최종 업데이트**: 2025-11-09 09:05 KST  
+**버전**: v1.6.0  
+**최종 업데이트**: 2025-11-09 16:39:35 KST  
 **app_id**: `com.sweetapps.pocketchord` (프로덕션)  
 **포함 내용**: Notice 테스트 (버전 관리)
 
 ---
 
-## 📝 변경 이력
+## 📝 변경 이력 (요약)
 
-### v1.1.0 (2025-11-09 09:05)
-- ✅ 모든 SQL 문에 디버그 버전 추가
-- ✅ 릴리즈/디버그 버전 명확히 구분
-
-### v1.0.0 (2025-11-09 06:35)
-- ✅ 최초 작성
-- ✅ Phase 3 테스트 시나리오 작성
+- v1.6.0 (2025-11-09 16:39:35 KST): 문서 간결화 및 날짜 버전 권장 정리
+- v1.5.0 이하: 이전 작성/수정 사항 (세부사항은 Git/이전 로그 참고)
 
 ---
 
-## ⚠️ 디버그 버전 사용 시 주의사항
+## 📋 Phase 3 개요 (간결)
 
-디버그 버전(🔧)을 테스트하기 전에 먼저 디버그 데이터를 생성해야 합니다!
+목표: 공지사항(notice_policy)의 동작(활성화, 재표시 조건, 버전 관리)을 검증합니다.
+핵심 시나리오:
+1) 공지 활성화 → 표시 확인
+2) 동일 버전(오타 수정) → 재표시 안 됨
+3) 버전 증가 → 모든 사용자에게 재표시
 
-**1회만 실행**: `docs/sql/07-create-debug-test-data.sql`
-
-이미 생성했다면 건너뛰세요!
-
----
-
-## 📋 Phase 3 개요
-
-이 문서는 릴리즈 테스트의 세 번째 단계입니다.
-
-**포함된 테스트**:
-1. ✅ 공지사항 표시 확인
-2. ✅ 오타 수정 (버전 유지) → 재표시 안 됨
-3. ✅ 새 공지 (버전 증가) → 재표시됨
-
-**소요 시간**: 약 15분
+소요 시간: 약 10~15분
 
 ---
 
-## 📢 Step 1: 공지사항 표시 테스트
+## 📢 핵심 테스트 절차
 
-### 1-1. 현재 버전 확인
+> 사전: 필요 시 앱 데이터 초기화(SharedPreferences 또는 앱 데이터 삭제) 후 시작
 
-**SQL 스크립트 - 릴리즈 버전** ⭐
+### 1) 공지 활성화
+```sql
+-- 1-1. 공지 활성화 - 릴리즈 & 디버그
+UPDATE notice_policy
+SET is_active = true,
+    title = CASE 
+        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 공지: 서비스 안내'
+        ELSE '공지: 서비스 안내'
+    END,
+    content = CASE 
+        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 테스트용 공지 내용입니다.'
+        ELSE '중요 공지입니다. 앱을 최신 버전으로 유지해 주세요.'
+    END,
+    notice_version = 251109  -- YYMMDD 형식 권장
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
+```
+검증: 앱 실행 → 팝업 표시 / X로 닫기 → 재실행 시 재표시 여부 확인(정상: 재표시 안 됨)
+
+---
+
+### 2) 오타 수정(버전 유지)
+
+요약: 같은 `notice_version`으로는 이미 본 사용자에게 재표시되지 않습니다. 따라서 단순 오타 수정은 버전을 변경하지 마세요.
 
 ```sql
--- 3-1. 현재 버전 확인
-SELECT notice_version, title, is_active 
-FROM notice_policy 
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-**SQL 스크립트 - 디버그 버전** 🔧
-
-```sql
--- 3-1. 현재 버전 확인 (디버그)
-SELECT notice_version, title, is_active 
-FROM notice_policy 
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
-```
-
-**결과 기록**: `notice_version = _____`
-
-### 1-2. SharedPreferences 초기화
-
-- [ ] 앱 데이터 삭제
-- [ ] 또는: 앱 재설치
-
-### 1-3. 앱 실행 및 검증
-
-- [ ] 앱 실행
-
-**검증 체크리스트**:
-- [ ] ✅ 공지사항 팝업 표시
-- [ ] ✅ 제목 표시됨
-- [ ] ✅ 내용 표시됨
-- [ ] ✅ X 버튼 있음
-
-### 1-4. X 클릭
-
-- [ ] X 버튼 클릭
-- [ ] ✅ 팝업 닫힘
-
-### 1-5. 재실행 (추적 확인)
-
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-- [ ] **예상**: 공지 팝업 표시 **안 됨** ⭐
-- [ ] ✅ 팝업 표시 안 됨 (추적됨)
-
-### Logcat 확인
-
-**Filter 설정**: `tag:HomeScreen`
-
-```
-예상 로그:
-✅ "Phase 3: Checking notice_policy"
-✅ "notice_policy found: version=1, title=환영합니다! 🎉"
-✅ "Notice already viewed (version=1), skipping"
-```
-
-- [ ] ✅ 로그 확인 완료
-
----
-
-## 📢 Step 2: 오타 수정 테스트 (버전 유지)
-
-### 2-1. 오타 수정
-
-**SQL 스크립트 - 릴리즈 버전** ⭐
-
-```sql
--- 3-2. 오타 수정 (버전 유지)
+-- 오타 수정 - 릴리즈 & 디버그
 UPDATE notice_policy 
-SET content = 'PocketChord를 이용해 주셔서 정말 감사합니다!'
-WHERE app_id = 'com.sweetapps.pocketchord';
--- notice_version은 변경하지 않음!
+SET content = CASE 
+    WHEN app_id LIKE '%.debug' THEN '[DEBUG] 수정된 내용'
+    ELSE '수정된 내용'
+END
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
 ```
-
-**SQL 스크립트 - 디버그 버전** 🔧
-
-```sql
--- 3-2. 오타 수정 (버전 유지, 디버그)
-UPDATE notice_policy 
-SET content = '[DEBUG] PocketChord를 이용해 주셔서 정말 감사합니다!'
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
--- notice_version은 변경하지 않음!
-```
-
-### 2-2. 앱 실행 및 검증
-
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-
-**검증**:
-- [ ] **예상**: 공지 팝업 표시 **안 됨** ⭐
-- [ ] ✅ 팝업 표시 안 됨 (버전이 같으므로)
-
-### Logcat 확인
-
-**Filter 설정**: `tag:HomeScreen`
-
-```
-예상 로그:
-✅ "Notice already viewed (version=1), skipping"
-```
-
-- [ ] ✅ 로그 확인 완료
-
-**의미**: 오타 수정 시 버전을 유지하면 이미 본 사용자에게 재표시되지 않습니다! ✅
+검증: 이미 본 사용자는 변경 후에도 팝업 재표시 안 됨.
 
 ---
 
-## 📢 Step 3: 새 공지 테스트 (버전 증가)
-
-### 3-1. 버전 증가
-
-**SQL 스크립트 - 릴리즈 버전** ⭐
-
+### 3) 새 공지(버전 증가)
 ```sql
--- 3-3. 새 공지 (버전 증가)
-UPDATE notice_policy 
-SET title = '🎉 11월 이벤트',
-    content = '11월 특별 이벤트가 시작되었습니다!\n많은 참여 부탁드립니다.',
-    notice_version = 2  -- 버전 증가! ⭐
-WHERE app_id = 'com.sweetapps.pocketchord';
+-- 3-1. 새 공지 (버전 증가) - 릴리즈 & 디버그
+UPDATE notice_policy
+SET title = CASE 
+        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 🎉 11월 이벤트'
+        ELSE '🎉 11월 이벤트'
+    END,
+    content = CASE 
+        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 이벤트 내용'
+        ELSE '11월 특별 이벤트가 시작되었습니다! 참여하세요.'
+    END,
+    notice_version = 251110  -- 이전(251109)보다 큰 값
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
 ```
-
-**SQL 스크립트 - 디버그 버전** 🔧
-
-```sql
--- 3-3. 새 공지 (버전 증가, 디버그)
-UPDATE notice_policy 
-SET title = '[DEBUG] 🎉 11월 이벤트',
-    content = '[DEBUG] 11월 특별 이벤트가 시작되었습니다!\n많은 참여 부탁드립니다.',
-    notice_version = 2  -- 버전 증가! ⭐
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
-```
-
-### 3-2. 앱 실행 및 검증
-
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-
-**검증**:
-- [ ] **예상**: 공지 팝업 **다시 표시됨** ⭐
-- [ ] ✅ 팝업 다시 표시됨
-- [ ] ✅ 새 제목: "🎉 11월 이벤트"
-- [ ] ✅ 새 내용 표시됨
-
-### 3-3. X 클릭 후 재실행
-
-- [ ] X 버튼 클릭
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-- [ ] **예상**: 공지 팝업 표시 **안 됨** (버전 2 추적됨)
-- [ ] ✅ 팝업 표시 안 됨
-
-### Logcat 확인
-
-**Filter 설정**: `tag:HomeScreen`
-
-```
-예상 로그:
-✅ "Decision: NOTICE from notice_policy (version=2)"
-✅ "Marked notice version 2 as viewed"
-```
-
-- [ ] ✅ 로그 확인 완료
-
-**의미**: 버전을 증가시키면 모든 사용자에게 다시 표시됩니다! ✅
+검증: 앱 재시작 → 팝업이 모든 사용자에게 재표시되어야 함 → X 클릭 후 재실행 시 재표시 안 됨(버전 추적)
 
 ---
 
-## 🧹 Step 4: Notice 정리
+## 🔧 버전 관리 권장(간결)
 
-### 4-1. 원래대로 복구
+권장: 날짜 기반(YYMMDD) 또는 날짜+시간(YYMMDDHH) 사용.
+- 날짜 기반(YYMMDD): 간단하고 직관적 (단, 하루 1건 권장)
+- 날짜+시간(YYMMDDHH): 하루 여러 건 필요 시 사용
+- 자동 증가: DB에서 `notice_version = notice_version + 1` 방식은 실수 방지에 안전함
 
-**SQL 스크립트 - 릴리즈 버전** ⭐
-
-```sql
--- 3-4. Notice 정리 (원래대로)
-UPDATE notice_policy 
-SET title = '환영합니다! 🎉',
-    content = 'PocketChord를 이용해 주셔서 감사합니다!\n더 나은 서비스를 제공하기 위해 노력하겠습니다.',
-    notice_version = 1
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-**SQL 스크립트 - 디버그 버전** 🔧
-
-```sql
--- 3-4. Notice 정리 (원래대로, 디버그)
-UPDATE notice_policy 
-SET title = '[DEBUG] 환영합니다! 🎉',
-    content = '[DEBUG] PocketChord를 이용해 주셔서 감사합니다!\n더 나은 서비스를 제공하기 위해 노력하겠습니다.',
-    notice_version = 1
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
-```
-
-- [ ] ✅ 정리 완료
+중요: 절대 자릿수를 혼용(예: 6자리와 7자리 혼합)하지 마세요 — 숫자 비교가 깨집니다.
 
 ---
 
-## 💡 버전 관리 정리
+## ✅ 최소 검사 목록
+- [ ] 릴리즈/디버그에 각각 SQL 적용
+- [ ] 앱에서 팝업 표시 확인
+- [ ] 동일 버전 수정 시 재표시 안 됨 확인
+- [ ] 버전 증가 시 재표시 확인
 
-### 오타 수정 (버전 유지)
+---
 
-**SQL 스크립트 - 릴리즈 버전** ⭐
-
+### 정리: 초기화
 ```sql
--- 버전 유지 = 재표시 안 됨
-UPDATE notice_policy 
-SET content = '수정된 내용'
-WHERE app_id = 'com.sweetapps.pocketchord';
--- notice_version은 건드리지 않음!
+-- 3-4. Notice 정리 (초기화) - 릴리즈 & 디버그
+UPDATE notice_policy
+SET is_active = false,
+    notice_version = 251109
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
 ```
 
-**SQL 스크립트 - 디버그 버전** 🔧
-
-```sql
--- 버전 유지 = 재표시 안 됨 (디버그)
-UPDATE notice_policy 
-SET content = '[DEBUG] 수정된 내용'
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
--- notice_version은 건드리지 않음!
-```
-
-**결과**: 이미 본 사용자에게 재표시 **안 됨** ✅
-
 ---
 
-### 새 공지 (버전 증가)
-
-**SQL 스크립트 - 릴리즈 버전** ⭐
-
-```sql
--- 버전 증가 = 모두에게 재표시
-UPDATE notice_policy 
-SET title = '새 공지',
-    content = '새 내용',
-    notice_version = 2  -- 증가!
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-**SQL 스크립트 - 디버그 버전** 🔧
-
-```sql
--- 버전 증가 = 모두에게 재표시 (디버그)
-UPDATE notice_policy 
-SET title = '[DEBUG] 새 공지',
-    content = '[DEBUG] 새 내용',
-    notice_version = 2  -- 증가!
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
-```
-
-**결과**: 모든 사용자에게 **재표시됨** ✅
-
----
-
-## ✅ Phase 3 완료 체크리스트
-
-- [ ] 공지사항 표시 확인 완료
-- [ ] 오타 수정 (버전 유지) 테스트 완료
-- [ ] 새 공지 (버전 증가) 테스트 완료
-- [ ] Notice 정리 완료
-- [ ] 버전 관리 동작 이해 완료
-- [ ] 모든 로그 확인 완료
-
----
-
-## 🔜 다음 단계
-
-**Phase 4**로 이동하세요!
-- Phase 4: 우선순위 테스트 + 최종 확인
-
----
-
-**Phase 3 완료!** 🎉
-
----
-
-**문서 버전**: v1.1.0  
-**마지막 수정**: 2025-11-09 09:05 KST
-
+**문서 버전**: v1.6.0  
+**마지막 수정**: 2025-11-09 16:39:35 KST

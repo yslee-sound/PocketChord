@@ -32,7 +32,6 @@ import com.sweetapps.pocketchord.data.supabase.model.Announcement
 fun NoticeDialog(
     title: String,
     description: String,
-    imageUrl: String? = null, // 미래에 Coil 등으로 교체할 때 사용
     buttonText: String? = null,
     onDismiss: () -> Unit,
     onButtonClick: (() -> Unit)? = null,
@@ -79,7 +78,6 @@ fun NoticeDialog(
                                 .aspectRatio(16f / 9f)
                                 .clip(shape)
                         ) {
-                            // 현재는 리소스 이미지를 표시 (imageUrl 사용은 추후 확장)
                             Image(
                                 painter = painterResource(id = R.drawable.notice_sample),
                                 contentDescription = null,
@@ -168,7 +166,6 @@ fun NoticeDialog(
 fun NoticeDialogDark(
     title: String,
     description: String,
-    imageUrl: String? = null,
     buttonText: String? = null,
     onDismiss: () -> Unit,
     onButtonClick: (() -> Unit)? = null
@@ -176,7 +173,6 @@ fun NoticeDialogDark(
     NoticeDialog(
         title = title,
         description = description,
-        imageUrl = imageUrl,
         buttonText = buttonText,
         onDismiss = onDismiss,
         onButtonClick = onButtonClick,
@@ -198,7 +194,6 @@ fun SimpleNoticeDialog(
     NoticeDialog(
         title = title,
         description = description,
-        imageUrl = null,
         buttonText = null,
         onDismiss = onDismiss,
         onButtonClick = null

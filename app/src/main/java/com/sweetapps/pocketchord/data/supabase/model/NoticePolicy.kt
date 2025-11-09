@@ -134,26 +134,6 @@ data class NoticePolicy(
      * - "notice_v1", "notice_v2", "notice_v3" ...
      */
     @SerialName("notice_version")
-    val noticeVersion: Int = 1,
-
-    // ===== 부가 정보 (선택적) =====
-
-    /**
-     * 이미지 URL (선택적)
-     *
-     * 공지사항에 표시할 이미지
-     * 예: "https://example.com/event_banner.png"
-     */
-    @SerialName("image_url")
-    val imageUrl: String? = null,
-
-    /**
-     * 액션 URL (선택적)
-     *
-     * 사용자가 클릭 시 이동할 URL
-     * 예: "https://example.com/event-details"
-     */
-    @SerialName("action_url")
-    val actionUrl: String? = null
+    val noticeVersion: Int = 1
 )
 

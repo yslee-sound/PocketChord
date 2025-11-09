@@ -173,6 +173,32 @@ fun MainScreen(navController: NavHostController) {
             updatePolicy?.let { up ->
                 val currentVersion = com.sweetapps.pocketchord.BuildConfig.VERSION_CODE
 
+                // Phase 2.5: 시간 기반 재표시 로직을 위한 SharedPreferences 읽기
+                val updatePrefsFile = context.getSharedPreferences("update_preferences", android.content.Context.MODE_PRIVATE)
+                val dismissedTime = updatePrefsFile.getLong("update_dismissed_time", 0L)
+                val laterCount = updatePrefsFile.getInt("update_later_count", 0)
+                val dismissedVersion = updatePrefsFile.getInt("dismissedVersionCode", -1)
+                val now = System.currentTimeMillis()
+
+                // Phase 2.5: 초/분/시간 단위 우선순위 적용 (테스트 편의)
+                val reshowIntervalMs = when {
+                    // 1순위: 초 단위 (초고속 테스트용)
+                    up.reshowIntervalSeconds != null -> {
+                        up.reshowIntervalSeconds.coerceAtLeast(1).toLong() * 1000L
+                    }
+                    // 2순위: 분 단위 (빠른 테스트용)
+                    up.reshowIntervalMinutes != null -> {
+                        up.reshowIntervalMinutes.coerceAtLeast(1).toLong() * 60 * 1000L
+                    }
+                    // 3순위: 시간 단위 (운영 환경)
+                    else -> {
+                        (up.reshowIntervalHours?.coerceAtLeast(1) ?: 24) * 60 * 60 * 1000L
+                    }
+                }
+
+                val maxLaterCount = up.maxLaterCount?.coerceAtLeast(1) ?: 3
+                val elapsed = now - dismissedTime
+
                 when {
                     up.requiresForceUpdate(currentVersion) -> {
                         Log.d("HomeScreen", "Decision: FORCE UPDATE from update_policy (target=${up.targetVersionCode})")
@@ -194,25 +220,94 @@ fun MainScreen(navController: NavHostController) {
                         return@LaunchedEffect  // 강제 업데이트면 다른 팝업 무시
                     }
 
-                    up.recommendsOptionalUpdate(currentVersion) &&
-                        dismissedVersionCode.value != up.targetVersionCode -> {
-                        Log.d("HomeScreen", "Decision: OPTIONAL UPDATE from update_policy (target=${up.targetVersionCode})")
-                        updateInfo = UpdateInfo(
-                            id = null,
-                            versionCode = up.targetVersionCode,
-                            versionName = "",
-                            appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
-                            isForce = false,
-                            releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
-                            releasedAt = null,
-                            downloadUrl = up.downloadUrl
-                        )
-                        showUpdateDialog = true
-                        return@LaunchedEffect  // 선택적 업데이트면 다른 팝업 무시
+                    up.recommendsOptionalUpdate(currentVersion) -> {
+                        // Phase 2.5: 시간 경과 체크 (최우선 - 버전 비교보다 먼저!)
+                        if (dismissedTime > 0 && elapsed >= reshowIntervalMs) {
+                            // 시간이 경과했으므로 재표시
+                            val newLaterCount = laterCount + 1
+                            val intervalMsg = when {
+                                up.reshowIntervalSeconds != null -> "${up.reshowIntervalSeconds}s"
+                                up.reshowIntervalMinutes != null -> "${up.reshowIntervalMinutes}min"
+                                else -> "${up.reshowIntervalHours ?: 24}h"
+                            }
+                            Log.d("HomeScreen", "⏱️ Update interval elapsed (>= $intervalMsg), reshow allowed")
+                            Log.d("HomeScreen", "🔄 Later count: $laterCount → $newLaterCount")
+
+                            // 최대 횟수 도달 확인
+                            if (newLaterCount >= maxLaterCount) {
+                                Log.d("HomeScreen", "🚨 Later count ($newLaterCount) >= max ($maxLaterCount), forcing update mode")
+                                updateInfo = UpdateInfo(
+                                    id = null,
+                                    versionCode = up.targetVersionCode,
+                                    versionName = "",
+                                    appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                                    isForce = true,  // 강제로 전환
+                                    releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
+                                    releasedAt = null,
+                                    downloadUrl = up.downloadUrl
+                                )
+                                showUpdateDialog = true
+                                // 강제 업데이트 캐시 저장
+                                updatePrefs.edit {
+                                    putInt("force_required_version", updateInfo!!.versionCode)
+                                    putString("force_update_info", gson.toJson(updateInfo!!))
+                                }
+                                return@LaunchedEffect
+                            }
+
+                            // 아직 최대 횟수 도달 전 → 선택적 업데이트 표시
+                            updateInfo = UpdateInfo(
+                                id = null,
+                                versionCode = up.targetVersionCode,
+                                versionName = "",
+                                appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                                isForce = false,
+                                releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
+                                releasedAt = null,
+                                downloadUrl = up.downloadUrl
+                            )
+                            showUpdateDialog = true
+
+                            // laterCount는 "나중에" 클릭 시 증가 (여기서는 증가하지 않음)
+                            return@LaunchedEffect
+                        }
+
+                        // 시간 미경과 시에만 버전 체크
+                        if (dismissedVersion == up.targetVersionCode) {
+                            Log.d("HomeScreen", "⏸️ Update dialog skipped (dismissed version: $dismissedVersion, target: ${up.targetVersionCode})")
+                        } else {
+                            // 첫 표시 또는 새 버전
+                            Log.d("HomeScreen", "Decision: OPTIONAL UPDATE from update_policy (target=${up.targetVersionCode})")
+                            updateInfo = UpdateInfo(
+                                id = null,
+                                versionCode = up.targetVersionCode,
+                                versionName = "",
+                                appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                                isForce = false,
+                                releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
+                                releasedAt = null,
+                                downloadUrl = up.downloadUrl
+                            )
+                            showUpdateDialog = true
+                            return@LaunchedEffect
+                        }
                     }
 
                     else -> {
                         Log.d("HomeScreen", "update_policy exists but no update needed (current=$currentVersion >= target=${up.targetVersionCode})")
+
+                        // Phase 2.5: 버전 업데이트 완료 시 추적 데이터 초기화
+                        val updatePrefsFile = context.getSharedPreferences("update_preferences", android.content.Context.MODE_PRIVATE)
+                        if (updatePrefsFile.contains("update_dismissed_time") ||
+                            updatePrefsFile.contains("update_later_count") ||
+                            updatePrefsFile.contains("dismissedVersionCode")) {
+                            Log.d("HomeScreen", "🧹 Clearing old update tracking data (version updated)")
+                            updatePrefsFile.edit {
+                                remove("update_dismissed_time")
+                                remove("update_later_count")
+                                remove("dismissedVersionCode")
+                            }
+                        }
                     }
                 }
             }
@@ -253,7 +348,7 @@ fun MainScreen(navController: NavHostController) {
                         content = n.content,
                         isActive = true,
                         kind = "announcement",
-                        redirectUrl = n.actionUrl,
+                        redirectUrl = null,  // action_url 필드 제거됨
                         dismissible = true
                     )
                     showAnnouncementDialog = true
@@ -311,13 +406,25 @@ fun MainScreen(navController: NavHostController) {
             },
             onLaterClick = if (updateInfo!!.isForce) null else {
                 {
-                    // 선택적 업데이트를 사용자가 닫았으므로 동일 versionCode 재표시 방지 저장
+                    // Phase 2.5: 시간 기반 추적 정보 저장
+                    val updatePrefsFile = context.getSharedPreferences("update_preferences", android.content.Context.MODE_PRIVATE)
+                    val currentLaterCount = updatePrefsFile.getInt("update_later_count", 0)
+                    val newLaterCount = currentLaterCount + 1
+
+                    updatePrefsFile.edit {
+                        putLong("update_dismissed_time", System.currentTimeMillis())
+                        putInt("update_later_count", newLaterCount)
+                        putInt("dismissedVersionCode", updateInfo!!.versionCode)
+                    }
+
+                    // 기존 호환성 유지
                     updatePrefs.edit {
                         putInt("dismissed_version_code", updateInfo!!.versionCode)
                     }
                     dismissedVersionCode.value = updateInfo!!.versionCode
                     showUpdateDialog = false
                     Log.d("HomeScreen", "Update dialog dismissed for code=${updateInfo!!.versionCode}")
+                    Log.d("HomeScreen", "⏱️ Tracking: laterCount=$currentLaterCount→$newLaterCount, timestamp=${System.currentTimeMillis()}")
                 }
             }
         )
