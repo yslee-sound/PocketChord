@@ -65,39 +65,26 @@
 
 **설명**: "나중에" 기능의 시간 추적, 카운트, 강제 전환 관련 로그만 표시합니다.
 
-**주요 로그 패턴**:
-```
-UpdateLater: ⏱️ Update interval elapsed (>= 60s), reshow allowed
-UpdateLater: 📊 Current later count: 1 / 3
-UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode
-UpdateLater: ✋ Update dialog dismissed for code=10
-UpdateLater: ⏱️ Tracking: laterCount=0→1, timestamp=1762705544280
-UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)
-UpdateLater: 🧹 Clearing old update tracking data (version updated)
-```
-
 ### 전체 업데이트 로직 확인 필터 (상세)
 
 **Filter 설정**: `tag:HomeScreen`
 
 **설명**: Phase 1~4 모든 팝업 우선순위 로직을 포함한 전체 로그를 표시합니다. (정보량이 많아 Phase 2.5만 테스트 시에는 권장하지 않음)
 
-**실제 로그 패턴 예시**:
-- 정책 로드: `HomeScreen: ✅ update_policy found: targetVersion=10, isForce=false`
-- 업데이트 결정: `HomeScreen: Decision: OPTIONAL UPDATE from update_policy (target=10)`
-
 ---
-### 📊 Phase 2.5 주요 로그 설명
+### 📊 Phase 2.5 주요 로그 패턴
 
-| 로그 | 의미 | 테스트 시나리오 |
-|------|------|----------------|
-| `📊 Current later count: X / Y` | 현재 카운트 확인 (매 시작 시) | 모든 시나리오 |
-| `⏱️ Update interval elapsed (>= Xs)` | 지정 시간 경과, 재표시 허용 | S3 (디버그: 60s) |
-| `⏱️ Tracking: laterCount=X→Y` | "나중에" 클릭 시 카운트 증가 | S2, S3 |
-| `🚨 Later count (3) >= max (3)` | 최대 횟수 도달, 강제 전환 | S4 |
-| `✋ Update dialog dismissed` | "나중에" 클릭 완료 | S2, S3 |
-| `⏸️ Update dialog skipped` | 시간 미경과로 스킵 | S2 재시작 |
-| `🧹 Clearing old update tracking` | 업데이트 완료, 추적 초기화 | S5 |
+| 로그 패턴 | 의미 | 테스트 시나리오 |
+|----------|------|----------------|
+| `UpdateLater: 📊 Current later count: X / Y` | 현재 카운트 확인 (매 시작 시) | 모든 시나리오 |
+| `UpdateLater: ⏱️ Update interval elapsed (>= Xs), reshow allowed` | 지정 시간 경과, 재표시 허용 | S3 (디버그: 60s) |
+| `UpdateLater: ⏱️ Tracking: laterCount=X→Y, timestamp=...` | "나중에" 클릭 시 카운트 증가 및 시간 기록 | S2, S3 |
+| `UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode` | 최대 횟수 도달, 강제 전환 | S4 |
+| `UpdateLater: ✋ Update dialog dismissed for code=X` | "나중에" 클릭 완료 | S2, S3 |
+| `UpdateLater: ⏸️ Update dialog skipped (dismissed version: X, target: X)` | 시간 미경과로 스킵 | S2 재시작 |
+| `UpdateLater: 🧹 Clearing old update tracking data (version updated)` | 업데이트 완료, 추적 초기화 | S5 |
+| `HomeScreen: ✅ update_policy found: targetVersion=X, isForce=...` | 정책 로드 성공 (전체 필터) | 모든 시나리오 |
+| `HomeScreen: Decision: OPTIONAL UPDATE from update_policy (target=X)` | 업데이트 결정 (전체 필터) | S2, S3 |
 
 ---
 ## 3. DB 스키마 변경 SQL
