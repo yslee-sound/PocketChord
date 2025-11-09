@@ -974,25 +974,3 @@ ORDER BY app_id;
 | com.sweetapps.pocketchord.debug | 10 | false | 1 | NULL | 60 | 3 | true |
 
 ---
-
-## 9. 참고 문서
-
-- **설계 문서**: [UPDATE-POLICY-TIME-BASED-STRATEGY.md](UPDATE-POLICY-TIME-BASED-STRATEGY.md)
-- **통합 가이드**: [POPUP-SYSTEM-GUIDE.md](POPUP-SYSTEM-GUIDE.md)
-- **Phase 2 기본**: [RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)
-
----
-
-## 10. 변경 이력
-
-- v3.1.2 (2025-11-10 02:15 KST): 문서 논리 오류 수정 (S2 전제조건 등), 시간 표기 일관성 개선
-- v3.1.1 (2025-11-10 01:50 KST): 테스트 간격을 60초로 설정 (디버그 버전 빠른 테스트용)
-- v3.1.0 (2025-11-10 00:15 KST): 초 단위 테스트 지원 추가 (reshow_interval_seconds)
-- v3.0.0 (2025-11-09 20:40 KST): Phase 2.5 원래 목적(시간 기반 재표시)으로 전면 재작성
-- v2.0.0 (2025-11-09 16:39 KST): 광고 정책 검증 (폐기)
-- v1.0.x: 이전 시간대 제어 실험 (폐기)
-
----
-**문서 버전**: v3.1.2  
-**마지막 수정**: 2025-11-10 02:15:00 KST
-
