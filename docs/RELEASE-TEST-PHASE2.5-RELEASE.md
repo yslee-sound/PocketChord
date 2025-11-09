@@ -1,8 +1,9 @@
 # 릴리즈 테스트 SQL 스크립트 - Phase 2.5 (선택적 업데이트 시간 기반 재표시)
 
 **버전**: v3.1.2  
-**최종 업데이트**: 2025-11-10 02:15:00 KST  
-**대상 app_id**: `com.sweetapps.pocketchord` (릴리즈) / `com.sweetapps.pocketchord.debug` (디버그)
+**최종 업데이트**: 2025-11-10 03:15:00 KST  
+**대상 app_id**: `com.sweetapps.pocketchord` (릴리즈) / `com.sweetapps.pocketchord.debug` (디버그)  
+**테스트 상태**: ✅ 완료 (2025-11-10)
 
 ---
 ## 0. 목적
