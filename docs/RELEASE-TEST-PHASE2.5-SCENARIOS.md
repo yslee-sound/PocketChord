@@ -68,13 +68,6 @@ ORDER BY app_id;
 | com.sweetapps.pocketchord | true | 10 | false | 24 | NULL | NULL | 3 |
 | com.sweetapps.pocketchord.debug | true | 10 | false | 1 | NULL | 60 | 3 |
 
-**⚠️ 새 필드가 NULL이거나 조회 안 될 경우**:
-- 원인: ALTER TABLE은 되었지만 UPDATE가 안 됨
-- 조치: 섹션 3의 "초기값 설정" SQL(UPDATE 문) 다시 실행
-  - 릴리즈: `UPDATE update_policy SET reshow_interval_hours = 24...`
-  - 디버그: `UPDATE update_policy SET reshow_interval_hours = 1...`
-- 재검증: 위 데이터 값 확인 SQL 다시 실행
-
 ---
 
 ### S2. 첫 "나중에" 클릭
