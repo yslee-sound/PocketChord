@@ -494,7 +494,7 @@ UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode  ← ✅ 강�
 
 **테스트 단계**:
 
-**1단계: 앱 버전 증가**
+### 1단계: 앱 버전 증가
 
 **실행**:
 1. Android Studio에서 `app/build.gradle.kts` 파일 열기
@@ -511,7 +511,7 @@ UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode  ← ✅ 강�
 
 ---
 
-**2단계: 로그 확인**
+### 2단계: 로그 확인
 
 **기대 로그** (UpdateLater 태그):
 ```
@@ -528,7 +528,7 @@ UpdateLater: 🧹 Clearing old update tracking data (version updated)  ← ✅ �
 
 ---
 
-**3단계: SharedPreferences 초기화 검증** (선택 사항)
+### 3단계: SharedPreferences 초기화 검증 (선택 사항)
 
 **실행**:
 ```cmd
@@ -546,18 +546,11 @@ cat: shared_prefs/update_preferences.xml: No such file or directory
 
 ---
 
-**4단계: 재시작 후 새 업데이트 팝업 확인**
+### 4단계: 재시작 후 새 업데이트 팝업 확인
 
 **실행**:
 1. Supabase에서 `target_version_code`를 더 높게 설정 (예: 20):
-   ```sql
-   UPDATE update_policy
-   SET target_version_code = 20,
-       is_force_update = false
-   WHERE app_id = 'com.sweetapps.pocketchord.debug';
-   ```
 2. 앱 강제 종료 후 재시작
-
 
 **확인 포인트**:
 - ✅ 새 target (20) 업데이트 팝업이 표시됨
