@@ -10,21 +10,20 @@
 
 **Phase 2.5**: 선택적 업데이트에서 "나중에" 클릭 후 **시간 기반 재표시** 구현
 
-### 핵심 변경
-- DB 필드: 
-  - `reshow_interval_hours` (재표시 간격 - 시간 단위)
-  - `reshow_interval_minutes` (재표시 간격 - 분 단위, 테스트용)
-  - `reshow_interval_seconds` (재표시 간격 - 초 단위, 초고속 테스트용, **최우선**)
-  - `max_later_count` (최대 "나중에" 횟수)
-- 우선순위: **seconds > minutes > hours** (가장 작은 단위가 우선)
-- 추적: `update_dismissed_time`, `update_later_count` (SharedPreferences 저장)
-
-### ⚠️ 운영 환경 주의사항
-- **운영 환경(릴리즈)**: 반드시 `hours` 단위만 사용 (예: 24시간)
-  - `reshow_interval_seconds` = NULL
-  - `reshow_interval_minutes` = NULL
-  - `reshow_interval_hours` = 24
-- **테스트 환경(디버그)**: 빠른 테스트를 위해 초/분 단위 사용 가능 (예: 60초)
+| 구분 | 항목 | 설명 |
+|------|------|------|
+| **DB 필드** | `reshow_interval_hours` | 재표시 간격 - 시간 단위 |
+| | `reshow_interval_minutes` | 재표시 간격 - 분 단위 (테스트용) |
+| | `reshow_interval_seconds` | 재표시 간격 - 초 단위 (초고속 테스트용, **최우선**) |
+| | `max_later_count` | 최대 "나중에" 횟수 |
+| **우선순위** | 필드 우선순위 | **seconds > minutes > hours** (가장 작은 단위가 우선) |
+| **추적 데이터** | SharedPreferences | `update_dismissed_time`, `update_later_count` |
+| **운영 환경<br>(릴리즈)** | `reshow_interval_seconds` | NULL (필수) |
+| | `reshow_interval_minutes` | NULL (필수) |
+| | `reshow_interval_hours` | 24 (기본값, 반드시 hours 단위만 사용) |
+| | 예시 | 24시간 간격으로 재표시 |
+| **테스트 환경<br>(디버그)** | 설정 가능 | 빠른 테스트를 위해 초/분 단위 사용 가능 |
+| | 예시 | 60초 간격으로 재표시 |
 
 ---
 ## 🚀 빠른 테스트 시작
@@ -34,15 +33,6 @@
 
 **이미 섹션 3의 DB 스키마 변경 및 초기값 설정을 완료했다면:**
 ➡️ **[섹션 4. 시나리오별 테스트](#4-시나리오별-테스트)로 바로 이동**
-
-**테스트 순서:**
-1. **S1**: DB 변경 확인만 (이미 완료했다면 스킵 가능)
-2. **S2**: 첫 "나중에" 클릭 테스트 ⭐ (여기서부터 시작)
-3. **S3**: 시간 경과 후 재표시 테스트
-4. **S4**: 3회 "나중에" 후 강제 전환 테스트
-5. **S5**: 업데이트 후 초기화 테스트
-6. **S6**: 정책 변경 테스트
-
 
 ---
 ## 1. 테스트 시나리오 요약
@@ -59,17 +49,12 @@
 ---
 ## 2. Logcat 필터 & 예상 로그
 
-### 🎯 Phase 2.5 전용 필터 (권장)
+### 📋 Logcat 필터 설정
 
-**Filter 설정**: `tag:UpdateLater`
-
-**설명**: "나중에" 기능의 시간 추적, 카운트, 강제 전환 관련 로그만 표시합니다.
-
-### 전체 업데이트 로직 확인 필터 (상세)
-
-**Filter 설정**: `tag:HomeScreen`
-
-**설명**: Phase 1~4 모든 팝업 우선순위 로직을 포함한 전체 로그를 표시합니다. (정보량이 많아 Phase 2.5만 테스트 시에는 권장하지 않음)
+| 필터 종류 | Filter 설정 | 설명 | 권장 사용 |
+|----------|-------------|------|----------|
+| **🎯 Phase 2.5 전용 필터** | `tag:UpdateLater` | "나중에" 기능의 시간 추적, 카운트, 강제 전환 관련 로그만 표시 | ✅ 권장 (Phase 2.5 테스트 시) |
+| **전체 업데이트 로직 필터** | `tag:HomeScreen` | Phase 1~4 모든 팝업 우선순위 로직을 포함한 전체 로그 표시 | 상세 분석 시 (정보량 많음) |
 
 ---
 ### 📊 Phase 2.5 주요 로그 패턴
@@ -106,15 +91,13 @@ FROM update_policy
 WHERE app_id IN ('com.sweetapps.pocketchord','com.sweetapps.pocketchord.debug');
 ```
 
-**필드 우선순위** (가장 작은 단위가 최우선):
-1. **`reshow_interval_seconds`** (초 단위) - NULL이 아니면 최우선 사용 (초고속 테스트용)
-2. **`reshow_interval_minutes`** (분 단위) - seconds가 NULL이고 minutes가 NULL이 아니면 사용 (빠른 테스트용)
-3. **`reshow_interval_hours`** (시간 단위) - 위 두 개가 모두 NULL이면 사용 (운영 환경)
+**필드 우선순위 및 운영 환경 설정** (가장 작은 단위가 최우선):
 
-**⚠️ 운영 환경 필수 조건**:
-- `reshow_interval_seconds` = NULL (항상!)
-- `reshow_interval_minutes` = NULL (항상!)
-- `reshow_interval_hours` = 24 (기본값)
+| 우선순위 | 필드 | 단위 | 사용 조건 | 용도 | 운영 환경 설정 |
+|---------|------|------|----------|------|---------------|
+| **1순위** | `reshow_interval_seconds` | 초 | NULL이 아니면 최우선 사용 | 초고속 테스트용 | ⚠️ NULL (필수) |
+| **2순위** | `reshow_interval_minutes` | 분 | seconds가 NULL이고 minutes가 NULL이 아니면 사용 | 빠른 테스트용 | ⚠️ NULL (필수) |
+| **3순위** | `reshow_interval_hours` | 시간 | 위 두 개가 모두 NULL이면 사용 | 운영 환경 | ✅ 24 (기본값) |
 
 ### 초기값 설정 (릴리즈)
 ```sql
