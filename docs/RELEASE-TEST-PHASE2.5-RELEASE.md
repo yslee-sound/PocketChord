@@ -51,10 +51,8 @@
 
 ### 📋 Logcat 필터 설정
 
-| 필터 종류 | Filter 설정 | 설명 | 권장 사용 |
-|----------|-------------|------|----------|
-| **🎯 Phase 2.5 전용 필터** | `tag:UpdateLater` | "나중에" 기능의 시간 추적, 카운트, 강제 전환 관련 로그만 표시 | ✅ 권장 (Phase 2.5 테스트 시) |
-| **전체 업데이트 로직 필터** | `tag:HomeScreen` | Phase 1~4 모든 팝업 우선순위 로직을 포함한 전체 로그 표시 | 상세 분석 시 (정보량 많음) |
+**Filter 설정**: `tag:UpdateLater`
+"나중에" 기능의 시간 추적, 카운트, 강제 전환 관련 로그만 표시합니다.
 
 ---
 ### 📊 Phase 2.5 주요 로그 패턴
@@ -68,8 +66,6 @@
 | `UpdateLater: ✋ Update dialog dismissed for code=X` | "나중에" 클릭 완료 | S2, S3 |
 | `UpdateLater: ⏸️ Update dialog skipped (dismissed version: X, target: X)` | 시간 미경과로 스킵 | S2 재시작 |
 | `UpdateLater: 🧹 Clearing old update tracking data (version updated)` | 업데이트 완료, 추적 초기화 | S5 |
-| `HomeScreen: ✅ update_policy found: targetVersion=X, isForce=...` | 정책 로드 성공 (전체 필터) | 모든 시나리오 |
-| `HomeScreen: Decision: OPTIONAL UPDATE from update_policy (target=X)` | 업데이트 결정 (전체 필터) | S2, S3 |
 
 ---
 ## 3. DB 스키마 변경 SQL
@@ -269,36 +265,14 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 **실행**:
 1. 디버그 앱 강제 종료 (완전히 종료)
 2. 앱 Cold Start로 재실행
-3. Logcat 모니터링 (Filter: `tag:HomeScreen`)
+3. Logcat 모니터링 (Filter: `tag:UpdateLater`)
 
-**기대 로그** (정상 케이스 - 실제 출력 패턴):
-```
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showEmergencyDialog: false
-HomeScreen: showUpdateDialog: false
-HomeScreen: showAnnouncementDialog: false
-HomeScreen: Startup: SUPABASE_APP_ID=com.sweetapps.pocketchord.debug, VERSION_CODE=3
-HomeScreen: Supabase configured=true
-HomeScreen: ===== Phase 1: Checking emergency_policy =====
-HomeScreen: ✅ emergency_policy found: isDismissible=null
-HomeScreen: ===== Phase 2: Trying update_policy =====
-HomeScreen: ✅ update_policy found: targetVersion=10, isForce=false
-HomeScreen: Decision: OPTIONAL UPDATE from update_policy (target=10)
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showEmergencyDialog: false
-HomeScreen: showUpdateDialog: true  ← ✅ 팝업 표시!
-HomeScreen: showAnnouncementDialog: false
-```
-
-**✅ 사용자의 로그가 위와 동일합니다! 정상 동작입니다!**
+**기대 UI**:
+- ✅ 선택적 업데이트 팝업이 화면에 표시되어야 함
+- ✅ "나중에" 버튼과 "업데이트" 버튼이 모두 보여야 함
 
 **핵심 확인 포인트**:
-- ✅ `update_policy found: targetVersion=10, isForce=false` (NULL 아님)
-- ✅ `Decision: OPTIONAL UPDATE from update_policy (target=10)` (업데이트 결정)
-- ✅ `showUpdateDialog: true` (팝업 표시됨)
-
-**UI 확인 (앱 화면)**:
-- ✅ 선택적 업데이트 팝업이 화면에 표시되어야 함
+- 첫 실행이므로 팝업이 표시되어야 함 (아직 "나중에"를 누른 적 없음)
 - ✅ "나중에" 버튼 있음
 - ✅ "지금 업데이트" 버튼 있음
 
@@ -352,21 +326,16 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 1. 팝업에서 "나중에" 버튼 클릭
 2. 팝업 닫힘 확인
 
-**기대 로그** (실제 출력 패턴):
+**기대 로그** (UpdateLater 태그):
 ```
-HomeScreen: Update dialog dismissed for code=10
-HomeScreen: ⏱️ Tracking: laterCount=0→1, timestamp=1762705544280  ← ✅ 첫 추적 시작!
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showEmergencyDialog: false
-HomeScreen: showUpdateDialog: false  ← ✅ 팝업이 닫힘!
-HomeScreen: showAnnouncementDialog: false
+UpdateLater: ✋ Update dialog dismissed for code=10
+UpdateLater: ⏱️ Tracking: laterCount=0→1, timestamp=1762705544280  ← ✅ 첫 추적 시작!
 ```
 
 **확인 포인트**:
-- ✅ `Update dialog dismissed for code=10` - 팝업이 정상적으로 닫힘
+- ✅ `✋ Update dialog dismissed for code=10` - 팝업이 정상적으로 닫힘
 - ✅ `⏱️ Tracking: laterCount=0→1` - **첫 "나중에" 클릭, 카운트 0에서 1로 증가!**
 - ✅ `timestamp=...` - 현재 시간 저장됨
-- ✅ `showUpdateDialog: false` - 팝업 상태가 false로 전환됨
 - ✅ 메인 화면으로 복귀
 
 **참고**: 내부적으로 SharedPreferences에 다음 값이 저장됩니다:
@@ -382,34 +351,14 @@ HomeScreen: showAnnouncementDialog: false
 1. 앱 강제 종료
 2. 즉시 재시작 (1분 경과 안 함)
 
-**기대 로그** (수정된 코드 - 실제 출력 패턴):
+**기대 로그** (UpdateLater 태그):
 ```
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showEmergencyDialog: false
-HomeScreen: showUpdateDialog: false
-HomeScreen: showAnnouncementDialog: false
-HomeScreen: Startup: SUPABASE_APP_ID=com.sweetapps.pocketchord.debug, VERSION_CODE=3
-HomeScreen: Supabase configured=true
-HomeScreen: ===== Phase 1: Checking emergency_policy =====
-HomeScreen: ✅ emergency_policy found: isDismissible=null
-HomeScreen: ===== Phase 2: Trying update_policy =====
-HomeScreen: ✅ update_policy found: targetVersion=10, isForce=false
-HomeScreen: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)  ← ✅ 팝업 스킵!
-HomeScreen: ===== Phase 3: Checking notice_policy =====
-HomeScreen: ✅ notice_policy found: version=null, title=null
+UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)  ← ✅ 팝업 스킵!
 ```
 
-**필수 확인 포인트** (로그 출력 순서대로):
-1. ✅ **로그 시작 부분** (`showUpdateDialog: false` 확인)
-   ```
-   HomeScreen: showUpdateDialog: false  ← 초기 상태 확인
-   ```
-2. ✅ **정책 조회** (`update_policy found: targetVersion=10, isForce=false`)
-   - NULL 아님, 정상 조회됨
-3. ✅ **팝업 스킵 로그** (`⏸️ Update dialog skipped (dismissed version: 10, target: 10)`)
-   - 이미 거부한 버전 → 팝업 스킵 (의도된 동작)
-4. ✅ **다음 Phase 진행** (`===== Phase 3: Checking notice_policy =====`)
-   - Phase 2에서 팝업을 표시하지 않았으므로 Phase 3로 진행
+**확인 포인트**:
+- ✅ `⏸️ Update dialog skipped` - 시간 미경과로 팝업 스킵됨
+- ✅ 팝업이 표시되지 않고 메인 화면으로 진입
 
 **로그 메시지 설명**:
 ```
@@ -482,34 +431,17 @@ HomeScreen: ✅ notice_policy found: version=null, title=null
 **실행**:
 1. 앱 강제 종료
 2. 앱 재실행
-3. Logcat 모니터링 (Filter: `tag:HomeScreen`)
+3. Logcat 모니터링 (Filter: `tag:UpdateLater`)
 
-**기대 로그** (실제 출력 패턴):
+**기대 로그** (UpdateLater 태그):
 ```
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showEmergencyDialog: false
-HomeScreen: showUpdateDialog: false
-HomeScreen: showAnnouncementDialog: false
-HomeScreen: Startup: SUPABASE_APP_ID=com.sweetapps.pocketchord.debug, VERSION_CODE=3
-HomeScreen: Supabase configured=true
-HomeScreen: ===== Phase 1: Checking emergency_policy =====
-HomeScreen: ✅ emergency_policy found: isDismissible=null
-HomeScreen: ===== Phase 2: Trying update_policy =====
-HomeScreen: ✅ update_policy found: targetVersion=10, isForce=false
 UpdateLater: ⏱️ Update interval elapsed (>= 60s), reshow allowed  ← ✅ 시간 경과 확인!
 UpdateLater: 📊 Current later count: 1 / 3  ← ✅ 현재 횟수 확인
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showEmergencyDialog: false
-HomeScreen: showUpdateDialog: true  ← ✅ 팝업 재표시!
-HomeScreen: showAnnouncementDialog: false
 ```
 
-**필수 확인 포인트** (로그 순서대로):
-1. ✅ `showUpdateDialog: false` (초기 상태)
-2. ✅ `update_policy found: targetVersion=10, isForce=false` (정책 조회 성공)
-3. ✅ `⏱️ Update interval elapsed (>= 60s), reshow allowed` (시간 경과 감지!)
-4. ✅ `📊 Current later count: 1 / 3` (현재 카운트 확인 - 아직 증가 안 함!)
-5. ✅ `showUpdateDialog: true` (팝업 재표시)
+**필수 확인 포인트**:
+1. ✅ `⏱️ Update interval elapsed (>= 60s), reshow allowed` (시간 경과 감지!)
+2. ✅ `📊 Current later count: 1 / 3` (현재 카운트 확인 - 아직 증가 안 함!)
 
 **UI 확인**:
 - ✅ 업데이트 팝업이 다시 나타남
@@ -520,7 +452,7 @@ HomeScreen: showAnnouncementDialog: false
 
 **❌ 만약 시간 경과 로그가 안 나온다면**:
 ```
-HomeScreen: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)
+UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)
 ```
 
 **원인**: 
@@ -551,20 +483,16 @@ adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug cat shared_pre
 1. (2단계에서 팝업이 표시되었다면) "나중에" 버튼 클릭
 2. 팝업 닫힘 확인
 
-**기대 로그** (실제 출력 패턴):
+**기대 로그** (UpdateLater 태그):
 ```
 UpdateLater: ✋ Update dialog dismissed for code=10
 UpdateLater: ⏱️ Tracking: laterCount=1→2, timestamp=1731150000000  ← ✅ 카운트 증가 추적!
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showUpdateDialog: false
-HomeScreen: showAnnouncementDialog: false
 ```
 
 **확인 포인트**:
 - ✅ `✋ Update dialog dismissed for code=10` - 팝업 정상 닫힘
 - ✅ `⏱️ Tracking: laterCount=1→2` - **카운트가 1에서 2로 증가!**
 - ✅ `timestamp=...` - 현재 시간 저장됨
-- ✅ `showUpdateDialog: false` - 팝업 상태 false 전환
 
 **내부 동작** (SharedPreferences):
 - `update_dismissed_time`: 현재 시간으로 갱신
@@ -595,15 +523,11 @@ HomeScreen: showAnnouncementDialog: false
 3. "나중에" 3번째 클릭 → laterCount = 3
 4. 다시 1분 경과 후 재시작
 
-**기대 로그** (4번째 표시 시 - 실제 출력 패턴):
+**기대 로그** (4번째 표시 시 - UpdateLater 태그):
 ```
-HomeScreen: ===== Phase 2: Trying update_policy =====
-HomeScreen: ✅ update_policy found: targetVersion=10, isForce=false
 UpdateLater: ⏱️ Update interval elapsed (>= 60s), reshow allowed
 UpdateLater: 📊 Current later count: 3 / 3  ← ✅ 최대 횟수 도달!
 UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode  ← ✅ 강제 전환!
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showUpdateDialog: true  ← ✅ 강제 모드로 표시!
 ```
 
 **UI 확인**:
@@ -654,29 +578,14 @@ HomeScreen: showUpdateDialog: true  ← ✅ 강제 모드로 표시!
 
 **2단계: 로그 확인**
 
-**기대 로그** (실제 출력 패턴):
+**기대 로그** (UpdateLater 태그):
 ```
-HomeScreen: ===== Popup Display Check =====
-HomeScreen: showEmergencyDialog: false
-HomeScreen: showUpdateDialog: false
-HomeScreen: showAnnouncementDialog: false
-HomeScreen: Startup: SUPABASE_APP_ID=com.sweetapps.pocketchord.debug, VERSION_CODE=11  ← ✅ 새 버전!
-HomeScreen: Supabase configured=true
-HomeScreen: ===== Phase 1: Checking emergency_policy =====
-HomeScreen: ✅ emergency_policy found: isDismissible=null
-HomeScreen: ===== Phase 2: Trying update_policy =====
-HomeScreen: ✅ update_policy found: targetVersion=10, isForce=false
-HomeScreen: update_policy exists but no update needed (current=11 >= target=10)  ← ✅ 업데이트 불필요!
-HomeScreen: 🧹 Clearing old update tracking data (version updated)  ← ✅ 자동 초기화!
-HomeScreen: ===== Phase 3: Checking notice_policy =====
+UpdateLater: 🧹 Clearing old update tracking data (version updated)  ← ✅ 자동 초기화!
 ```
 
 **필수 확인 포인트**:
-1. ✅ `VERSION_CODE=11` - 새 버전으로 실행됨
-2. ✅ `current=11 >= target=10` - 업데이트 불필요 판정
-3. ✅ `🧹 Clearing old update tracking data (version updated)` - **자동 초기화 실행!**
-4. ✅ 업데이트 팝업이 표시되지 않음
-5. ✅ Phase 3로 정상 진행
+1. ✅ `🧹 Clearing old update tracking data (version updated)` - **자동 초기화 실행!**
+2. ✅ 업데이트 팝업이 표시되지 않음
 
 **UI 확인**:
 - ✅ 업데이트 팝업 미표시
@@ -714,13 +623,6 @@ cat: shared_prefs/update_preferences.xml: No such file or directory
    ```
 2. 앱 강제 종료 후 재시작
 
-**기대 로그**:
-```
-HomeScreen: ===== Phase 2: Trying update_policy =====
-HomeScreen: ✅ update_policy found: targetVersion=20, isForce=false
-HomeScreen: Decision: OPTIONAL UPDATE from update_policy (target=20)  ← ✅ 새 업데이트 감지!
-HomeScreen: showUpdateDialog: true
-```
 
 **확인 포인트**:
 - ✅ 새 target (20) 업데이트 팝업이 표시됨
