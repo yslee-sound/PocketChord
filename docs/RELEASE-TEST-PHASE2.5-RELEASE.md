@@ -90,8 +90,8 @@ UpdateLater: 🧹 Clearing old update tracking data (version updated)
 
 | 로그 | 의미 | 테스트 시나리오 |
 |------|------|----------------|
+| `📊 Current later count: X / Y` | 현재 카운트 확인 (매 시작 시) | 모든 시나리오 |
 | `⏱️ Update interval elapsed (>= Xs)` | 지정 시간 경과, 재표시 허용 | S3 (디버그: 60s) |
-| `📊 Current later count: X / Y` | 현재 카운트 확인 (시간 경과 시) | S3, S4 |
 | `⏱️ Tracking: laterCount=X→Y` | "나중에" 클릭 시 카운트 증가 | S2, S3 |
 | `🚨 Later count (3) >= max (3)` | 최대 횟수 도달, 강제 전환 | S4 |
 | `✋ Update dialog dismissed` | "나중에" 클릭 완료 | S2, S3 |

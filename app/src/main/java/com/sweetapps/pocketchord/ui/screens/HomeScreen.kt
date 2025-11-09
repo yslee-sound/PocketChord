@@ -221,6 +221,9 @@ fun MainScreen(navController: NavHostController) {
                     }
 
                     up.recommendsOptionalUpdate(currentVersion) -> {
+                        // 매 시작마다 현재 laterCount 로그
+                        Log.d("UpdateLater", "📊 Current later count: $laterCount / $maxLaterCount")
+
                         // Phase 2.5: 시간 경과 체크 (최우선 - 버전 비교보다 먼저!)
                         if (dismissedTime > 0 && elapsed >= reshowIntervalMs) {
                             // 시간이 경과했으므로 재표시
@@ -230,7 +233,6 @@ fun MainScreen(navController: NavHostController) {
                                 else -> "${up.reshowIntervalHours ?: 24}h"
                             }
                             Log.d("UpdateLater", "⏱️ Update interval elapsed (>= $intervalMsg), reshow allowed")
-                            Log.d("UpdateLater", "📊 Current later count: $laterCount / $maxLaterCount")
 
                             // 최대 횟수 도달 확인 (현재 count만 확인, 증가는 "나중에" 클릭 시)
                             if (laterCount >= maxLaterCount) {
@@ -271,11 +273,12 @@ fun MainScreen(navController: NavHostController) {
                             return@LaunchedEffect
                         }
 
-                        // 시간 미경과 시에만 버전 체크
+                        // 시간 미경과: 버전 체크
                         if (dismissedVersion == up.targetVersionCode) {
+                            // 같은 버전을 이미 "나중에" 한 경우 - 시간이 지나지 않았으므로 스킵
                             Log.d("UpdateLater", "⏸️ Update dialog skipped (dismissed version: $dismissedVersion, target: ${up.targetVersionCode})")
                         } else {
-                            // 첫 표시 또는 새 버전
+                            // 첫 표시 또는 새 버전 (dismissed된 적 없거나 다른 버전)
                             Log.d("HomeScreen", "Decision: OPTIONAL UPDATE from update_policy (target=${up.targetVersionCode})")
                             updateInfo = UpdateInfo(
                                 id = null,
