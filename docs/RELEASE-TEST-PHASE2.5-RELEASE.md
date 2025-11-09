@@ -666,16 +666,12 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ---
 
-## 6. SharedPreferences 초기화 명령
+## 6. 초기화/복구 SQL
 
-### 전체 초기화
+### SharedPreferences 초기화 명령
 ```cmd
 adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug rm shared_prefs/update_preferences.xml
 ```
-
----
-
-## 7. 초기화/복구 SQL
 
 ### 테스트 전 초기 상태로 복구
 
