@@ -1,13 +1,17 @@
 # 릴리즈 테스트 SQL 스크립트 - Phase 3 (릴리즈용)
 
-**버전**: v1.0.0  
-**최종 업데이트**: 2025-11-09 06:35 KST  
+**버전**: v1.1.0  
+**최종 업데이트**: 2025-11-09 09:05 KST  
 **app_id**: `com.sweetapps.pocketchord` (프로덕션)  
 **포함 내용**: Notice 테스트 (버전 관리)
 
 ---
 
 ## 📝 변경 이력
+
+### v1.1.0 (2025-11-09 09:05)
+- ✅ 모든 SQL 문에 디버그 버전 추가
+- ✅ 릴리즈/디버그 버전 명확히 구분
 
 ### v1.0.0 (2025-11-09 06:35)
 - ✅ 최초 작성
@@ -42,11 +46,22 @@
 
 ### 1-1. 현재 버전 확인
 
+**SQL 스크립트 - 릴리즈 버전** ⭐
+
 ```sql
 -- 3-1. 현재 버전 확인
 SELECT notice_version, title, is_active 
 FROM notice_policy 
 WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+**SQL 스크립트 - 디버그 버전** 🔧
+
+```sql
+-- 3-1. 현재 버전 확인 (디버그)
+SELECT notice_version, title, is_active 
+FROM notice_policy 
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 **결과 기록**: `notice_version = _____`
@@ -97,11 +112,23 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ### 2-1. 오타 수정
 
+**SQL 스크립트 - 릴리즈 버전** ⭐
+
 ```sql
 -- 3-2. 오타 수정 (버전 유지)
 UPDATE notice_policy 
 SET content = 'PocketChord를 이용해 주셔서 정말 감사합니다!'
 WHERE app_id = 'com.sweetapps.pocketchord';
+-- notice_version은 변경하지 않음!
+```
+
+**SQL 스크립트 - 디버그 버전** 🔧
+
+```sql
+-- 3-2. 오타 수정 (버전 유지, 디버그)
+UPDATE notice_policy 
+SET content = '[DEBUG] PocketChord를 이용해 주셔서 정말 감사합니다!'
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 -- notice_version은 변경하지 않음!
 ```
 
@@ -133,6 +160,8 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ### 3-1. 버전 증가
 
+**SQL 스크립트 - 릴리즈 버전** ⭐
+
 ```sql
 -- 3-3. 새 공지 (버전 증가)
 UPDATE notice_policy 
@@ -140,6 +169,17 @@ SET title = '🎉 11월 이벤트',
     content = '11월 특별 이벤트가 시작되었습니다!\n많은 참여 부탁드립니다.',
     notice_version = 2  -- 버전 증가! ⭐
 WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+**SQL 스크립트 - 디버그 버전** 🔧
+
+```sql
+-- 3-3. 새 공지 (버전 증가, 디버그)
+UPDATE notice_policy 
+SET title = '[DEBUG] 🎉 11월 이벤트',
+    content = '[DEBUG] 11월 특별 이벤트가 시작되었습니다!\n많은 참여 부탁드립니다.',
+    notice_version = 2  -- 버전 증가! ⭐
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 ### 3-2. 앱 실행 및 검증
@@ -181,6 +221,8 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ### 4-1. 원래대로 복구
 
+**SQL 스크립트 - 릴리즈 버전** ⭐
+
 ```sql
 -- 3-4. Notice 정리 (원래대로)
 UPDATE notice_policy 
@@ -188,6 +230,17 @@ SET title = '환영합니다! 🎉',
     content = 'PocketChord를 이용해 주셔서 감사합니다!\n더 나은 서비스를 제공하기 위해 노력하겠습니다.',
     notice_version = 1
 WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+**SQL 스크립트 - 디버그 버전** 🔧
+
+```sql
+-- 3-4. Notice 정리 (원래대로, 디버그)
+UPDATE notice_policy 
+SET title = '[DEBUG] 환영합니다! 🎉',
+    content = '[DEBUG] PocketChord를 이용해 주셔서 감사합니다!\n더 나은 서비스를 제공하기 위해 노력하겠습니다.',
+    notice_version = 1
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 - [ ] ✅ 정리 완료
@@ -198,11 +251,23 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ### 오타 수정 (버전 유지)
 
+**SQL 스크립트 - 릴리즈 버전** ⭐
+
 ```sql
 -- 버전 유지 = 재표시 안 됨
 UPDATE notice_policy 
 SET content = '수정된 내용'
 WHERE app_id = 'com.sweetapps.pocketchord';
+-- notice_version은 건드리지 않음!
+```
+
+**SQL 스크립트 - 디버그 버전** 🔧
+
+```sql
+-- 버전 유지 = 재표시 안 됨 (디버그)
+UPDATE notice_policy 
+SET content = '[DEBUG] 수정된 내용'
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 -- notice_version은 건드리지 않음!
 ```
 
@@ -212,6 +277,8 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ### 새 공지 (버전 증가)
 
+**SQL 스크립트 - 릴리즈 버전** ⭐
+
 ```sql
 -- 버전 증가 = 모두에게 재표시
 UPDATE notice_policy 
@@ -219,6 +286,17 @@ SET title = '새 공지',
     content = '새 내용',
     notice_version = 2  -- 증가!
 WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+**SQL 스크립트 - 디버그 버전** 🔧
+
+```sql
+-- 버전 증가 = 모두에게 재표시 (디버그)
+UPDATE notice_policy 
+SET title = '[DEBUG] 새 공지',
+    content = '[DEBUG] 새 내용',
+    notice_version = 2  -- 증가!
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 **결과**: 모든 사용자에게 **재표시됨** ✅
@@ -247,6 +325,6 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-**문서 버전**: v1.0.0  
-**마지막 수정**: 2025-11-09 06:35 KST
+**문서 버전**: v1.1.0  
+**마지막 수정**: 2025-11-09 09:05 KST
 
