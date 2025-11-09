@@ -10,17 +10,13 @@
 
 **Phase 2.5**: 선택적 업데이트에서 "나중에" 클릭 후 **시간 기반 재표시** 구현
 
-| 구분 | 항목 | 설명 |
-|------|------|------|
-| **DB 필드** | `reshow_interval_hours` | 재표시 간격 - 시간 단위 |
-| | `reshow_interval_minutes` | 재표시 간격 - 분 단위 (테스트용) |
-| | `reshow_interval_seconds` | 재표시 간격 - 초 단위 (초고속 테스트용, **최우선**) |
+| 구분 | 항목 | 설명 | 운영 환경 (릴리즈시) | 우선순위 |
+|------|------|------|--------------|------|
+| **DB 필드** | `reshow_interval_hours` | 재표시 간격 - 시간 단위 | NULL (필수) | 2 |
+| | `reshow_interval_minutes` | 재표시 간격 - 분 단위 (테스트용) | NULL (필수) | 1 |
+| | `reshow_interval_seconds` | 재표시 간격 - 초 단위 (초고속 테스트용, **최우선**) | 24 (기본값, 반드시 hours 단위만 사용) | 0 |
 | | `max_later_count` | 최대 "나중에" 횟수 |
-| **우선순위** | 필드 우선순위 | **seconds > minutes > hours** (가장 작은 단위가 우선) |
 | **추적 데이터** | SharedPreferences | `update_dismissed_time`, `update_later_count` |
-| **운영 환경<br>(릴리즈)** | `reshow_interval_seconds` | NULL (필수) |
-| | `reshow_interval_minutes` | NULL (필수) |
-| | `reshow_interval_hours` | 24 (기본값, 반드시 hours 단위만 사용) |
 | | 예시 | 24시간 간격으로 재표시 |
 | **테스트 환경<br>(디버그)** | 설정 가능 | 빠른 테스트를 위해 초/분 단위 사용 가능 |
 | | 예시 | 60초 간격으로 재표시 |
@@ -736,11 +732,6 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ### 전체 초기화
 ```cmd
 adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug rm shared_prefs/update_preferences.xml
-```
-
-### 특정 값만 확인
-```cmd
-adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug cat shared_prefs/update_preferences.xml
 ```
 
 ---
