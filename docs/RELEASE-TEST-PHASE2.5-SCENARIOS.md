@@ -368,25 +368,7 @@ UpdateLater: 🧹 Clearing old update tracking data (version updated)  ← ✅ �
 
 ---
 
-**3단계: SharedPreferences 초기화 검증 (선택 사항)**
-
-**실행**:
-```cmd
-adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug cat shared_prefs/update_preferences.xml
-```
-
-**기대 결과**:
-- 파일이 비어있거나 Phase 2.5 관련 키(`update_dismissed_time`, `update_later_count`, `dismissedVersionCode`)가 없음
-
-**또는**:
-```
-cat: shared_prefs/update_preferences.xml: No such file or directory
-```
-- ✅ 파일 자체가 삭제됨 (완전 초기화)
-
----
-
-**4단계: 재시작 후 새 업데이트 팝업 확인**
+**3단계: 재시작 후 새 업데이트 팝업 확인**
 
 **실행**:
 1. Supabase에서 `target_version_code`를 더 높게 설정 (예: 20):
