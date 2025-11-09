@@ -224,18 +224,17 @@ fun MainScreen(navController: NavHostController) {
                         // Phase 2.5: 시간 경과 체크 (최우선 - 버전 비교보다 먼저!)
                         if (dismissedTime > 0 && elapsed >= reshowIntervalMs) {
                             // 시간이 경과했으므로 재표시
-                            val newLaterCount = laterCount + 1
                             val intervalMsg = when {
                                 up.reshowIntervalSeconds != null -> "${up.reshowIntervalSeconds}s"
                                 up.reshowIntervalMinutes != null -> "${up.reshowIntervalMinutes}min"
                                 else -> "${up.reshowIntervalHours ?: 24}h"
                             }
-                            Log.d("HomeScreen", "⏱️ Update interval elapsed (>= $intervalMsg), reshow allowed")
-                            Log.d("HomeScreen", "🔄 Later count: $laterCount → $newLaterCount")
+                            Log.d("UpdateLater", "⏱️ Update interval elapsed (>= $intervalMsg), reshow allowed")
+                            Log.d("UpdateLater", "📊 Current later count: $laterCount / $maxLaterCount")
 
-                            // 최대 횟수 도달 확인
-                            if (newLaterCount >= maxLaterCount) {
-                                Log.d("HomeScreen", "🚨 Later count ($newLaterCount) >= max ($maxLaterCount), forcing update mode")
+                            // 최대 횟수 도달 확인 (현재 count만 확인, 증가는 "나중에" 클릭 시)
+                            if (laterCount >= maxLaterCount) {
+                                Log.d("UpdateLater", "🚨 Later count ($laterCount) >= max ($maxLaterCount), forcing update mode")
                                 updateInfo = UpdateInfo(
                                     id = null,
                                     versionCode = up.targetVersionCode,
@@ -274,7 +273,7 @@ fun MainScreen(navController: NavHostController) {
 
                         // 시간 미경과 시에만 버전 체크
                         if (dismissedVersion == up.targetVersionCode) {
-                            Log.d("HomeScreen", "⏸️ Update dialog skipped (dismissed version: $dismissedVersion, target: ${up.targetVersionCode})")
+                            Log.d("UpdateLater", "⏸️ Update dialog skipped (dismissed version: $dismissedVersion, target: ${up.targetVersionCode})")
                         } else {
                             // 첫 표시 또는 새 버전
                             Log.d("HomeScreen", "Decision: OPTIONAL UPDATE from update_policy (target=${up.targetVersionCode})")
@@ -301,7 +300,7 @@ fun MainScreen(navController: NavHostController) {
                         if (updatePrefsFile.contains("update_dismissed_time") ||
                             updatePrefsFile.contains("update_later_count") ||
                             updatePrefsFile.contains("dismissedVersionCode")) {
-                            Log.d("HomeScreen", "🧹 Clearing old update tracking data (version updated)")
+                            Log.d("UpdateLater", "🧹 Clearing old update tracking data (version updated)")
                             updatePrefsFile.edit {
                                 remove("update_dismissed_time")
                                 remove("update_later_count")
@@ -423,8 +422,8 @@ fun MainScreen(navController: NavHostController) {
                     }
                     dismissedVersionCode.value = updateInfo!!.versionCode
                     showUpdateDialog = false
-                    Log.d("HomeScreen", "Update dialog dismissed for code=${updateInfo!!.versionCode}")
-                    Log.d("HomeScreen", "⏱️ Tracking: laterCount=$currentLaterCount→$newLaterCount, timestamp=${System.currentTimeMillis()}")
+                    Log.d("UpdateLater", "✋ Update dialog dismissed for code=${updateInfo!!.versionCode}")
+                    Log.d("UpdateLater", "⏱️ Tracking: laterCount=$currentLaterCount→$newLaterCount, timestamp=${System.currentTimeMillis()}")
                 }
             }
         )
