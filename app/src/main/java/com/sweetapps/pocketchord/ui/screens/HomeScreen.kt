@@ -128,8 +128,8 @@ fun MainScreen(navController: NavHostController) {
                 return@LaunchedEffect
             }
 
-            // ===== Phase 2: emergency_policy 조회 시도 (최우선순위!) =====
-            android.util.Log.d("HomeScreen", "===== Phase 2: Checking emergency_policy =====")
+            // ===== Phase 1: emergency_policy 조회 시도 (최우선순위!) =====
+            android.util.Log.d("HomeScreen", "===== Phase 1: Checking emergency_policy =====")
             var emergency: EmergencyPolicy? = null
             EmergencyPolicyRepository(supabaseClient)
                 .getActiveEmergency()
@@ -156,8 +156,8 @@ fun MainScreen(navController: NavHostController) {
                 return@LaunchedEffect  // 긴급 상황이면 다른 팝업 무시
             }
 
-            // ===== Phase 1: update_policy 조회 시도 (신규) =====
-            android.util.Log.d("HomeScreen", "===== Phase 1: Trying update_policy =====")
+            // ===== Phase 2: update_policy 조회 시도 (신규) =====
+            android.util.Log.d("HomeScreen", "===== Phase 2: Trying update_policy =====")
             var updatePolicy: UpdatePolicy? = null
             UpdatePolicyRepository(supabaseClient)
                 .getPolicy()
@@ -182,7 +182,7 @@ fun MainScreen(navController: NavHostController) {
                             versionName = "",
                             appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
                             isForce = true,
-                            releaseNotes = up.releaseNotes ?: up.message ?: "",
+                            releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
                             releasedAt = null,
                             downloadUrl = up.downloadUrl
                         )
@@ -203,7 +203,7 @@ fun MainScreen(navController: NavHostController) {
                             versionName = "",
                             appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
                             isForce = false,
-                            releaseNotes = up.releaseNotes ?: up.message ?: "",
+                            releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
                             releasedAt = null,
                             downloadUrl = up.downloadUrl
                         )
@@ -268,6 +268,7 @@ fun MainScreen(navController: NavHostController) {
 
     android.util.Log.d("HomeScreen", "===== Popup Display Check =====")
     android.util.Log.d("HomeScreen", "showEmergencyDialog: $showEmergencyDialog")
+    android.util.Log.d("HomeScreen", "showUpdateDialog: $showUpdateDialog")
     android.util.Log.d("HomeScreen", "showAnnouncementDialog: $showAnnouncementDialog")
 
     // 1순위: Emergency - emergency_policy 사용 (Phase 2)

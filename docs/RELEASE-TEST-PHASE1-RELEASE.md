@@ -1,13 +1,17 @@
 # 릴리즈 테스트 SQL 스크립트 - Phase 1 (릴리즈용)
 
-**버전**: v1.1.0  
-**최종 업데이트**: 2025-11-09 06:35 KST  
+**버전**: v1.2.0  
+**최종 업데이트**: 2025-11-09 06:50 KST  
 **app_id**: `com.sweetapps.pocketchord` (프로덕션)  
 **포함 내용**: 초기 상태 확인 + Emergency 테스트
 
 ---
 
 ## 📝 변경 이력
+
+### v1.2.0 (2025-11-09 06:50)
+- ✅ 로그 Phase 번호 수정 (Phase 2 → Phase 1)
+- ✅ emergency_policy가 최우선순위임을 명확히 함
 
 ### v1.1.0 (2025-11-09 06:35)
 - ✅ emergency_policy에 button_text 필드 추가 반영
@@ -187,7 +191,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ```
 예상 로그:
-✅ "Phase 2: Checking emergency_policy"
+✅ "Phase 1: Checking emergency_policy"
 ✅ "emergency_policy found: isDismissible=true"
 ✅ "Decision: EMERGENCY from emergency_policy"
 ✅ "Displaying EmergencyRedirectDialog from emergency_policy"
@@ -208,7 +212,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 UPDATE emergency_policy 
 SET is_dismissible = false,
     content = '🚨 [테스트] 이 앱은 더 이상 지원되지 않습니다. 새 앱을 설치해야 합니다.',
-    button_text = '새 앱 설치하기'
+    button_text = '확인'
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 
@@ -219,7 +223,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 UPDATE emergency_policy 
 SET is_dismissible = false,
     content = '🚨 [DEBUG 테스트] 이 앱은 더 이상 지원되지 않습니다. 새 앱을 설치해야 합니다.',
-    button_text = '새 앱 설치하기'
+    button_text = '확인'
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
@@ -232,7 +236,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - [ ] ✅ 긴급 팝업 표시됨
 - [ ] ✅ **X 버튼 없음** ⭐
 - [ ] ✅ 뒤로가기 버튼 막힘 (테스트 해보기)
-- [ ] ✅ "새 앱 설치하기" 버튼만 있음
+- [ ] ✅ "확인" 버튼만 있음
 
 ---
 
@@ -283,6 +287,6 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ---
 
-**문서 버전**: v1.1.0  
-**마지막 수정**: 2025-11-09 06:35 KST
+**문서 버전**: v1.2.0  
+**마지막 수정**: 2025-11-09 06:50 KST
 

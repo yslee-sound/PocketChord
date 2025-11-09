@@ -21,9 +21,8 @@ CREATE TABLE public.update_policy (
     is_force_update BOOLEAN NOT NULL,        -- 강제 업데이트 여부
 
     -- 부가 정보
-    message TEXT,                            -- 업데이트 메시지
     release_notes TEXT,                      -- 릴리즈 노트 (선택적)
-    download_url TEXT,                       -- 스토어 링크
+    download_url TEXT NOT NULL DEFAULT 'https://play.google.com/',  -- Play Store 링크
 
     CONSTRAINT update_policy_pkey PRIMARY KEY (id)
 );
@@ -56,15 +55,15 @@ INSERT INTO public.update_policy (
     is_active,
     target_version_code,
     is_force_update,
-    message,
-    release_notes
+    release_notes,
+    download_url
 ) VALUES (
     'com.sweetapps.pocketchord',
     true,
     1,  -- 현재 버전보다 낮게 설정 (업데이트 팝업 안 뜸)
     false,
-    '새로운 기능이 추가되었습니다',
-    '• 성능 개선\n• 버그 수정'
+    '• 성능 개선\n• 버그 수정',
+    'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord'
 );
 
 -- 테스트용 debug 데이터
@@ -73,15 +72,15 @@ INSERT INTO public.update_policy (
     is_active,
     target_version_code,
     is_force_update,
-    message,
-    release_notes
+    release_notes,
+    download_url
 ) VALUES (
     'com.sweetapps.pocketchord.debug',
     false,  -- 비활성화 (테스트 시 수동으로 활성화)
     999,    -- 높은 버전 (테스트용)
     false,
-    '[DEBUG] 테스트용 업데이트 메시지',
-    '• [DEBUG] 테스트 기능 1\n• [DEBUG] 테스트 기능 2'
+    '• [DEBUG] 테스트 기능 1\n• [DEBUG] 테스트 기능 2',
+    'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord.debug'
 );
 
 -- 완료!

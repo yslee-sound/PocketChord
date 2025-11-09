@@ -101,13 +101,6 @@ data class UpdatePolicy(
     // ===== 부가 정보 =====
 
     /**
-     * 업데이트 메시지
-     * 팝업에 표시될 짧은 메시지
-     */
-    @SerialName("message")
-    val message: String? = null,
-
-    /**
      * 릴리즈 노트
      * 업데이트 내용 상세 설명 (줄바꿈으로 구분)
      * 예: "• 새로운 기능 추가\n• 버그 수정\n• 성능 개선"
@@ -117,10 +110,11 @@ data class UpdatePolicy(
 
     /**
      * 다운로드 URL
-     * 스토어 링크 (없으면 기본 스토어 사용)
+     * Play Store 링크 (필수)
+     * 기본값: https://play.google.com/
      */
     @SerialName("download_url")
-    val downloadUrl: String? = null
+    val downloadUrl: String = "https://play.google.com/"
 ) {
     /**
      * 업데이트가 필요한지 확인

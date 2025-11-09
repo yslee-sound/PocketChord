@@ -64,7 +64,7 @@ INSERT INTO public.emergency_policy (
     'com.sweetapps.pocketchord',
     false,  -- 비활성화 (테스트용)
     '⚠️ [테스트] 이 앱은 더 이상 지원되지 않습니다.\n새 버전을 설치해주세요.',
-    'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord',
+    NULL,  -- 수동으로 입력 필요!
     '확인',
     true    -- X 버튼 허용 (Google Play 정책 준수)
 );
@@ -81,7 +81,7 @@ INSERT INTO public.emergency_policy (
     'com.sweetapps.pocketchord.debug',
     false,  -- 비활성화 (테스트 시 수동으로 활성화)
     '🚨 [DEBUG] 긴급 테스트 메시지입니다.\n이것은 디버그용 팝업입니다.',
-    'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord.debug',
+    NULL,  -- 수동으로 입력 필요!
     '확인',
     true    -- X 버튼 허용
 );

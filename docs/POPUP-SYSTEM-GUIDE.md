@@ -1,12 +1,52 @@
 # 🚀 PocketChord 팝업 시스템 가이드
 
-**버전**: v2.1.0  
-**최종 업데이트**: 2025-11-09 06:35 KST  
-**상태**: ✅ 구현 완료
+**버전**: v2.6.0  
+**최종 업데이트**: 2025-11-09 09:00 KST  
+**상태**: ✅ 구현 완료 (Phase 2.5 설계 완료 - 간소화)
 
 ---
 
 ## 📝 버전 히스토리
+
+### v2.6.0 (2025-11-09 09:00) 🎯 최종 구현 방식 확정
+- ✅ **3회 "나중에" 후 강제 전환으로 간소화**
+  - 경고 메시지 제거 (구현 복잡도 감소)
+  - 3회까지 선택권 제공, 4회째 강제 전환
+  - "나중에" 버튼 숨김 + 뒤로가기 차단
+- ✅ 모든 문서에 간소화된 구현 방식 반영
+- ✅ `max_dismiss_count = 3` 고정
+
+### v2.5.0 (2025-11-09 08:50) 💡 강제 전환 메커니즘 설명
+- ✅ **강제 전환 메커니즘 상세 문서 작성** (UPDATE-POLICY-FORCE-CONVERSION-EXPLAINED.md)
+  - "Supabase는 변경 안 하는데 어떻게 강제로 전환?" 질문에 대한 답변
+  - 클라이언트 측 동적 전환 메커니즘 설명
+  - 3가지 구현 방법 비교 (버튼 숨기기, 경고 표시, 완전 전환)
+  - 실제 시나리오 및 코드 예시
+- ✅ 시간 기반 전략 문서에 강제 전환 로직 추가
+
+### v2.4.0 (2025-11-09 08:40) 📋 Phase 2.5 설계
+- ✅ **시간 기반 재표시 전략 문서 작성** (UPDATE-POLICY-TIME-BASED-STRATEGY.md)
+  - 5가지 상세 시나리오 제공
+  - 업계 표준 비교 분석
+  - 구현 방안 및 효과 예측
+  - 권장 설정 가이드
+- ✅ 현재 선택적 업데이트의 문제점 명시 ("나중에" 1회로 영구 숨김)
+- ✅ Phase 2.5 개선 계획 추가
+
+### v2.3.0 (2025-11-09 08:30) 🔍 동작 명확화
+- ✅ **선택적 업데이트의 "업데이트" 버튼 동작 명확화**
+  - "업데이트" 버튼 클릭 시 `dismissedVersionCode`를 저장하지 **않음**
+  - Play Store에서 업데이트하지 않으면 앱 재시작 시 팝업이 **다시 표시됨**
+  - 실제로 업데이트하면 VERSION_CODE가 증가하여 팝업이 자동으로 사라짐
+- ✅ Logcat에 `showUpdateDialog` 로그 추가
+
+### v2.2.0 (2025-11-09 08:15) 🔥 Phase 2 완료
+- ✅ **update_policy에서 message 필드 제거** (release_notes로 통합)
+- ✅ **download_url NOT NULL 및 기본값 설정** (`https://play.google.com/`)
+- ✅ 현재 앱 버전코드 반영 (VERSION_CODE = 3)
+- ✅ SharedPreferences 전체 삭제 방법 추가 (`rm -r`)
+- ✅ 선택적 업데이트 테스트 가이드 개선
+- ✅ Phase 2 릴리즈 테스트 문서 v2.1.0 완성
 
 ### v2.1.0 (2025-11-09 06:35)
 - ✅ emergency_policy에 button_text 필드 추가
@@ -119,29 +159,59 @@ CREATE TABLE update_policy (
     is_active BOOLEAN DEFAULT TRUE,
     target_version_code INT NOT NULL,      -- ⭐ 단일 필드
     is_force_update BOOLEAN DEFAULT FALSE, -- ⭐ 강제/선택
-    message TEXT,
-    release_notes TEXT
+    release_notes TEXT,                     -- 업데이트 내용
+    download_url TEXT NOT NULL DEFAULT 'https://play.google.com/'  -- ⭐ 필수
 );
 ```
 
 **핵심 필드**:
 - `target_version_code`: 목표 버전 (단일 필드로 단순화!)
 - `is_force_update`: true=강제, false=선택적
+- `release_notes`: 업데이트 메시지 (message 제거, release_notes로 통합)
+- `download_url`: Play Store 링크 (필수, 기본값: `https://play.google.com/`)
 
 **사용 예시**:
 ```sql
--- 강제 업데이트
+-- 강제 업데이트 (현재 버전 3 → 4로 업데이트)
 UPDATE update_policy 
-SET target_version_code = 15,
-    is_force_update = true
+SET is_active = true,
+    target_version_code = 4,  -- 현재 3보다 높게
+    is_force_update = true,
+    release_notes = '• 중요 보안 패치\n• 필수 기능 추가',
+    download_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord'
 WHERE app_id = 'com.sweetapps.pocketchord';
 
--- 선택적 업데이트
+-- 선택적 업데이트 (기본값 사용)
 UPDATE update_policy 
-SET target_version_code = 15,
-    is_force_update = false
+SET is_active = true,
+    target_version_code = 4,
+    is_force_update = false,
+    release_notes = '• 다크 모드 추가\n• 성능 개선'
+    -- download_url 생략 (기본값 사용)
+WHERE app_id = 'com.sweetapps.pocketchord';
+
+-- 업데이트 비활성화 (현재 버전과 같게)
+UPDATE update_policy 
+SET target_version_code = 3  -- 현재 버전과 같게 → 팝업 안 뜸
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
+
+**💡 중요**:
+- `target_version_code`는 **현재 앱 버전보다 높아야** 업데이트 팝업이 표시됨
+- **선택적 업데이트 (현재 구현)**:
+  - "나중에" 버튼이 있으며, 클릭 시 `dismissedVersionCode` 저장
+  - 한 번 "나중에"를 누르면 같은 버전의 팝업이 다시 표시되지 않음
+  - **"업데이트" 버튼 클릭 시**: `dismissedVersionCode`를 저장하지 **않음**
+    - → Play Store로 이동하고 업데이트하지 않으면, 앱 재시작 시 팝업이 **다시 표시됨** ✅
+    - → 실제로 업데이트하면 `VERSION_CODE`가 증가하여 팝업이 표시되지 않음
+- **강제 업데이트**:
+  - X 버튼이 없으며, 뒤로가기가 차단됨
+  - `dismissedVersionCode` 추적하지 않음 (매번 표시)
+
+**⚠️ 개선 필요 (Phase 2.5 예정)**:
+- 현재 "나중에" 1회 클릭 시 다음 버전까지 영구히 숨김 → **너무 느슨함**
+- **시간 기반 재표시 전략** 도입 예정 (24시간 후 재표시)
+- 자세한 내용: **[UPDATE-POLICY-TIME-BASED-STRATEGY.md](UPDATE-POLICY-TIME-BASED-STRATEGY.md)** 참조
 
 ---
 
@@ -218,8 +288,23 @@ WHERE app_id = 'your.app.id';
 
 ```sql
 UPDATE update_policy 
-SET target_version_code = 15,
-    is_force_update = true
+SET is_active = true,
+    target_version_code = 4,  -- 현재 버전(3)보다 높게
+    is_force_update = true,
+    release_notes = '• 중요 보안 패치\n• 필수 업데이트',
+    download_url = 'https://play.google.com/store/apps/details?id=your.app.id'
+WHERE app_id = 'your.app.id';
+```
+
+### 🔔 선택적 업데이트
+
+```sql
+UPDATE update_policy 
+SET is_active = true,
+    target_version_code = 4,  -- 현재 버전(3)보다 높게
+    is_force_update = false,
+    release_notes = '• 새로운 기능 추가\n• 성능 개선'
+    -- download_url 생략 시 기본값 사용: https://play.google.com/
 WHERE app_id = 'your.app.id';
 ```
 
@@ -289,6 +374,8 @@ WHERE app_id = 'your.app.id';
 
 ### 상세 가이드
 - **[UPDATE-POLICY-USAGE-GUIDE.md](UPDATE-POLICY-USAGE-GUIDE.md)** - update_policy 실제 사용법
+- **[UPDATE-POLICY-TIME-BASED-STRATEGY.md](UPDATE-POLICY-TIME-BASED-STRATEGY.md)** - 시간 기반 재표시 전략 (권장) 🔥
+- **[UPDATE-POLICY-FORCE-CONVERSION-EXPLAINED.md](UPDATE-POLICY-FORCE-CONVERSION-EXPLAINED.md)** - 강제 전환 메커니즘 설명 💡
 - **[TEST-ENVIRONMENT-GUIDE.md](TEST-ENVIRONMENT-GUIDE.md)** - 테스트 환경 선택 가이드
 
 ### 릴리즈 테스트
@@ -302,12 +389,16 @@ WHERE app_id = 'your.app.id';
 - **[sql/02-create-emergency-policy.sql](sql/02-create-emergency-policy.sql)** - emergency_policy 테이블
 - **[sql/03-create-notice-policy.sql](sql/03-create-notice-policy.sql)** - notice_policy 테이블
 - **[sql/07-create-debug-test-data.sql](sql/07-create-debug-test-data.sql)** - 디버그 테스트 데이터
+- **[sql/10-update-policy-remove-message.sql](sql/10-update-policy-remove-message.sql)** - message 필드 제거 마이그레이션
+- **[sql/11-fix-download-url-default.sql](sql/11-fix-download-url-default.sql)** - download_url 기본값 수정
+- **[sql/12-diagnose-update-policy.sql](sql/12-diagnose-update-policy.sql)** - update_policy 진단 스크립트
 
 ### 변경 이력
+- **[UPDATE-POLICY-MESSAGE-REMOVAL-COMPLETE.md](UPDATE-POLICY-MESSAGE-REMOVAL-COMPLETE.md)** - message 제거 완료 보고서
 - **[archive/NEW-APP-ID-REMOVAL-HISTORY.md](archive/NEW-APP-ID-REMOVAL-HISTORY.md)** - new_app_id 제거 기록
 
 ---
 
-**문서 버전**: v2.1.0  
-**마지막 수정**: 2025-11-09 06:35 KST
+**문서 버전**: v2.6.0  
+**마지막 수정**: 2025-11-09 09:00 KST
 

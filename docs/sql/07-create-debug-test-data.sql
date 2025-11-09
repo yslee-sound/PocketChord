@@ -32,15 +32,15 @@ INSERT INTO public.update_policy (
     is_active,
     target_version_code,
     is_force_update,
-    message,
-    release_notes
+    release_notes,
+    download_url
 ) VALUES (
     'com.sweetapps.pocketchord.debug',
     true,
     1,
     false,
-    '[DEBUG] 앱 업데이트',
-    '• [DEBUG] 최신 버전으로 업데이트하세요'
+    '• [DEBUG] 최신 버전으로 업데이트하세요',
+    'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord.debug'
 );
 
 -- 3. notice_policy 디버그 데이터
