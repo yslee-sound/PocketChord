@@ -333,11 +333,11 @@ WHERE app_id = 'your.app.id';
 ### 📋 테스트 문서
 
 **Phase별 상세 가이드**:
-1. `RELEASE-TEST-PHASE1-RELEASE.md` - Emergency 테스트
-2. `RELEASE-TEST-PHASE2-RELEASE.md` - Update 테스트
-3. `RELEASE-TEST-PHASE3-RELEASE.md` - Notice 테스트
-4. `RELEASE-TEST-PHASE4-RELEASE.md` - 우선순위 + 최종 확인
-5. `RELEASE-TEST-PHASE5-RELEASE.md` - Ad Policy 테스트
+1. `release/RELEASE-TEST-PHASE1-RELEASE.md` - Emergency 테스트
+2. `release/RELEASE-TEST-PHASE2-RELEASE.md` - Update 테스트
+3. `release/RELEASE-TEST-PHASE3-RELEASE.md` - Notice 테스트
+4. `release/RELEASE-TEST-PHASE4-RELEASE.md` - 우선순위 + 최종 확인
+5. `release/RELEASE-TEST-PHASE5-RELEASE.md` - Ad Policy 테스트
 
 **빠른 체크리스트**:
 - `RELEASE-TEST-QUICK.md` (15분)
@@ -382,11 +382,11 @@ WHERE app_id = 'your.app.id';
 - **[TEST-ENVIRONMENT-GUIDE.md](TEST-ENVIRONMENT-GUIDE.md)** - 테스트 환경 선택 가이드
 
 ### 릴리즈 테스트
-- **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency
-- **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update
-- **[RELEASE-TEST-PHASE3-RELEASE.md](RELEASE-TEST-PHASE3-RELEASE.md)** - Phase 3: Notice
-- **[RELEASE-TEST-PHASE4-RELEASE.md](RELEASE-TEST-PHASE4-RELEASE.md)** - Phase 4: 우선순위
-- **[RELEASE-TEST-PHASE5-RELEASE.md](RELEASE-TEST-PHASE5-RELEASE.md)** - Phase 5: Ad Policy
+- **[release/RELEASE-TEST-PHASE1-RELEASE.md](release/RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency
+- **[release/RELEASE-TEST-PHASE2-RELEASE.md](release/RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update
+- **[release/RELEASE-TEST-PHASE3-RELEASE.md](release/RELEASE-TEST-PHASE3-RELEASE.md)** - Phase 3: Notice
+- **[release/RELEASE-TEST-PHASE4-RELEASE.md](release/RELEASE-TEST-PHASE4-RELEASE.md)** - Phase 4: 우선순위
+- **[release/RELEASE-TEST-PHASE5-RELEASE.md](release/RELEASE-TEST-PHASE5-RELEASE.md)** - Phase 5: Ad Policy
 
 ### SQL 스크립트
 - **[sql/01-create-update-policy.sql](sql/01-create-update-policy.sql)** - update_policy 테이블
