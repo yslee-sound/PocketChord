@@ -311,7 +311,7 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 - [ ] 앱 재실행
 - [ ] **검증**: App Open 광고 정상 표시 ✅
-- [ ] **검증**: 화면 하단 배너 표시 안 됨 ✅
+- [ ] **검증**: 배너 광고 표시 안 됨 ✅
 - [ ] **전면 광고 테스트** (조건 만족):
   - 코드 상세 → 홈 (3회 반복)
   - 이미 광고 봤다면 60초 대기
