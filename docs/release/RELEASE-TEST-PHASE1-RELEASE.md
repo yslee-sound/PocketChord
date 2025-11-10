@@ -20,9 +20,9 @@
 
 PocketChord는 **4개 독립 테이블**로 팝업을 관리합니다:
 
-| 테이블 | 목적 | 우선순위 |
-|--------|------|----------|
-| **emergency_policy** | 긴급 상황 (앱 차단, 서비스 종료) | 1순위 (최우선) |
+| 테이블 | 목적 | 우선순위 | 중요 |
+|--------|------|----------|----------|
+| **emergency_policy** | 긴급 상황 (앱 차단, 서비스 종료) | 1순위 (최우선) | 되도록 update popup을 사용할것, 이 기능을 사용하는 일은 없어야 함 |
 | **update_policy** | 앱 업데이트 (강제/선택적) | 2순위 |
 | **notice_policy** | 일반 공지 (이벤트, 신규 기능) | 3순위 |
 | **ad_policy** | 광고 제어 | - |
@@ -39,16 +39,12 @@ PocketChord는 **4개 독립 테이블**로 팝업을 관리합니다:
 
 ### 3 emergency_policy 테이블 구조
 
-**핵심 필드**:
-- `is_active`: 긴급 상황 ON/OFF
-- `is_dismissible`: `true` = X 버튼 있음, `false` = X 버튼 없음 (강제)
-- `redirect_url`: Play Store 링크 또는 웹 페이지
-- `button_text`: 버튼 텍스트
-
-**특징**:
-- ✅ **최우선 순위** (다른 모든 팝업보다 먼저 표시)
-- ✅ **추적 없음** (매번 표시됨)
-- ✅ **Google Play 정책 준수** (is_dismissible로 제어)
+| 핵심 필드 | 특징                                     |
+|----------|----------------------------------------|
+| `is_active`: 긴급 상황 ON/OFF | 최우선 순위 (다른 모든 팝업보다 먼저 표시)              |
+| `is_dismissible`: `true` = X 버튼 있음, `false` = X 버튼 없음 (강제) | Google Play 정책 준수 (is_dismissible로 제어) |
+| `redirect_url`: Play Store 링크 또는 웹 페이지 | https://play.google.com/                         |
+| `button_text`: 버튼 텍스트 | 추적 없음 (매번 표시됨)                         |
 
 ---
 
@@ -72,7 +68,7 @@ SET is_active = true,
     title = '긴급공지',
     content = '긴급 테스트입니다. X 버튼으로 닫을 수 있습니다.',
     button_text = '확인'
-WHERE app_id = 'com.sweetapps.pocketchord';
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 #### 검증
@@ -94,8 +90,8 @@ SET is_active = true,
     title = '긴급공지',
     content = '이 앱은 더 이상 지원되지 않습니다. 새 앱을 설치하세요.',
     button_text = '새 앱 설치',
-    redirect_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord'
-WHERE app_id = 'com.sweetapps.pocketchord';
+    redirect_url = 'https://play.google.com/'
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 #### 검증
@@ -113,7 +109,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 ```sql
 UPDATE emergency_policy
 SET is_active = false
-WHERE app_id = 'com.sweetapps.pocketchord';
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 #### 검증
