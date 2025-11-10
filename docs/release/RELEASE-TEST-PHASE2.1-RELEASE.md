@@ -32,14 +32,24 @@
 
 ### 2 업데이트 타입
 
-| 타입 | 설정 | 사용자 경험 | 시간 기반 설정 | 사용 시기 |
-|------|------|-----------|--------------|----------|
-| **강제 업데이트** | `is_force_update = true` | "나중에" 버튼 없음, 뒤로가기 차단 | ❌ 설정 무관<br>(항상 즉시 표시) | 중요 버그, 보안 이슈 |
-| **선택적 업데이트** | `is_force_update = false` | "나중에" 버튼 있음 | ✅ `reshow_interval_hours`<br>✅ `max_later_count` | 일반 업데이트 |
+| 타입 | DB 설정 | 1~3회차 | 4회차 (laterCount >= 3) | 시간 기반 설정 | 사용 시기 |
+|------|---------|---------|------------------------|--------------|----------|
+| **원본 강제 업데이트** | `is_force_update = true` | "나중에" ❌ | - | ❌ 설정 무관 | 중요 버그, 보안 이슈 |
+| **선택적 업데이트** | `is_force_update = false` | "나중에" ✅ | "나중에" ❌<br>(동적 강제 전환) | ✅ `reshow_interval_*`<br>✅ `max_later_count` | 일반 업데이트 |
 
-**💡 참고**: 
-- **강제 업데이트**: `reshow_interval_hours`, `max_later_count` 설정 무관. "나중에" 버튼이 없으므로 재표시 로직 자체가 작동하지 않습니다.
-- **선택적 업데이트**: 시간 기반 설정에 따라 재표시 및 강제 전환이 자동으로 관리됩니다. [PHASE2.2 문서](RELEASE-TEST-PHASE2.2-SETUP.md) 참조
+**💡 핵심 차이점**: 
+- **원본 강제 업데이트** (`is_force_update = true`):
+  - DB 설정부터 강제
+  - 처음부터 "나중에" 버튼이 **아예 없음**
+  - `max_later_count` 무관 (재표시 로직 자체가 작동 안 함)
+  
+- **선택적 → 동적 강제 전환** (`is_force_update = false` + `laterCount >= max_later_count`):
+  - DB는 `is_force_update = false`로 유지
+  - 1~3회차: "나중에" 버튼 있음 (사용자 친화적)
+  - 4회차부터: 클라이언트에서 `isForce = true`로 동적 전환
+  - "나중에" 버튼 사라지고 "필수" 배지 표시
+
+[PHASE2.2 문서](RELEASE-TEST-PHASE2.2-SETUP.md) 참조
 
 ---
 
@@ -91,9 +101,15 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ### 3 시나리오 2: 선택적 업데이트 (디버그 테스트)
 
-**💡 참고**: 선택적 업데이트는 `reshow_interval_seconds`, `max_later_count` 설정에 따라 동작합니다.
+**💡 핵심 동작**: 
+- DB: `is_force_update = false` 유지 (변경 없음)
+- 1~3회차: "나중에" 버튼 있음
+- 4회차: `laterCount >= 3` 도달 → **클라이언트에서** `isForce = true`로 동적 전환
+- 결과: "나중에" 버튼 사라지고 "필수" 배지 표시
+
+**시간 기반 설정**:
 - "나중에" 클릭 후 → `reshow_interval_seconds` 경과 시 재표시
-- `laterCount >= max_later_count` 도달 시 → **강제 업데이트로 자동 전환** ("나중에" 버튼 숨김)
+- `laterCount >= max_later_count` 도달 시 → 강제 업데이트로 자동 전환
 
 #### SQL
 ```sql
@@ -131,7 +147,8 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - [ ] 60초 후 앱 재실행 → 팝업 **다시 표시됨** ⭐
 - [ ] **"나중에" 버튼 없음** (강제 업데이트로 전환됨)
 - [ ] 배지: "필수" 표시
-- [ ] laterCount = 3 도달 → 강제 업데이트로 전환 (정상 동작)
+- [ ] laterCount = 3 도달 → 클라이언트에서 `isForce = true`로 동적 전환
+- [ ] **참고**: DB는 여전히 `is_force_update = false`, 클라이언트에서만 전환됨
 
 **⚠️ 운영 환경**: `reshow_interval_hours = 24`로 설정 필요
 
