@@ -57,12 +57,51 @@
 ---
 ## 3. DB 스키마 변경 SQL
 
-### Phase 2.2 필드 추가
+### 3.1 reshow_interval_hours NOT NULL + DEFAULT 설계
 
-**⚠️ 설계 원칙**: 
+**설계 원칙**: 
 - `reshow_interval_hours`는 **NOT NULL + DEFAULT 24**로 설정
-- 이유: 모두 NULL이 되는 것을 방지하고, 항상 안전한 기본값 보장
-- 30초 테스트는 `seconds = 30`만 설정 (우선순위로 해결)
+- `reshow_interval_minutes`, `reshow_interval_seconds`는 **NULL 허용**
+
+**왜 이렇게 설계했는가?**
+
+| 구분 | NULL 허용 (이전) | NOT NULL + DEFAULT (현재) ✅ |
+|------|-----------------|---------------------------|
+| **모두 NULL 가능?** | ❌ 가능 (위험) | ✅ 불가능 (안전) |
+| **30초 설정** | `hours = NULL, seconds = 30` | `seconds = 30` (간단) |
+| **코드 else 블록** | 필요 | 불필요 |
+| **기본값 명확성** | 낮음 | 높음 (항상 hours = 24) |
+
+**장점**:
+1. ✅ **안전성**: 모든 interval이 NULL이 되는 상황 불가능
+2. ✅ **단순성**: 30초 테스트는 `seconds = 30`만 설정
+3. ✅ **명확성**: `hours = 24`가 항상 보여서 기본값이 명확
+4. ✅ **우선순위와 완벽 호환**: 코드에서 `else` 블록 불필요
+
+**사용 예시**:
+```sql
+-- ✅ 60초 테스트 (간단)
+UPDATE update_policy
+SET reshow_interval_seconds = 60
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- hours는 자동으로 24 유지, seconds 우선 적용
+
+-- ✅ 테스트 해제 (24시간으로 복귀)
+UPDATE update_policy
+SET reshow_interval_seconds = NULL
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- hours = 24가 적용됨
+
+-- ❌ hours를 NULL로 만들 수 없음 (에러 발생)
+UPDATE update_policy
+SET reshow_interval_hours = NULL;  -- 에러!
+```
+
+**참고**: 상세한 설계 배경은 `docs/archive/INTERVAL-NOT-NULL-DESIGN.md` 참조 (아카이브됨)
+
+---
+
+### 3.2 Phase 2.2 필드 추가
 
 **1단계: 기존 스키마 확인 및 수정** (필요한 경우):
 ```sql

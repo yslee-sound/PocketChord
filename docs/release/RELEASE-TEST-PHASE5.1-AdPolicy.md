@@ -262,6 +262,7 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 **예상 로그**:
 ```
+---------------------------- PROCESS STARTED (xxxxx) for package com.sweetapps.pocketchord.debug ----------------------------
 AdPolicyRepo: ===== Ad Policy Fetch Started =====
 AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
 AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug

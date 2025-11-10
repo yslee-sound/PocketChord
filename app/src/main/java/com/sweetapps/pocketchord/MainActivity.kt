@@ -101,14 +101,6 @@ class MainActivity : ComponentActivity() {
         // 전면광고 매니저 초기화
         interstitialAdManager = InterstitialAdManager(this)
 
-        // 디버그 빌드에서만: Supabase 연결 테스트
-        if (BuildConfig.DEBUG) {
-            try {
-                com.sweetapps.pocketchord.debug.SupabaseDebugTest.testConnection(this)
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Debug test failed", e)
-            }
-        }
 
         setContent {
             PocketChordTheme {
