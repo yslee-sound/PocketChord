@@ -31,6 +31,25 @@
 | `ad_interstitial_max_per_hour` | 2 | 시간당 최대 횟수 |
 | `ad_interstitial_max_per_day` | 15 | 일일 최대 횟수 |
 
+**전면광고(Interstitial) 표시 조건**:
+```
+필수 조건 (모두 만족해야 표시됨):
+1. 광고 로드 완료
+2. 마지막 광고 표시 후 60초 경과
+3. 화면 전환 3회 이상 누적
+4. 특정 화면 전환 패턴 중 하나:
+   - 코드 상세 화면 → 홈으로 돌아가기
+   - 메트로놈 → 홈으로 돌아가기
+   - 튜너 → 홈으로 돌아가기
+   - 더보기 → 설정으로 이동
+5. 시간당 제한 (기본 2회) 미초과
+6. 일일 제한 (기본 15회) 미초과  
+7. Supabase 정책 활성화
+
+⚠️ 주의: 단순히 여러 화면을 이동하는 것만으로는 표시되지 않습니다.
+특정 패턴의 화면 전환이 3회 누적되고, 1분이 경과해야 표시됩니다.
+```
+
 ### 1.2 광고 정책 제어 방식
 
 **핵심 변경사항 (2025-11-11)**:
@@ -187,8 +206,43 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 #### Logcat 확인
 ```
 예상 로그:
+- [ ] **검증**: App Open 광고 표시 안 됨
+- [ ] **전면 광고 표시 조건** (다음 중 하나):
+**전면광고 표시 조건 상세**:
+```
+필수 조건 (모두 만족해야 함):
+1. 광고 로드 완료
+2. 마지막 광고 표시 후 60초 경과
+3. 화면 전환 3회 이상
+4. 특정 화면 전환 패턴:
+   - 코드 상세 → 홈
+   - 메트로놈/튜너 → 홈  
+   - 더보기 → 설정
+5. 시간당 제한 (기본 2회) 미초과
+6. 일일 제한 (기본 15회) 미초과
+7. Supabase 정책: is_active = true & ad_interstitial_enabled = true
+
+따라서:
+- 단순히 3회 화면 전환만으로는 안 나옴
+- 특정 패턴 + 1분 경과 + 빈도 제한 체크 모두 통과해야 함
+```
+
+#### Logcat 확인
+
+```
+예상 로그:
+AdPolicyRepo: ===== Ad Policy Fetch Started =====
+AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
+AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug
+AdPolicyRepo: Total rows fetched: 2
 AdPolicyRepo: ✅ 광고 정책 발견!
 AdPolicyRepo:   - is_active: false
+AdPolicyRepo:   - App Open Ad: true
+AdPolicyRepo:   - Interstitial Ad: true
+AdPolicyRepo:   - Banner Ad: true
+AdPolicyRepo:   - Max Per Hour: 2
+AdPolicyRepo:   - Max Per Day: 15
+AdPolicyRepo: ===== Ad Policy Fetch Completed =====
 InterstitialAdManager: [정책] is_active = false - 모든 광고 비활성화
 MainActivity: [정책] is_active = false - 모든 광고 비활성화
 ```
@@ -222,14 +276,20 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 - [ ] **검증**: App Open 광고 표시 안 됨
 - [ ] 백그라운드 → 포그라운드 전환
 - [ ] **검증**: App Open 광고 표시 안 됨
-- [ ] 코드 조회 (3회)
+- [ ] **전면 광고 테스트** (특정 패턴 3회 + 1분 경과):
+  - 코드 상세 → 홈 (3회 반복) + 1분 대기 + 코드 상세 → 홈
 - [ ] **검증**: Interstitial 광고 정상 표시
 - [ ] **검증**: Banner 광고 정상 표시
 
 #### Logcat 확인
 ```
-AdPolicy: App Open enabled=false
-AdMob: App Open Ad disabled by policy
+예상 로그:
+AdPolicyRepo: ✅ 광고 정책 발견!
+AdPolicyRepo:   - is_active: true
+AdPolicyRepo:   - App Open Ad: false
+AdPolicyRepo:   - Interstitial Ad: true
+AdPolicyRepo:   - Banner Ad: true
+AppOpenAdManager: [정책] App Open Ad 비활성화
 ```
 
 #### Step 3: 복구
@@ -257,6 +317,47 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 #### Step 2: 앱 실행 및 검증
 - [ ] 앱 재실행
 - [ ] **검증**: App Open 광고 정상 표시 (백그라운드 복귀 시)
+- [ ] **전면 광고 테스트**:
+  - 코드 상세 → 홈 → 코드 상세 → 홈 → 코드 상세 → 홈 (3회 반복)
+  - 또는 메트로놈 → 홈 → 메트로놈 → 홈 → 메트로놈 → 홈
+  - **1분 대기** (광고 간격)
+  - 다시 코드 상세 → 홈
+- [ ] **검증**: Interstitial 광고 표시 안 됨 (정책에 의해 차단)
+- [ ] **검증**: Banner 광고 정상 표시
+
+**참고**: 전면광고는 특정 화면 전환 패턴(코드→홈, 메트로놈→홈 등)에서만 표시되며, 단순히 여러 화면을 돌아다니는 것만으로는 표시되지 않습니다.
+
+#### Logcat 확인
+```
+예상 로그:
+AdPolicyRepo: ✅ 광고 정책 발견!
+AdPolicyRepo:   - is_active: true
+AdPolicyRepo:   - App Open Ad: true
+AdPolicyRepo:   - Interstitial Ad: false
+AdPolicyRepo:   - Banner Ad: true
+InterstitialAdManager: [정책] 전면 광고 비활성화
+```
+
+#### Step 3: 복구
+```sql
+UPDATE ad_policy
+SET ad_interstitial_enabled = true
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+- [ ] ✅ 재활성화 완료
+
+---
+
+#### Step 1: Interstitial만 비활성화
+```sql
+UPDATE ad_policy
+SET ad_interstitial_enabled = false
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+#### Step 2: 앱 실행 및 검증
+- [ ] 앱 재실행
+- [ ] **검증**: App Open 광고 정상 표시 (백그라운드 복귀 시)
 - [ ] 코드 여러 개 조회 (3회 이상)
 - [ ] **검증**: Interstitial 광고 표시 안 됨
 - [ ] **검증**: Banner 광고 정상 표시
@@ -265,7 +366,8 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 AdPolicy: Interstitial enabled=false
 AdMob: Interstitial Ad disabled by policy
-```
+- [ ] **전면 광고 테스트** (특정 패턴 3회 + 1분 경과):
+  - 코드 상세 → 홈 (3회 반복) + 1분 대기
 
 #### Step 3: 복구
 ```sql
@@ -298,13 +400,19 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 #### Logcat 확인
 ```
-AdPolicy: Banner enabled=false
-AdMob: Banner Ad disabled by policy
-```
-
-#### Step 3: 복구
-```sql
-UPDATE ad_policy
+- [ ] **전면 광고 표시 조건 만족**:
+  - 코드 상세 → 홈 (3회 반복)
+  - 1분 대기
+  - 코드 상세 → 홈
+- [ ] **검증**: 전면 광고 표시 (1회)
+예상 로그:
+AdPolicyRepo: ✅ 광고 정책 발견!
+AdPolicyRepo:   - is_active: true
+AdPolicyRepo:   - App Open Ad: true
+AdPolicyRepo:   - Interstitial Ad: true
+AdPolicyRepo:   - Banner Ad: false
+MainActivity: [정책] 배너 광고 비활성화
+MainActivity: 🔄 배너 광고 정책 변경: 활성화 → 비활성화
 SET ad_banner_enabled = true
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
@@ -346,8 +454,12 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 - [ ] ✅ 운영 설정 복구 완료
 
 ---
-
-### 4.6 최종 확인
+예상 로그:
+InterstitialAdManager: 📊 광고 카운트 증가: 시간당 1, 일일 1
+InterstitialAdManager: 전면광고 표시됨
+(다음 시도 시)
+InterstitialAdManager: ⚠️ 시간당 빈도 제한 초과: 1/1
+InterstitialAdManager: 전면광고 표시 조건 미달
 
 #### Step 1: 모든 광고 정상화 확인
 ```sql
@@ -442,17 +554,16 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 6. **캐시 초기화** (최후 수단)
    ```bash
    adb shell pm clear com.sweetapps.pocketchord
-   ```
-
-### 5.2 is_active = false인데 광고가 나올 때
-
-**원인**: RLS 정책 수정을 하지 않았거나 실패했습니다.
-
-**해결**:
-1. 섹션 2의 RLS 정책 수정 SQL을 다시 실행
-2. 다음 SQL로 정책 확인:
-   ```sql
-   -- RLS 정책 확인
+   AdPolicyRepo: ===== Ad Policy Fetch Started =====
+   AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
+   AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug
+   AdPolicyRepo: Total rows fetched: 2
+   AdPolicyRepo: ✅ 광고 정책 발견!
+   AdPolicyRepo:   - is_active: true
+   AdPolicyRepo:   - App Open Ad: true
+   AdPolicyRepo:   - Interstitial Ad: true
+   AdPolicyRepo:   - Banner Ad: true
+   AdPolicyRepo: ===== Ad Policy Fetch Completed =====
    SELECT schemaname, tablename, policyname, cmd, qual
 -- 모든 광고 즉시 차단
    WHERE tablename = 'ad_policy';
@@ -550,25 +661,38 @@ MainActivity: [정책] 정책 없음 - 기본값(true) 사용
 
 #### Step 1: Supabase Dashboard 로그인
 - [ ] URL: https://supabase.com 접속
+AdPolicyRepo: ===== Ad Policy Fetch Started =====
 - [ ] PocketChord 프로젝트 선택
-**참고**: 정책 변경은 **최대 3분** 소요됩니다 (캐시 만료 주기).
+AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug
+AdPolicyRepo: Total rows fetched: 2
 
 #### Step 2: RLS 정책 수정 (최초 1회, 중요!)
-**섹션 2의 RLS 정책 수정 SQL을 실행하세요.**
-
-#### Step 3: ad_policy 테이블 확인
+AdPolicyRepo:   - App Open Ad: false
+AdPolicyRepo:   - Interstitial Ad: false
+AdPolicyRepo:   - Banner Ad: false
+AdPolicyRepo:   - Max Per Hour: 2
+AdPolicyRepo:   - Max Per Day: 15
+AdPolicyRepo: ===== Ad Policy Fetch Completed =====
 ```sql
+AppOpenAdManager: [정책] is_active = false - 모든 광고 비활성화
 SELECT * FROM ad_policy 
+MainActivity: 🔄 배너 광고 정책 변경: 활성화 → 비활성화
 WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
 ```
 
 **기대 결과**:
 - [ ] ✅ 2개 행 반환 (release, debug)
+AdPolicyRepo: ===== Ad Policy Fetch Started =====
+AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
+AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug
 - [ ] ✅ is_active = true
-- [ ] ✅ 모든 광고 enabled = true
+AdPolicyRepo: ⚠️ 광고 정책 없음 (app_id: com.sweetapps.pocketchord.debug)
 
+AdPolicyRepo: ===== Ad Policy Fetch Completed =====
 ---
+AppOpenAdManager: [정책] 정책 없음 - 기본값(true) 사용
 
+MainActivity: 🎯 배너 광고 정책: 활성화
 ### 6.2 로컬 빌드 테스트
 
 #### Debug 빌드
