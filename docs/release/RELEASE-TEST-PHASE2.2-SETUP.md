@@ -76,6 +76,10 @@ WHERE app_id IN ('com.sweetapps.pocketchord','com.sweetapps.pocketchord.debug');
 
 **필드 우선순위 및 운영 환경 설정** (가장 작은 단위가 최우선):
 
+**⚠️ 중요**: 세 필드는 **조합되지 않고 우선순위에 따라 하나만 선택**됩니다.
+- 예: `hours = 24, seconds = 60` → **60초만 적용** (hours는 무시됨)
+- 예: `hours = 1, minutes = 5, seconds = NULL` → **5분만 적용** (hours는 무시됨)
+
 | 우선순위 | 필드 | 단위 | 사용 조건 | 용도 | 운영 환경 설정 |
 |---------|------|------|----------|------|---------------|
 | **1순위** | `reshow_interval_seconds` | 초 | NULL이 아니면 최우선 사용 | 초고속 테스트용 | ⚠️ NULL (필수) |

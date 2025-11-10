@@ -194,19 +194,19 @@ fun MainScreen(navController: NavHostController) {
                 val reshowIntervalMs = when {
                     // 1순위: 초 단위 (초고속 테스트용)
                     up.reshowIntervalSeconds != null -> {
-                        up.reshowIntervalSeconds.coerceAtLeast(1).toLong() * 1000L
+                        up.reshowIntervalSeconds.toLong() * 1000L
                     }
                     // 2순위: 분 단위 (빠른 테스트용)
                     up.reshowIntervalMinutes != null -> {
-                        up.reshowIntervalMinutes.coerceAtLeast(1).toLong() * 60 * 1000L
+                        up.reshowIntervalMinutes.toLong() * 60 * 1000L
                     }
                     // 3순위: 시간 단위 (운영 환경)
                     else -> {
-                        (up.reshowIntervalHours?.coerceAtLeast(1) ?: 24) * 60 * 60 * 1000L
+                        (up.reshowIntervalHours ?: 24) * 60 * 60 * 1000L
                     }
                 }
 
-                val maxLaterCount = up.maxLaterCount?.coerceAtLeast(1) ?: 3
+                val maxLaterCount = up.maxLaterCount ?: 3
                 val elapsed = now - dismissedTime
 
                 when {
