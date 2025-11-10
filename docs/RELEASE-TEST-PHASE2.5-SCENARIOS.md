@@ -18,13 +18,16 @@
 
 ## 4. 시나리오별 테스트
 
-### S1. DB 변경 및 초기 설정
+### 4.S1. DB 변경 및 초기 설정
 
 **전제조건**: 없음 (섹션 3의 SQL 실행 후 이 단계로 진행)
 
 **목적**: 섹션 3에서 실행한 DB 스키마 변경과 초기값 설정이 정상적으로 적용되었는지 검증
 
-**1단계: 테이블 구조 확인** (새 필드가 추가되었는지 확인)
+---
+
+### 📌 4.S1.1단계: 테이블 구조 확인
+(새 필드가 추가되었는지 확인)
 
 **SQL 스크립트 - 공통** (릴리즈/디버그 구분 없음):
 ```sql
@@ -49,7 +52,7 @@ ORDER BY column_name;
 
 ---
 
-**2단계: 데이터 값 확인**
+### 📌 4.S1.2단계: 데이터 값 확인
 
 **SQL 스크립트 - 공통** (릴리즈 + 디버그 동시 확인):
 ```sql
@@ -70,19 +73,17 @@ ORDER BY app_id;
 
 ---
 
-### S2. 첫 "나중에" 클릭
+### 4.S2. 첫 "나중에" 클릭
 
-**전제조건**: S1 완료 (DB 필드 추가 및 초기값 설정 완료)
-
-**대상**: 디버그 앱 (reshow_interval_seconds = 60초)
-
-**목적**: "나중에" 버튼 클릭 후 시간 추적이 시작되고, 재시작 시 지정 시간 동안 팝업이 표시되지 않는지 확인
-
-**⚠️ 참고**: 이 시나리오는 디버그 환경에서만 테스트합니다. 릴리즈 환경(24시간 간격)
+| 전제조건 | 대상 | 목적 | 참고 |
+|---------|------|------|------|
+| S1 완료 (DB 필드 추가 및 초기값 설정 완료) | 디버그 앱 (reshow_interval_seconds = 60초) | "나중에" 버튼 클릭 후 시간 추적이 시작되고, 재시작 시 지정 시간 동안 팝업이 표시되지 않는지 확인 | ⚠️ 이 시나리오는 디버그 환경에서만 테스트합니다. 릴리즈 환경(24시간 간격) |
 
 ---
 
-**1단계: DB 설정 간단 확인** (S1이 정상 완료되었는지만 확인)
+### 📌 4.S2.1단계: DB 설정 간단 확인
+(S1이 정상 완료되었는지만 확인)
+
 ```sql
 -- 디버그 설정 빠른 확인
 SELECT app_id, target_version_code, is_force_update, is_active
@@ -100,41 +101,24 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ---
 
-**2단계: 앱 실행 및 팝업 표시 확인**
+### 📌 4.S2.2단계: 앱 실행 및 팝업 표시 확인
 
-**실행**:
-1. 디버그 앱 강제 종료 (완전히 종료)
-2. 앱 Cold Start로 재실행
-3. Logcat 모니터링 (Filter: `tag:UpdateLater`)
-
-**기대 UI**:
-- ✅ 선택적 업데이트 팝업이 화면에 표시되어야 함
-- ✅ "나중에" 버튼과 "업데이트" 버튼이 모두 보여야 함
-
-**핵심 확인 포인트**:
-- 첫 실행이므로 팝업이 표시되어야 함 (아직 "나중에"를 누른 적 없음)
-- ✅ "나중에" 버튼 있음
-- ✅ "지금 업데이트" 버튼 있음
+| 실행 | 기대 UI | 핵심 확인 포인트 |
+|------|---------|----------------|
+| 1. 디버그 앱 강제 종료 (완전히 종료) | ✅ 선택적 업데이트 팝업이 화면에 표시되어야 함 | 첫 실행이므로 팝업이 표시되어야 함 (아직 "나중에"를 누른 적 없음) |
+| 2. 앱 Cold Start로 재실행 | ✅ "나중에" 버튼과 "업데이트" 버튼이 모두 보여야 함 | ✅ "나중에" 버튼 있음 |
+| 3. Logcat 모니터링 (Filter: `tag:UpdateLater`) | | ✅ "지금 업데이트" 버튼 있음 |
 
 ---
 
-**3단계: "나중에" 버튼 클릭**
+### 📌 4.S2.3단계: "나중에" 버튼 클릭
 
-**실행**:
-1. 팝업에서 "나중에" 버튼 클릭
-2. 팝업 닫힘 확인
-
-**기대 로그** (UpdateLater 태그):
-```
-UpdateLater: ✋ Update dialog dismissed for code=10
-UpdateLater: ⏱️ Tracking: laterCount=0→1, timestamp=1762705544280  ← ✅ 첫 추적 시작!
-```
-
-**확인 포인트**:
-- ✅ `✋ Update dialog dismissed for code=10` - 팝업이 정상적으로 닫힘
-- ✅ `⏱️ Tracking: laterCount=0→1` - **첫 "나중에" 클릭, 카운트 0에서 1로 증가!**
-- ✅ `timestamp=...` - 현재 시간 저장됨
-- ✅ 메인 화면으로 복귀
+| 실행 | 기대 로그 (UpdateLater) | 확인 포인트 |
+|------|----------------------|-----------|
+| 1. 팝업에서 "나중에" 버튼 클릭 | `UpdateLater: ✋ Update dialog dismissed for code=10` | ✅ 팝업이 정상적으로 닫힘 |
+| 2. 팝업 닫힘 확인 | `UpdateLater: ⏱️ Tracking: laterCount=0→1, timestamp=1762705544280` ← ✅ 첫 추적 시작! | ✅ **카운트 0→1 증가!** |
+| | | ✅ 현재 시간 저장됨 |
+| | | ✅ 메인 화면으로 복귀 |
 
 **참고**: 내부적으로 SharedPreferences에 다음 값이 저장됩니다:
 - `update_dismissed_time`: 현재 시간 (timestamp)
@@ -143,28 +127,15 @@ UpdateLater: ⏱️ Tracking: laterCount=0→1, timestamp=1762705544280  ← ✅
 
 ---
 
-**4단계: 재시작 후 미표시 확인 (1분 이내)**
+### 📌 4.S2.4단계: 재시작 후 미표시 확인 (1분 이내)
 
-**실행**:
-1. 앱 강제 종료
-2. 즉시 재시작 (1분 경과 안 함)
-
-**기대 로그** (UpdateLater 태그):
-```
-UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)  ← ✅ 팝업 스킵!
-```
-
-**확인 포인트**:
-- ✅ `⏸️ Update dialog skipped` - 시간 미경과로 팝업 스킵됨
-- ✅ 팝업이 표시되지 않고 메인 화면으로 진입
-
-**로그 메시지 설명**:
-```
-"⏸️ Update dialog skipped (dismissed version: 10, target: 10)"
-```
+| 실행 | 기대 로그 (UpdateLater) | 확인 포인트 |
+|------|----------------------|-----------|
+| 1. 앱 강제 종료 | `UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)` ← ✅ 팝업 스킵! | ✅ 시간 미경과로 팝업 스킵됨 |
+| 2. 즉시 재시작 (1분 경과 안 함) | | ✅ 팝업이 표시되지 않고 메인 화면으로 진입 |
 
 **왜 팝업이 스킵되는가?**
-1. **S2-3단계**에서 "나중에" 클릭 시 `dismissedVersionCode = 10` 저장됨
+1. **S2.3단계**에서 "나중에" 클릭 시 `dismissedVersionCode = 10` 저장됨
 2. **재시작 시** 조건 확인:
    - `currentVersion (3) < targetVersion (10)` → true (업데이트 필요함) ✅
    - `isForceUpdate` → false (선택적 업데이트) ✅
@@ -173,8 +144,6 @@ UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)  �
      - 코드는 `!=` (같지 않음)을 확인하므로 → false
 3. **판단**: `!=` 조건이 false이므로 팝업 표시 조건 불충족 → 팝업 스킵 (시간 미경과)
 
-**기대 결과**: 
-- 팝업 미표시, `showUpdateDialog: false` 유지, Phase 3 정상 진행
 
 **참고**: 
 - **1분(60초) 경과 후**에는 `dismissedVersionCode`를 무시하고 재표시됨 (S3에서 테스트)
@@ -186,7 +155,7 @@ UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)  �
 
 ---
 
-### S3. 시간 경과 후 재표시
+### 4.S3. 시간 경과 후 재표시
 
 **전제조건**: S2 완료 상태 (1회 "나중에" 클릭 완료)
 
@@ -207,60 +176,33 @@ UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)  �
 
 ---
 
-**1단계: 1분 경과 대기**
+### 📌 4.S3.1단계: 1분 경과 대기
 
-**실행**:
-1. S2-4단계 완료 후 (첫 "나중에" 클릭)
-2. **실제로 1분(60초) 대기** (디버그 앱 기준 - `reshow_interval_seconds = 60`)
-   - 또는 에뮬레이터 시스템 시간을 60초 앞으로 변경:
-   ```cmd
-   adb -s emulator-5554 shell su root date @$(($(($(date +%s) + 60))))
-   ```
-
-**주의**: SharedPreferences 삭제는 **하지 마세요!** (추적 데이터가 초기화됨)
+| 실행 | 주의사항 |
+|------|---------|
+| 1. S2-4단계 완료 후 (첫 "나중에" 클릭) | SharedPreferences 삭제는 **하지 마세요!** (추적 데이터가 초기화됨) |
+| 2. **실제로 1분(60초) 대기** (디버그 앱 기준 - `reshow_interval_seconds = 60`) | |
+| 또는 에뮬레이터 시스템 시간을 60초 앞으로 변경:<br>`adb -s emulator-5554 shell su root date @$(($(($(date +%s) + 60))))` | |
 
 ---
 
-**2단계: 앱 재시작**
+### 📌 4.S3.2단계: 앱 재시작
 
-**실행**:
-1. 앱 강제 종료
-2. 앱 재실행
-3. Logcat 모니터링 (Filter: `tag:UpdateLater`)
-
-**기대 로그** (UpdateLater 태그):
-```
-UpdateLater: ⏱️ Update interval elapsed (>= 60s), reshow allowed  ← ✅ 시간 경과 확인!
-UpdateLater: 📊 Current later count: 1 / 3  ← ✅ 현재 횟수 확인
-```
-
-**필수 확인 포인트**:
-1. ✅ `⏱️ Update interval elapsed (>= 60s), reshow allowed` (시간 경과 감지!)
-2. ✅ `📊 Current later count: 1 / 3` (현재 카운트 확인 - 아직 증가 안 함!)
-
-**UI 확인**:
-- ✅ 업데이트 팝업이 다시 나타남
-- ✅ "나중에" 버튼 있음 (아직 최대 횟수 도달 전)
-- ✅ "업데이트" 버튼 있음
+| 실행 | 기대 로그 (UpdateLater) | 필수 확인 포인트 | UI 확인 |
+|------|----------------------|---------------|---------|
+| 1. 앱 강제 종료 | `UpdateLater: ⏱️ Update interval elapsed (>= 60s), reshow allowed` ← ✅ 시간 경과! | ✅ 시간 경과 감지! | ✅ 업데이트 팝업이 다시 나타남 |
+| 2. 앱 재실행 | `UpdateLater: 📊 Current later count: 1 / 3` ← ✅ 현재 횟수 | ✅ 현재 카운트 확인 (아직 증가 안 함!) | ✅ "나중에" 버튼 있음 |
+| 3. Logcat 모니터링 (Filter: `tag:UpdateLater`) | | | ✅ "업데이트" 버튼 있음 |
 
 ---
 
-**3단계: "나중에" 버튼 클릭**
+### 📌 4.S3.3단계: "나중에" 버튼 클릭
 
-**실행**:
-1. (2단계에서 팝업이 표시되었다면) "나중에" 버튼 클릭
-2. 팝업 닫힘 확인
-
-**기대 로그** (UpdateLater 태그):
-```
-UpdateLater: ✋ Update dialog dismissed for code=10
-UpdateLater: ⏱️ Tracking: laterCount=1→2, timestamp=1731150000000  ← ✅ 카운트 증가 추적!
-```
-
-**확인 포인트**:
-- ✅ `✋ Update dialog dismissed for code=10` - 팝업 정상 닫힘
-- ✅ `⏱️ Tracking: laterCount=1→2` - **카운트가 1에서 2로 증가!**
-- ✅ `timestamp=...` - 현재 시간 저장됨
+| 실행 | 기대 로그 (UpdateLater) | 확인 포인트 |
+|------|----------------------|-----------|
+| 1. (2단계에서 팝업이 표시되었다면) "나중에" 버튼 클릭 | `UpdateLater: ✋ Update dialog dismissed for code=10` | ✅ 팝업 정상 닫힘 |
+| 2. 팝업 닫힘 확인 | `UpdateLater: ⏱️ Tracking: laterCount=1→2, timestamp=1731150000000` ← ✅ 카운트 증가! | ✅ **카운트 1→2 증가!** |
+| | | ✅ 현재 시간 저장됨 |
 
 **내부 동작** (SharedPreferences):
 - `update_dismissed_time`: 현재 시간으로 갱신
@@ -279,17 +221,11 @@ UpdateLater: ⏱️ Tracking: laterCount=1→2, timestamp=1731150000000  ← ✅
 
 ---
 
-### S4. 3회 "나중에" 후 강제 전환
+### 4.S4. 3회 "나중에" 후 강제 전환
 
 **전제조건**: S3를 2회 더 반복 (총 3회 "나중에" 클릭)
 
 **대상**: 디버그 앱 (max_later_count = 3)
-
-**테스트 단계**:
-1. S3 과정 반복 → laterCount = 2
-2. 다시 1분 경과 후 재시작
-3. "나중에" 3번째 클릭 → laterCount = 3
-4. 다시 1분 경과 후 재시작
 
 **기대 로그** (4번째 표시 시 - UpdateLater 태그):
 ```
@@ -298,15 +234,16 @@ UpdateLater: 📊 Current later count: 3 / 3  ← ✅ 최대 횟수 도달!
 UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode  ← ✅ 강제 전환!
 ```
 
-**UI 확인**:
-- ✅ "나중에" 버튼 없음
-- ✅ "업데이트" 버튼만 표시
-- ✅ 뒤로가기 눌러도 팝업 닫히지 않음
-- ✅ X 버튼 없음
+| 테스트 단계 | UI 확인 |
+|----------|---------|
+| 1. S3 과정 반복 → laterCount = 2 | ✅ "나중에" 버튼 없음 |
+| 2. 다시 1분 경과 후 재시작 | ✅ "업데이트" 버튼만 표시 |
+| 3. "나중에" 3번째 클릭 → laterCount = 3 | ✅ 뒤로가기 눌러도 팝업 닫히지 않음 |
+| 4. 다시 1분 경과 후 재시작 | ✅ X 버튼 없음 |
 
 ---
 
-### S5. 업데이트 후 초기화
+### 4.S5. 업데이트 후 초기화
 
 **전제조건**: S3 또는 S4 상태 (선택적/강제 업데이트 팝업 표시 중)
 
@@ -325,9 +262,7 @@ UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode  ← ✅ 강�
 
 ---
 
-**테스트 단계**:
-
-**1단계: 앱 버전 증가**
+### 📌 4.S5.1단계: 앱 버전 증가
 
 **실행**:
 1. Android Studio에서 `app/build.gradle.kts` 파일 열기
@@ -344,44 +279,32 @@ UpdateLater: 🚨 Later count (3) >= max (3), forcing update mode  ← ✅ 강�
 
 ---
 
-**2단계: 로그 확인**
+### 📌 4.S5.2단계: 로그 확인
 
-**기대 로그** (UpdateLater 태그):
+**기대 로그 (UpdateLater)**:
 ```
 UpdateLater: 🧹 Clearing old update tracking data (version updated)  ← ✅ 자동 초기화!
 ```
 
-**필수 확인 포인트**:
-1. ✅ `🧹 Clearing old update tracking data (version updated)` - **자동 초기화 실행!**
-2. ✅ 업데이트 팝업이 표시되지 않음
-
-**UI 확인**:
-- ✅ 업데이트 팝업 미표시
-- ✅ 앱이 정상적으로 메인 화면으로 진입
+| 필수 확인 포인트 | UI 확인 |
+|---------------|---------|
+| ✅ **자동 초기화 실행!** | ✅ 업데이트 팝업 미표시 |
+| ✅ 업데이트 팝업이 표시되지 않음 | ✅ 앱이 정상적으로 메인 화면으로 진입 |
 
 ---
 
-**3단계: 재시작 후 새 업데이트 팝업 확인**
+### 📌 4.S5.3단계: 재시작 후 새 업데이트 팝업 확인
 
-**실행**:
-1. Supabase에서 `target_version_code`를 더 높게 설정 (예: 20):
-2. 앱 강제 종료 후 재시작
-
-**확인 포인트**:
-- ✅ 새 target (20) 업데이트 팝업이 표시됨
-- ✅ 이전 추적 데이터(laterCount 등)가 완전히 초기화되어 새로 시작됨
-
----
-
-**S5 완료 조건**: 
-- ✅ 버전 증가 시 팝업 미표시 확인
-- ✅ `🧹 Clearing old update tracking data` 로그 확인
-- ✅ SharedPreferences 초기화 검증 (선택)
-- ✅ 새 업데이트 팝업 정상 표시 확인
+| 실행 | 확인 포인트 | S5 완료 조건 |
+|------|-----------|------------|
+| 1. Supabase에서 `target_version_code`를 더 높게 설정 (예: 20) | ✅ 새 target (20) 업데이트 팝업이 표시됨 | ✅ 버전 증가 시 팝업 미표시 확인 |
+| 2. 앱 강제 종료 후 재시작 | ✅ 이전 추적 데이터(laterCount 등)가 완전히 초기화되어 새로 시작됨 | ✅ `🧹 Clearing old update tracking data` 로그 확인 |
+| | | ✅ SharedPreferences 초기화 검증 (선택) |
+| | | ✅ 새 업데이트 팝업 정상 표시 확인 |
 
 ---
 
-### S6. 정책 변경 테스트
+### 4.S6. 정책 변경 테스트
 
 #### S6-1. 재표시 간격 변경
 
@@ -460,65 +383,11 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ---
 
-## 5. 에지 케이스 테스트
+## ✅ 시나리오 테스트 완료!
 
-| 케이스 | 설정 | 기대 동작 |
-|--------|------|-----------|
-| 음수 간격 | reshow_interval_hours = -1 | 앱에서 최소값(1)으로 클램프, 로그 경고 |
-| 0 간격 | reshow_interval_hours = 0 | 매번 재표시 (즉시 재표시) |
-| 과대 간격 | reshow_interval_hours = 999 | 정상 동작 (999시간 = 약 41일) |
-| 0 횟수 | max_later_count = 0 | 즉시 강제 모드 |
-| 음수 횟수 | max_later_count = -1 | 최소값(1)으로 클램프 |
-| 타임존 변경 | 디바이스 타임존 변경 | UTC 기준 추적이면 정상 동작 |
-| 시계 뒤로 조작 | 과거 시간으로 설정 | 재표시 안 됨 (경과 시간 음수) |
+모든 시나리오(S1~S6)를 완료했습니다.
 
----
-
-## 6. 초기화/복구 SQL
-
-### SharedPreferences 초기화 명령
-```cmd
-adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug rm shared_prefs/update_preferences.xml
-```
-
-### 테스트 전 초기 상태로 복구
-
-**두 버전 동시 초기화**:
-```sql
--- 디버그 초기화
-UPDATE update_policy
-SET target_version_code = 10, is_force_update = false,
-    reshow_interval_hours = 1, reshow_interval_minutes = NULL, reshow_interval_seconds = 60,
-    max_later_count = 3, is_active = true
-WHERE app_id = 'com.sweetapps.pocketchord.debug';
-
--- 릴리즈 초기화
-UPDATE update_policy
-SET target_version_code = 10, is_force_update = false,
-    reshow_interval_hours = 24, reshow_interval_minutes = NULL, reshow_interval_seconds = NULL,
-    max_later_count = 3, is_active = true
-WHERE app_id = 'com.sweetapps.pocketchord';
-
--- 두 버전 확인
-SELECT app_id, target_version_code, is_force_update,
-       reshow_interval_hours, reshow_interval_minutes, reshow_interval_seconds, max_later_count, is_active
-FROM update_policy
-WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
-ORDER BY app_id;
-```
-
-**기대 결과**:
-
-| app_id | target_version_code | is_force_update | reshow_interval_hours | reshow_interval_minutes | reshow_interval_seconds | max_later_count | is_active |
-|--------|---------------------|-----------------|----------------------|------------------------|------------------------|-----------------|-----------|
-| com.sweetapps.pocketchord | 10 | false | 24 | NULL | NULL | 3 | true |
-| com.sweetapps.pocketchord.debug | 10 | false | 1 | NULL | 60 | 3 | true |
-
----
-
-## ✅ 테스트 완료!
-
-모든 시나리오를 완료했습니다. 문제가 있거나 처음부터 다시 시작하려면:
-
-➡️ **[Phase 2.5 설정 가이드로 돌아가기](RELEASE-TEST-PHASE2.5-SETUP.md)**
+**다음 단계:**
+- ➡️ **[Phase 2.5 고급 테스트 (에지 케이스 & 초기화)](RELEASE-TEST-PHASE2.5-ADVANCED.md)** - 에지 케이스 및 복구 방법
+- ⬅️ **[Phase 2.5 설정 가이드로 돌아가기](RELEASE-TEST-PHASE2.5-SETUP.md)** - DB 설정 재확인
 
