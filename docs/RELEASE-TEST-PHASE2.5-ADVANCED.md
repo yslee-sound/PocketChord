@@ -413,14 +413,4 @@ adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug rm shared_pref
 
 ## ✅ 모든 테스트 완료!
 
-Phase 2.5의 모든 테스트를 완료했습니다.
-
-**문서 네비게이션**:
-- ⬅️ **[Phase 2.5 시나리오 테스트로 돌아가기](RELEASE-TEST-PHASE2.5-SCENARIOS.md)** - 기본 시나리오 재확인
-- ⬅️ **[Phase 2.5 설정 가이드로 돌아가기](RELEASE-TEST-PHASE2.5-SETUP.md)** - DB 설정 재확인
-
-**문제가 발생했을 때**:
-1. 섹션 6-4의 "문제 해결 SQL" 참고
-2. 섹션 6-3의 "완전 초기화" 실행
-3. 설정 가이드부터 다시 시작
 

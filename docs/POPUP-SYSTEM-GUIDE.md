@@ -337,6 +337,7 @@ WHERE app_id = 'your.app.id';
 2. `RELEASE-TEST-PHASE2-RELEASE.md` - Update 테스트
 3. `RELEASE-TEST-PHASE3-RELEASE.md` - Notice 테스트
 4. `RELEASE-TEST-PHASE4-RELEASE.md` - 우선순위 + 최종 확인
+5. `RELEASE-TEST-PHASE5-RELEASE.md` - Ad Policy 테스트
 
 **빠른 체크리스트**:
 - `RELEASE-TEST-QUICK.md` (15분)
@@ -355,9 +356,11 @@ WHERE app_id = 'your.app.id';
    ↓
 5. Phase 4: 우선순위 테스트
    ↓
-6. 최종 확인 및 복구
+6. Phase 5: Ad Policy 테스트
    ↓
-7. 릴리즈 승인 ✅
+7. 최종 확인 및 복구
+   ↓
+8. 릴리즈 승인 ✅
 ```
 
 ---
@@ -383,6 +386,7 @@ WHERE app_id = 'your.app.id';
 - **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update
 - **[RELEASE-TEST-PHASE3-RELEASE.md](RELEASE-TEST-PHASE3-RELEASE.md)** - Phase 3: Notice
 - **[RELEASE-TEST-PHASE4-RELEASE.md](RELEASE-TEST-PHASE4-RELEASE.md)** - Phase 4: 우선순위
+- **[RELEASE-TEST-PHASE5-RELEASE.md](RELEASE-TEST-PHASE5-RELEASE.md)** - Phase 5: Ad Policy
 
 ### SQL 스크립트
 - **[sql/01-create-update-policy.sql](sql/01-create-update-policy.sql)** - update_policy 테이블

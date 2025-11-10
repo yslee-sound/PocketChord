@@ -150,8 +150,3 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ---
 
 ## ➡️ 다음 단계
-
-DB 설정이 완료되었습니다! 이제 실제 시나리오 테스트를 진행하세요:
-
-**[Phase 2.5 시나리오 테스트로 이동 →](RELEASE-TEST-PHASE2.5-SCENARIOS.md)**
-
