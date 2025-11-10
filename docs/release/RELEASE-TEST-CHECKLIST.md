@@ -121,8 +121,8 @@ ad_policy: is_active = _____
 | 정리 (target_version_code=1) | ⬜ |
 
 **⚠️ Phase 2.5 (시간 재표시)**: 별도 테스트 필요 시
-- [PHASE2.5-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)
-- [PHASE2.5-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
+- [PHASE2-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)
+- [PHASE2-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
 
 ---
 
