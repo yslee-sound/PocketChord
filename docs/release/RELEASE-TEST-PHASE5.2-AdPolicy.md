@@ -235,15 +235,51 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 ### 3.5 Logcat 확인
 
+**필터 설정**: `tag:AdPolicyRepo | tag:InterstitialAdManager`
+
+**앱 시작 시 로그**:
 ```
-예상 로그:
+AdPolicyRepo: ===== Ad Policy Fetch Started =====
+AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
+AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug
+AdPolicyRepo: Total rows fetched: 2
 AdPolicyRepo: ✅ 광고 정책 발견!
 AdPolicyRepo:   - is_active: true
 AdPolicyRepo:   - App Open Ad: true
 AdPolicyRepo:   - Interstitial Ad: false
 AdPolicyRepo:   - Banner Ad: true
-InterstitialAdManager: [정책] 전면 광고 비활성화
+AdPolicyRepo:   - Max Per Hour: 2
+AdPolicyRepo:   - Max Per Day: 15
+AdPolicyRepo: ===== Ad Policy Fetch Completed =====
+InterstitialAdManager: 전면광고 로드 성공
 ```
+
+**전면광고 표시 시도 시 로그** (코드→홈 3회 + 60초 경과 후):
+```
+InterstitialAdManager: [정책] 전면 광고 비활성화
+InterstitialAdManager: 전면광고 표시 조건 미달
+```
+
+**캐시 사용 로그** (3분 이내 재조회 시):
+```
+AdPolicyRepo: 📦 캐시된 광고 정책 사용 (유효 시간: xxx초 남음)
+```
+
+**⚠️ 중요**:
+- **`전면광고 로드 성공`은 정상입니다**: 광고가 준비된 것일 뿐, 표시되는 것은 아닙니다
+- **차단 로그는 실제 표시 시도 시에만 나타납니다**: 
+  - 화면 전환 3회 완료
+  - 60초 경과
+  - 특정 패턴 실행 (코드→홈)
+  - 이때 `[정책] 전면 광고 비활성화` 로그가 출력됩니다
+- **정책 조회만으로는 차단 로그가 안 나옵니다**: 실제로 광고를 보여주려고 할 때 차단됩니다
+
+**검증 방법**:
+1. 앱 시작 → 위의 정책 조회 로그 확인
+2. 코드→홈을 3회 반복
+3. 60초 대기
+4. 다시 코드→홈 실행
+5. **이때 차단 로그 확인** ← 여기서 비로소 `[정책] 전면 광고 비활성화` 출력
 
 ### 3.6 Step 3: 복구
 
