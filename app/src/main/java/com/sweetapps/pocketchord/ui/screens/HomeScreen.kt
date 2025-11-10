@@ -234,7 +234,29 @@ fun MainScreen(navController: NavHostController) {
                         // 매 시작마다 현재 laterCount 로그
                         Log.d("UpdateLater", "📊 Current later count: $laterCount / $maxLaterCount")
 
-                        // Phase 2.5: 시간 경과 체크 (최우선 - 버전 비교보다 먼저!)
+                        // Phase 2.5: 최대 횟수 체크 (최우선 - 시간 경과와 무관하게 체크)
+                        if (laterCount >= maxLaterCount) {
+                            Log.d("UpdateLater", "🚨 Later count ($laterCount) >= max ($maxLaterCount), forcing update mode")
+                            updateInfo = UpdateInfo(
+                                id = null,
+                                versionCode = up.targetVersionCode,
+                                versionName = "",
+                                appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
+                                isForce = true,  // 강제로 전환
+                                releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
+                                releasedAt = null,
+                                downloadUrl = up.downloadUrl
+                            )
+                            showUpdateDialog = true
+                            // 강제 업데이트 캐시 저장
+                            updatePrefs.edit {
+                                putInt("force_required_version", updateInfo!!.versionCode)
+                                putString("force_update_info", gson.toJson(updateInfo!!))
+                            }
+                            return@LaunchedEffect
+                        }
+
+                        // Phase 2.5: 시간 경과 체크
                         if (dismissedTime > 0 && elapsed >= reshowIntervalMs) {
                             // 시간이 경과했으므로 재표시
                             val intervalMsg = when {
@@ -244,29 +266,7 @@ fun MainScreen(navController: NavHostController) {
                             }
                             Log.d("UpdateLater", "⏱️ Update interval elapsed (>= $intervalMsg), reshow allowed")
 
-                            // 최대 횟수 도달 확인 (현재 count만 확인, 증가는 "나중에" 클릭 시)
-                            if (laterCount >= maxLaterCount) {
-                                Log.d("UpdateLater", "🚨 Later count ($laterCount) >= max ($maxLaterCount), forcing update mode")
-                                updateInfo = UpdateInfo(
-                                    id = null,
-                                    versionCode = up.targetVersionCode,
-                                    versionName = "",
-                                    appId = com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID,
-                                    isForce = true,  // 강제로 전환
-                                    releaseNotes = up.releaseNotes ?: "새로운 업데이트가 있습니다.",
-                                    releasedAt = null,
-                                    downloadUrl = up.downloadUrl
-                                )
-                                showUpdateDialog = true
-                                // 강제 업데이트 캐시 저장
-                                updatePrefs.edit {
-                                    putInt("force_required_version", updateInfo!!.versionCode)
-                                    putString("force_update_info", gson.toJson(updateInfo!!))
-                                }
-                                return@LaunchedEffect
-                            }
-
-                            // 아직 최대 횟수 도달 전 → 선택적 업데이트 표시
+                            // 선택적 업데이트 표시
                             updateInfo = UpdateInfo(
                                 id = null,
                                 versionCode = up.targetVersionCode,

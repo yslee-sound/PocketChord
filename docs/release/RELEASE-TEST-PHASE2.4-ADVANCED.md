@@ -267,27 +267,93 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 **목적**: max_later_count를 0으로 설정 시 즉시 강제 모드로 전환되는지 확인
 
+**전제조건**: SharedPreferences 초기화 필요 (깨끗한 상태에서 시작)
+
 **SQL 스크립트**:
 ```sql
 UPDATE update_policy
 SET max_later_count = 0
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
-
--- SharedPreferences 초기화 (새로 시작)
 ```
+
+**SharedPreferences 초기화**:
 ```cmd
 adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug rm shared_prefs/update_preferences.xml
 ```
 
 **기대 동작**:
-- 첫 팝업 표시 시부터 "나중에" 버튼 없음
-- 즉시 강제 모드
-- Logcat: `🚨 Later count (0) >= max (0), forcing update mode`
+- **최초 실행 시부터 "나중에" 버튼 없음** (즉시 강제 모드)
+- Logcat 로그:
+  ```
+  UpdateLater: 📊 Current later count: 0 / 0
+  UpdateLater: 🚨 Later count (0) >= max (0), forcing update mode
+  ```
+- 팝업에 "나중에" 버튼 표시 안 됨
+- 뒤로가기 차단됨
 
-**테스트**:
-1. 앱 시작
-2. 업데이트 팝업 표시 시 "나중에" 버튼이 없는지 확인
-3. 뒤로가기 차단 확인
+**테스트 절차**:
+1. SQL로 `max_later_count = 0` 설정
+2. SharedPreferences 초기화 (위 명령어)
+3. 앱 재시작
+4. **즉시 강제 업데이트 팝업 표시** ✅
+   - "나중에" 버튼 없음 ✅
+   - 뒤로가기 차단 ✅
+
+**💡 로직 설명 - "강제 모드"의 정확한 의미**:
+
+**❌ 오해하기 쉬운 부분**:
+- ~~Supabase의 `is_force_update`를 코드가 자동으로 true로 변경한다~~ (불가능!)
+- DB 값은 그대로 `is_force_update = false` 유지됨
+
+**✅ 실제 동작**:
+```kotlin
+// 코드 실행 순서
+laterCount = 0, maxLaterCount = 0  // SharedPreferences와 DB에서 읽어옴
+
+// 1. 최대 횟수 체크 (최우선 - 시간 경과와 무관하게 먼저 체크)
+if (laterCount >= maxLaterCount) {  // 0 >= 0 → true
+    Log.d("UpdateLater", "🚨 Later count ($laterCount) >= max ($maxLaterCount), forcing update mode")
+    
+    // ✅ updateInfo.isForce = true로 설정 (코드에서 결정)
+    // ✅ 팝업에서 "나중에" 버튼 숨김
+    // ✅ 뒤로가기 차단
+    // ⚠️ 주의: DB의 is_force_update는 여전히 false (변경 안 됨)
+    
+    // 결과: 사용자에게는 "강제 모드 팝업"이 표시됨
+}
+```
+
+**💡 두 가지 강제 모드 방법 비교**:
+
+| 방법 | DB `is_force_update` | DB `max_later_count` | 코드 `updateInfo.isForce` | UI 결과 | 용도 |
+|------|---------------------|---------------------|------------------------|---------|------|
+| **방법 1** | **true** | 3 (무관) | true | 강제 모드 | Supabase에서 직접 제어 |
+| **방법 2 (E4)** | false (유지) | **0** | **true** (코드에서 결정) | 강제 모드 **처럼** 보임 | "나중에" 횟수 시스템 검증 |
+
+**공통점**:
+- 둘 다 "나중에" 버튼이 숨겨짐
+- 둘 다 뒤로가기가 차단됨
+- 사용자 입장에서는 동일한 UI
+
+**차이점**:
+- 방법 1: DB의 `is_force_update = true` (명시적)
+- 방법 2: DB의 `is_force_update = false`지만, 코드가 `laterCount >= maxLaterCount` 조건으로 `updateInfo.isForce = true` 설정 (간접적)
+
+**E4 테스트의 목적**:
+- ✅ `max_later_count = 0`일 때 코드가 올바르게 작동하는지 확인
+- ✅ "나중에" 허용 횟수 시스템이 엣지 케이스(0회)에서도 정상 작동하는지 검증
+- ✅ 최초 실행부터 강제 모드 UI가 표시되는지 확인
+- ⚠️ DB의 `is_force_update`를 변경하는 것이 아니라, **코드 로직으로 강제 모드 UI를 만드는 것**
+
+**이전 버그**:
+- ❌ 시간 경과 체크가 먼저 실행됨
+- ❌ `dismissedTime = 0` (최초 실행) → 시간 경과 체크 블록을 건너뜀
+- ❌ "첫 표시" 로직으로 가서 선택적 업데이트 팝업 표시됨 (잘못된 동작)
+
+**수정 후**:
+- ✅ 최대 횟수 체크가 최우선 (시간 경과와 무관하게 먼저 실행)
+- ✅ `laterCount = 0, maxLaterCount = 0` → 조건 만족 → `updateInfo.isForce = true` 설정
+- ✅ 최초 실행부터 강제 모드 UI 정상 표시
 
 **복구**:
 ```sql
@@ -546,6 +612,50 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 ALTER TABLE update_policy
 DROP CONSTRAINT check_reshow_interval_positive;
 ```
+
+**💡 설명 - 제약 조건 삭제의 역할**:
+
+**이 명령어가 하는 일**:
+- ✅ `update_policy` 테이블에서 `check_reshow_interval_positive` 제약 조건을 **완전히 제거**
+- ✅ 삭제 후에는 음수 값 입력이 가능해짐 (제약 조건이 없어지므로)
+
+**왜 필요한가?**:
+1. **테스트 목적**: 음수 값 입력을 테스트하고 싶을 때 (E1, E5 테스트)
+2. **설계 변경**: 제약 조건 로직을 수정하고 싶을 때
+3. **문제 해결**: 제약 조건 때문에 정상적인 작업이 막힐 때
+
+**⚠️ 주의사항**:
+- ❌ 운영 환경에서는 제약 조건을 삭제하지 마세요!
+- ❌ 제약 조건 없이는 음수 값이 DB에 들어갈 수 있어 위험합니다
+- ✅ 삭제 후 다시 생성하려면 위의 "2단계: CHECK 제약 조건 생성" SQL을 다시 실행하세요
+
+**사용 예시**:
+```sql
+-- 1. 제약 조건 삭제
+ALTER TABLE update_policy
+DROP CONSTRAINT check_reshow_interval_positive;
+
+-- 2. 이제 음수 값 입력 가능 (테스트용)
+UPDATE update_policy
+SET reshow_interval_hours = -1
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- ✅ 성공 (제약 조건이 없으므로)
+
+-- 3. 테스트 완료 후 제약 조건 다시 생성
+ALTER TABLE update_policy
+ADD CONSTRAINT check_reshow_interval_positive
+CHECK (
+    (reshow_interval_hours IS NULL OR reshow_interval_hours >= 0) AND
+    (reshow_interval_minutes IS NULL OR reshow_interval_minutes >= 0) AND
+    (reshow_interval_seconds IS NULL OR reshow_interval_seconds >= 0) AND
+    (max_later_count >= 0)
+);
+```
+
+**💡 실용적 조언**:
+- 대부분의 경우 제약 조건을 삭제할 필요가 없습니다
+- E1, E5 음수 테스트는 **제약 조건이 있을 때 에러가 나는 것을 확인**하는 테스트입니다
+- 즉, 제약 조건을 삭제하지 않고 테스트하는 것이 정상입니다
 
 ---
 

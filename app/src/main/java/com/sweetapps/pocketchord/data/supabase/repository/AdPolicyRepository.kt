@@ -7,7 +7,7 @@ import io.github.jan.supabase.postgrest.from
 /**
  * AdPolicy Repository: 광고 정책 조회
  * - RLS 정책에 의해 is_active = TRUE인 정책만 조회 가능
- * - 5분 캐싱으로 네트워크 요청 최소화
+ * - 3분 캐싱으로 네트워크 요청 최소화 (긴급 제어 가능)
  * - app_policy와 독립적으로 운영
  */
 class AdPolicyRepository(
@@ -16,14 +16,14 @@ class AdPolicyRepository(
 ) {
     companion object {
         private const val TAG = "AdPolicyRepo"
-        private const val CACHE_DURATION_MS = 5 * 60 * 1000L // 5분
+        private const val CACHE_DURATION_MS = 3 * 60 * 1000L // 3분 (긴급 대응 가능 + 효율적)
     }
 
     private var cachedPolicy: AdPolicy? = null
     private var cacheTimestamp: Long = 0
 
     /**
-     * 현재 활성화된 광고 정책 조회 (5분 캐싱)
+     * 현재 활성화된 광고 정책 조회 (3분 캐싱)
      * @return 정책이 있으면 AdPolicy, 없으면 null
      */
     suspend fun getPolicy(): Result<AdPolicy?> = runCatching {
@@ -48,22 +48,25 @@ class AdPolicyRepository(
 
         android.util.Log.d(TAG, "Total rows fetched: ${allPolicies.size}")
 
-        // 클라이언트에서 필터링
-        val policy = allPolicies.firstOrNull { it.appId == appId && it.isActive }
+        // app_id로 정책 찾기 (is_active 상관없이)
+        val policy = allPolicies.firstOrNull { it.appId == appId }
 
         if (policy != null) {
             android.util.Log.d(TAG, "✅ 광고 정책 발견!")
+            android.util.Log.d(TAG, "  - is_active: ${policy.isActive}")
             android.util.Log.d(TAG, "  - App Open Ad: ${policy.adAppOpenEnabled}")
             android.util.Log.d(TAG, "  - Interstitial Ad: ${policy.adInterstitialEnabled}")
             android.util.Log.d(TAG, "  - Banner Ad: ${policy.adBannerEnabled}")
             android.util.Log.d(TAG, "  - Max Per Hour: ${policy.adInterstitialMaxPerHour}")
             android.util.Log.d(TAG, "  - Max Per Day: ${policy.adInterstitialMaxPerDay}")
 
-            // 캐시 갱신
+            // is_active 체크는 사용하는 곳에서 수행
+            // 캐시 갱신 (is_active 상관없이 저장)
             cachedPolicy = policy
             cacheTimestamp = currentTime
         } else {
-            android.util.Log.d(TAG, "⚠️ 활성화된 광고 정책 없음 (기본값 사용)")
+            android.util.Log.d(TAG, "⚠️ 광고 정책 없음 (app_id: $appId)")
+            android.util.Log.d(TAG, "⚠️ 기본값 사용됨")
             cachedPolicy = null
         }
 

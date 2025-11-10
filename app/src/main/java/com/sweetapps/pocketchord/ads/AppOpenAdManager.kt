@@ -62,10 +62,24 @@ class AppOpenAdManager(
      * Supabase 광고 정책에서 앱 오픈 광고 활성화 여부 확인
      */
     private suspend fun isAppOpenEnabledFromPolicy(): Boolean {
-        return adPolicyRepository.getPolicy()
-            .getOrNull()
-            ?.adAppOpenEnabled
-            ?: true  // 정책 조회 실패 시 기본값 true
+        val policy = adPolicyRepository.getPolicy().getOrNull()
+
+        // 정책이 없으면 기본값 true (Supabase 장애 대응)
+        if (policy == null) {
+            android.util.Log.d(TAG, "[정책] 정책 없음 - 기본값(true) 사용")
+            return true
+        }
+
+        // is_active가 false이면 모든 광고 비활성화
+        if (!policy.isActive) {
+            android.util.Log.d(TAG, "[정책] is_active = false - 모든 광고 비활성화")
+            return false
+        }
+
+        // is_active = true일 때만 개별 플래그 확인
+        val enabled = policy.adAppOpenEnabled
+        android.util.Log.d(TAG, "[정책] 앱 오픈 광고 ${if (enabled) "활성화" else "비활성화"}")
+        return enabled
     }
 
     /**

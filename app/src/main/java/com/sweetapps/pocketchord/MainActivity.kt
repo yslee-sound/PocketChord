@@ -123,13 +123,28 @@ class MainActivity : ComponentActivity() {
                 val isShowingAppOpenAd by app.isShowingAppOpenAd.collectAsState()
                 var isBannerEnabled by remember { mutableStateOf(true) }
 
-                // Supabase에서 배너 광고 정책 가져오기 (5분마다 자동 갱신)
+                // Supabase에서 배너 광고 정책 가져오기 (3분마다 자동 갱신)
                 LaunchedEffect(Unit) {
                     val adPolicyRepo = com.sweetapps.pocketchord.data.supabase.repository.AdPolicyRepository(app.supabase)
 
                     while (true) {
                         val adPolicy = adPolicyRepo.getPolicy().getOrNull()
-                        val newBannerEnabled = adPolicy?.adBannerEnabled ?: true
+
+                        // 정책 체크: 없으면 기본값 true, is_active = false면 false, 개별 플래그 확인
+                        val newBannerEnabled = when {
+                            adPolicy == null -> {
+                                android.util.Log.d("MainActivity", "[정책] 정책 없음 - 기본값(true) 사용")
+                                true  // Supabase 장애 대응
+                            }
+                            !adPolicy.isActive -> {
+                                android.util.Log.d("MainActivity", "[정책] is_active = false - 모든 광고 비활성화")
+                                false
+                            }
+                            else -> {
+                                android.util.Log.d("MainActivity", "[정책] 배너 광고 ${if (adPolicy.adBannerEnabled) "활성화" else "비활성화"}")
+                                adPolicy.adBannerEnabled
+                            }
+                        }
 
                         if (isBannerEnabled != newBannerEnabled) {
                             android.util.Log.d("MainActivity", "🔄 배너 광고 정책 변경: ${if (isBannerEnabled) "활성화" else "비활성화"} → ${if (newBannerEnabled) "활성화" else "비활성화"}")
@@ -138,8 +153,8 @@ class MainActivity : ComponentActivity() {
                             android.util.Log.d("MainActivity", "🎯 배너 광고 정책: ${if (isBannerEnabled) "활성화" else "비활성화"}")
                         }
 
-                        // 5분마다 체크 (캐시 만료 주기와 동일)
-                        kotlinx.coroutines.delay(5 * 60 * 1000L)
+                        // 3분마다 체크 (캐시 만료 주기와 동일)
+                        kotlinx.coroutines.delay(3 * 60 * 1000L)
                     }
                 }
 

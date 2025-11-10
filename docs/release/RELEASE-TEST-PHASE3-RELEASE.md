@@ -62,7 +62,7 @@ SET is_active = true,
     title = '서비스 안내',
     content = '중요 공지입니다. 앱을 최신 버전으로 유지해 주세요.',
     notice_version = 251109  -- YYMMDD 형식 권장
-WHERE app_id = 'com.sweetapps.pocketchord';
+WHERE app_id IN ('com.sweetapps.pocketchord','com.sweetapps.pocketchord.debug');
 ```
 
 #### 검증

@@ -1,7 +1,7 @@
 # 릴리즈 테스트 - Phase 5 (Ad Policy + 배포)
 
-**버전**: v3.0  
-**최종 업데이트**: 2025-11-10  
+**버전**: v3.1 (is_active 근본 해결)  
+**최종 업데이트**: 2025-11-11  
 **소요 시간**: 약 20-30분
 
 ---
@@ -9,37 +9,135 @@
 ## 📋 목차
 
 1. [개요](#1-개요)
-2. [테스트 준비](#2-테스트-준비)
-3. [시나리오 테스트](#3-시나리오-테스트)
-4. [문제 해결](#4-문제-해결)
-5. [배포 체크리스트](#5-배포-체크리스트)
-6. [완료 체크리스트](#6-완료-체크리스트)
+2. [중요: RLS 정책 수정 (최초 1회)](#2-중요-rls-정책-수정-최초-1회)
+3. [테스트 준비](#3-테스트-준비)
+4. [시나리오 테스트](#4-시나리오-테스트)
+5. [문제 해결](#5-문제-해결)
+6. [배포 체크리스트](#6-배포-체크리스트)
+7. [완료 체크리스트](#7-완료-체크리스트)
 
 ---
 
 ## 1 개요
 
-### 1 ad_policy 테이블 구조
+### 1.1 ad_policy 테이블 구조
 
 | 필드명 | 기본값 | 설명 |
 |--------|--------|------|
-| `is_active` | true | 전체 광고 ON/OFF |
+| `is_active` | true | 전체 광고 ON/OFF (메인 제어) |
 | `ad_app_open_enabled` | true | App Open 광고 |
 | `ad_interstitial_enabled` | true | Interstitial 광고 |
 | `ad_banner_enabled` | true | Banner 광고 |
 | `ad_interstitial_max_per_hour` | 2 | 시간당 최대 횟수 |
 | `ad_interstitial_max_per_day` | 15 | 일일 최대 횟수 |
 
+### 1.2 광고 정책 제어 방식
+
+**핵심 변경사항 (2025-11-11)**:
+- ✅ **is_active 정상화**: RLS 정책 수정으로 is_active가 의도대로 작동
+- ✅ **3분 캐싱**: 앱 실행 중 정책 변경 시 최대 3분 이내 반영
+- ✅ **즉시 반영**: 앱 재시작 시 즉시 반영 (캐시 초기화)
+- ✅ **직관적인 제어**: is_active 하나로 모든 광고 제어 가능
+
+**제어 우선순위**:
+```
+1. is_active = false → 모든 광고 비활성화 (가장 강력)
+2. is_active = true → 개별 플래그 확인
+   - ad_app_open_enabled
+   - ad_interstitial_enabled
+   - ad_banner_enabled
+3. 정책 없음 → 기본값 true (Supabase 장애 대응)
+```
+
+**정책 반영 시간**:
+```
+방법 1: 앱 재시작
+  → 즉시 반영 (0초) ✅ 권장
+
+방법 2: 앱 실행 중 대기
+  → 최대 3분 대기 (캐시 만료)
+  → 배너 광고는 자동으로 3분마다 체크하여 반영
+```
+
+**3분 캐싱을 선택한 이유**:
+
+| 측면 | 1분 | 3분 (선택) ✅ | 5분 |
+|------|-----|---------------|-----|
+| 긴급 대응 | 매우 빠름 | **충분히 빠름** | 느림 |
+| 네트워크 부담 | 높음 (60회/시간) | **적절함 (20회/시간)** | 낮음 (12회/시간) |
+| 배터리 소모 | 높음 | **적절함** | 낮음 |
+| 실제 효과 | 과도함 | **균형적** | 여유로움 |
+
+**선택 근거**:
+1. ✅ **긴급 대응 충분**: 3분이면 심각한 상황에 충분히 빠르게 대응 가능
+2. ✅ **효율성**: 1분 대비 네트워크 요청 66% 감소 (960회/일 절감)
+3. ✅ **배터리 절약**: 요청 빈도 감소로 사용자 배터리 수명 향상
+4. ✅ **업계 표준**: 대부분의 앱이 3~5분 캐싱 사용 (Firebase: 12시간, 광고 정책: 3~5분)
+5. ✅ **실용성**: 실제 운영에서 새로 앱을 여는 사용자는 즉시 반영(0초)되므로 3분으로 충분
+
+**실제 시나리오**:
+```
+긴급 광고 차단 필요 시:
+  → Supabase에서 is_active = false 설정
+  → 새로 시작하는 사용자: 즉시 차단 (0초) ✅
+  → 실행 중인 사용자: 최대 3분 이내 차단 ✅
+  → 결과: 3분이면 충분히 효과적!
+```
+
 ---
 
-## 2 테스트 준비
+## 2 중요: RLS 정책 수정 (최초 1회)
 
-### 1 사전 확인
+### 2.1 왜 수정이 필요한가?
+
+**이전 문제**:
+- ❌ RLS 정책이 `is_active = false`인 행을 숨김
+- ❌ 앱에서 정책을 찾을 수 없어 기본값 적용
+- ❌ 결과: `is_active = false` 설정 시 광고가 켜짐 (역설!)
+
+**해결 방안**:
+**Supabase Dashboard → SQL Editor에서 실행**:
+
+```sql
+-- ============================================
+-- ad_policy RLS 정책 수정 (근본 해결)
+-- ============================================
+-- 작성일: 2025-11-11
+-- 목적: is_active를 정상적으로 사용 가능하도록 RLS 정책 수정
+-- ============================================
+
+-- 1. 기존 RLS 정책들 제거
+DROP POLICY IF EXISTS "ad_policy_select" ON ad_policy;
+DROP POLICY IF EXISTS "ad_policy_select_all" ON ad_policy;
+
+-- 2. 새로운 RLS 정책: 모든 행 조회 가능
+CREATE POLICY "ad_policy_select_all" ON ad_policy
+  FOR SELECT USING (true);
+
+-- 3. 확인
+SELECT app_id, is_active, ad_banner_enabled 
+FROM ad_policy;
+-- 이제 is_active = false인 행도 조회됨
+```
+
+**실행 확인**:
+- [ ] ✅ SQL 실행 완료
+- [ ] ✅ 에러 없음
+- [ ] ✅ 모든 행이 조회됨
+
+**참고**: 이 수정은 **최초 1회만** 실행하면 됩니다.
+
+---
+
+## 3 테스트 준비
+
+### 3.1 사전 확인
 - [ ] Supabase SQL Editor 접속 완료
+- [ ] **RLS 정책 수정 완료** (섹션 2)
 - [ ] 테스트 기기/에뮬레이터 연결 확인
 - [ ] Logcat 필터 설정: `tag:AdPolicy` 또는 `tag:AdMob`
 
-### 2 초기 상태 확인
+### 3.2 초기 상태 확인
 
 **SQL 스크립트**:
 ```sql
@@ -57,53 +155,42 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 **기대 결과** (운영 기본값):
 ```
-is_active: true
-ad_app_open_enabled: true
-ad_interstitial_enabled: true
-ad_banner_enabled: true
-ad_interstitial_max_per_hour: 2
-ad_interstitial_max_per_day: 15
 ```
+- [ ] **검증**: App Open 광고 표시 안 됨 ✅ (즉시 반영)
 
-**현재 값 기록**:
-```
-is_active: _____
-ad_app_open_enabled: _____
-ad_interstitial_enabled: _____
-ad_banner_enabled: _____
-max_per_hour: _____
-max_per_day: _____
-```
+## 4 시나리오 테스트
 
----
+### 4.1 전체 광고 비활성화 (is_active 테스트)
+**방법 B: 앱 실행 중 대기 (캐싱 테스트)**
+- [ ] 앱을 종료하지 않고 계속 실행
+- [ ] **최대 3분 대기** (캐시 만료)
+- [ ] 배너 광고가 자동으로 사라지는지 확인
+- [ ] **검증**: 3분 이내 배너 광고 사라짐 ✅
 
-## 3 시나리오 테스트
 
-### 1 전체 광고 비활성화
+#### Step 2: 앱 실행 및 검증
 
-#### 목적
-`is_active = false` 설정 시 모든 광고가 표시되지 않는지 확인
-
-#### Step 1: 전체 광고 OFF
+**방법 A: 즉시 반영 (권장)**
+- [ ] 앱 완전 종료 (백그라운드에서 제거)
+✅ **RLS 정책 수정 후 정상 작동 검증**
+- [ ] **검증**: App Open 광고 표시 안 됨 ✅ (즉시 반영)
 ```sql
 UPDATE ad_policy
 SET is_active = false
 WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-#### Step 2: 앱 실행 및 검증
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-- [ ] **검증**: App Open 광고 표시 안 됨
-- [ ] 코드 여러 개 조회
-- [ ] **검증**: Interstitial 광고 표시 안 됨
-- [ ] **검증**: Banner 광고 표시 안 됨
+**방법 B: 앱 실행 중 대기 (캐싱 테스트)**
+- [ ] 앱을 종료하지 않고 계속 실행
+- [ ] **최대 3분 대기** (캐시 만료)
+- [ ] 배너 광고가 자동으로 사라지는지 확인
+- [ ] **검증**: 3분 이내 배너 광고 사라짐 ✅
 
 #### Logcat 확인
 ```
 예상 로그:
-AdPolicy: is_active=false
-AdMob: All ads disabled by policy
+AdPolicyRepo: ✅ 광고 정책 발견!
+AdPolicyRepo:   - is_active: false
+InterstitialAdManager: [정책] is_active = false - 모든 광고 비활성화
+MainActivity: [정책] is_active = false - 모든 광고 비활성화
 ```
 
 #### Step 3: 복구
@@ -113,10 +200,11 @@ SET is_active = true
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 - [ ] ✅ 재활성화 완료
+- [ ] ✅ **중요**: is_active가 정상 작동함을 확인!
 
 ---
 
-### 2 App Open 광고 제어
+### 4.2 App Open 광고 제어
 
 #### 목적
 App Open 광고만 개별 제어
@@ -154,7 +242,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3 Interstitial 광고 제어
+### 4.3 Interstitial 광고 제어
 
 #### 목적
 Interstitial 광고만 개별 제어
@@ -189,7 +277,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 4 Banner 광고 제어
+### 4.4 Banner 광고 제어
 
 #### 목적
 Banner 광고만 개별 제어
@@ -224,7 +312,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 5 빈도 제한 테스트 (선택사항)
+### 4.5 빈도 제한 테스트 (선택사항)
 
 #### 목적
 Interstitial 광고 빈도 제한 동작 확인
@@ -259,7 +347,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 6 최종 확인
+### 4.6 최종 확인
 
 #### Step 1: 모든 광고 정상화 확인
 ```sql
@@ -288,13 +376,26 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 - [ ] ✅ Phase 5 완료!
 
 ---
-
-## 4 문제 해결
-
-### 1 광고가 표시되지 않을 때
+3. **정책 반영 확인**
+   
+   **즉시 반영 (권장)**:
+   - 앱 완전 종료 (백그라운드에서 제거)
+   - 앱 재시작
+   - 로그 확인: `🔄 Supabase에서 광고 정책 새로 가져오기`
+   
+   **앱 실행 중 (캐시 대기)**:
+   - 정책 변경 후 **최대 3분** 대기
+   - 배너 광고가 자동으로 변경됨
+   - 전면/앱오픈 광고는 다음 표시 시점에 반영
+   - 전면/앱오픈 광고는 다음 표시 시점에 반영
+### 5.1 광고가 표시되지 않을 때
 
 **체크리스트**:
-1. **Supabase 설정 확인**
+1. **RLS 정책 수정 확인** (섹션 2)
+   - RLS 정책 수정 SQL을 실행했는가?
+   - `USING (true)` 정책이 적용되었는가?
+
+2. **Supabase 설정 확인**
    ```sql
    SELECT * FROM ad_policy 
    WHERE app_id = 'com.sweetapps.pocketchord';
@@ -302,126 +403,173 @@ WHERE app_id = 'com.sweetapps.pocketchord';
    - `is_active = true`인가?
    - 해당 광고 플래그가 `true`인가?
 
-2. **Logcat 확인**
+3. **정책 반영 확인**
+   
+   **즉시 반영 (권장)**:
+   - 앱 완전 종료 (백그라운드에서 제거)
+   - 앱 재시작
+   - 로그 확인: `🔄 Supabase에서 광고 정책 새로 가져오기`
+   
+   **앱 실행 중 (캐시 대기)**:
+   - 정책 변경 후 **최대 3분** 대기
+   - 배너 광고가 자동으로 변경됨
+   - 전면/앱오픈 광고는 다음 표시 시점에 반영
+
+4. **Logcat 확인**
    ```bash
-   adb logcat | findstr "AdPolicy"
-   adb logcat | findstr "AdMob"
+   adb logcat | findstr "AdPolicyRepo"
+   adb logcat | findstr "정책"
+   ```
+   예상 로그:
+   ```
+3. **정책 반영 확인**
+   
+   **즉시 반영 (권장)**:
+   - 앱 완전 종료 (백그라운드에서 제거)
+   - 앱 재시작
+   - 로그 확인: `🔄 Supabase에서 광고 정책 새로 가져오기`
+   
+   **앱 실행 중 (캐시 대기)**:
+   - 정책 변경 후 **최대 3분** 대기
+   - 배너 광고가 자동으로 변경됨
+   - 전면/앱오픈 광고는 다음 표시 시점에 반영
    ```
 
-3. **빈도 제한 확인**
+5. **빈도 제한 확인**
    - 시간당/일일 제한 도달했는지 확인
    - 로그에서 `⚠️ limit reached` 메시지 확인
 
-4. **캐시 초기화**
+6. **캐시 초기화** (최후 수단)
    ```bash
    adb shell pm clear com.sweetapps.pocketchord
    ```
 
-### 2 긴급 조치
+### 5.2 is_active = false인데 광고가 나올 때
 
-**모든 광고 즉시 끄기**:
+**원인**: RLS 정책 수정을 하지 않았거나 실패했습니다.
+
+**해결**:
+1. 섹션 2의 RLS 정책 수정 SQL을 다시 실행
+2. 다음 SQL로 정책 확인:
+   ```sql
+   -- RLS 정책 확인
+   SELECT schemaname, tablename, policyname, cmd, qual
+-- 모든 광고 즉시 차단
+   WHERE tablename = 'ad_policy';
+   ```
+   예상 결과:
+   ```
+   policyname: ad_policy_select_all
+   qual: true
+   ```
+
+3. 앱 완전 종료 후 재시작
+
+**반영 시간**:
+- ✅ **즉시 반영**: 사용자가 앱 재시작 시 (권장)
+- ⏰ **최대 1분**: 앱 실행 중 (캐시 만료 대기)
+
+### 5.3 긴급 광고 제어
+
+**⚠️ 2025-11-11 업데이트: is_active 정상화 완료!**
+- ✅ 앱 재시작 시 즉시 적용
+#### 방법 1: is_active 사용 (✅ 권장, 간단하고 직관적)
+
 ```sql
+-- 모든 광고 차단 (최대 3분 소요, 앱 재시작 시 즉시)
 UPDATE ad_policy
 SET is_active = false
-WHERE app_id = 'com.sweetapps.pocketchord';
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
+
+-- 모든 광고 다시 활성화
+UPDATE ad_policy
+SET is_active = true
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
 ```
 
-**특정 광고만 즉시 끄기**:
+**장점**:
+- ✅ 한 줄로 모든 광고 제어
+- ✅ 직관적이고 명확
+- ✅ 앱 재시작 시 즉시, 실행 중 3분 이내 반영
+
+#### 방법 2: 개별 플래그 사용 (세밀한 제어)
+
 ```sql
--- Interstitial만
+-- 모든 광고 플래그를 개별적으로 끄기
 UPDATE ad_policy
-SET ad_interstitial_enabled = false
-WHERE app_id = 'com.sweetapps.pocketchord';
-
--- App Open만
-UPDATE ad_policy
-SET ad_app_open_enabled = false
-WHERE app_id = 'com.sweetapps.pocketchord';
-
--- Banner만
-UPDATE ad_policy
-SET ad_banner_enabled = false
-WHERE app_id = 'com.sweetapps.pocketchord';
+SET 
+  ad_app_open_enabled = false,
+  ad_interstitial_enabled = false,
+  ad_banner_enabled = false
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
 ```
+
+**장점**:
+- ✅ 개별 광고 독립 제어 가능
+- ✅ 유연성 높음
+
+#### 현재 설정 확인
+
+```sql
+SELECT app_id, is_active, ad_app_open_enabled, ad_interstitial_enabled, ad_banner_enabled
+FROM ad_policy
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
+```
+
+#### 예상 로그 (정책 적용 성공 시)
+
+```
+AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
+AdPolicyRepo: Total rows fetched: 1
+AdPolicyRepo: ✅ 광고 정책 발견!
+AdPolicyRepo:   - is_active: false
+AdPolicyRepo:   - App Open Ad: true
+AdPolicyRepo:   - Interstitial Ad: true
+AdPolicyRepo:   - Banner Ad: true
+InterstitialAdManager: [정책] is_active = false - 모든 광고 비활성화
+MainActivity: [정책] is_active = false - 모든 광고 비활성화
+```
+
+#### 예상 로그 (정책 조회 실패 시 - 기본값 적용)
+
+```
+AdPolicyRepo: Total rows fetched: 0
+AdPolicyRepo: ⚠️ 광고 정책 없음 (app_id: xxx)
+AdPolicyRepo: ⚠️ 기본값 사용됨
+InterstitialAdManager: [정책] 정책 없음 - 기본값(true) 사용
+MainActivity: [정책] 정책 없음 - 기본값(true) 사용
+```
+
+**참고**: 정책 변경은 **최대 3분** 소요됩니다 (캐시 만료 주기). 앱 재시작 시 즉시 반영됩니다.
 
 ---
 
-## 5 배포 체크리스트
+## 6 배포 체크리스트
 
-### 1 Supabase 작업
+### 6.1 Supabase 작업
 
 #### Step 1: Supabase Dashboard 로그인
 - [ ] URL: https://supabase.com 접속
 - [ ] PocketChord 프로젝트 선택
-- [ ] SQL Editor 열기
+**참고**: 정책 변경은 **최대 3분** 소요됩니다 (캐시 만료 주기).
 
-#### Step 2: ad_policy 테이블 생성 (최초 1회)
-```sql
--- ad_policy 테이블 생성
-CREATE TABLE IF NOT EXISTS ad_policy (
-  id BIGSERIAL PRIMARY KEY,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  app_id TEXT UNIQUE NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  
-  -- 광고 ON/OFF
-  ad_app_open_enabled BOOLEAN DEFAULT true,
-  ad_interstitial_enabled BOOLEAN DEFAULT true,
-  ad_banner_enabled BOOLEAN DEFAULT true,
-  
-  -- 빈도 제한
-  ad_interstitial_max_per_hour INT DEFAULT 2,
-  ad_interstitial_max_per_day INT DEFAULT 15
-);
+#### Step 2: RLS 정책 수정 (최초 1회, 중요!)
+**섹션 2의 RLS 정책 수정 SQL을 실행하세요.**
 
--- 초기 데이터 삽입 (Release)
-INSERT INTO ad_policy (
-  app_id, is_active,
-  ad_app_open_enabled, ad_interstitial_enabled, ad_banner_enabled,
-  ad_interstitial_max_per_hour, ad_interstitial_max_per_day
-) VALUES (
-  'com.sweetapps.pocketchord',
-  true, true, true, true, 2, 15
-);
-
--- 초기 데이터 삽입 (Debug)
-INSERT INTO ad_policy (
-  app_id, is_active,
-  ad_app_open_enabled, ad_interstitial_enabled, ad_banner_enabled,
-  ad_interstitial_max_per_hour, ad_interstitial_max_per_day
-) VALUES (
-  'com.sweetapps.pocketchord.debug',
-  true, true, true, true, 2, 15
-)
-ON CONFLICT (app_id) DO UPDATE SET
-  is_active = EXCLUDED.is_active,
-  ad_app_open_enabled = EXCLUDED.ad_app_open_enabled,
-  ad_interstitial_enabled = EXCLUDED.ad_interstitial_enabled,
-  ad_banner_enabled = EXCLUDED.ad_banner_enabled,
-  ad_interstitial_max_per_hour = EXCLUDED.ad_interstitial_max_per_hour,
-  ad_interstitial_max_per_day = EXCLUDED.ad_interstitial_max_per_day;
-
--- RLS 정책 생성
-CREATE POLICY "ad_policy_select" ON ad_policy
-  FOR SELECT USING (is_active = true);
-```
-
-#### Step 3: 테이블 생성 확인
+#### Step 3: ad_policy 테이블 확인
 ```sql
 SELECT * FROM ad_policy 
-WHERE app_id = 'com.sweetapps.pocketchord';
+WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
 ```
 
 **기대 결과**:
-- [ ] ✅ 1개 행 반환
+- [ ] ✅ 2개 행 반환 (release, debug)
 - [ ] ✅ is_active = true
 - [ ] ✅ 모든 광고 enabled = true
-- [ ] ✅ max_per_hour = 2
-- [ ] ✅ max_per_day = 15
 
 ---
 
-### 2 로컬 빌드 테스트
+### 6.2 로컬 빌드 테스트
 
 #### Debug 빌드
 ```bash
@@ -457,22 +605,22 @@ SET ad_banner_enabled = false
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 
-- [ ] ✅ 5분 이내 배너 광고 사라짐
+- [ ] ✅ 1분 이내 배너 광고 사라짐
 - [ ] ✅ Logcat 확인: `배너 광고 정책 변경`
 
 ```sql
 -- 배너 ON
-UPDATE ad_policy 
+- [ ] ✅ 3분 이내 배너 광고 사라짐
 SET ad_banner_enabled = true 
 WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 
-- [ ] ✅ 5분 이내 배너 광고 다시 나타남
+- [ ] ✅ 1분 이내 배너 광고 다시 나타남
 
 #### 테스트 2: 전체 광고 제어
 ```sql
 -- 모든 광고 OFF
-UPDATE ad_policy 
+- [ ] ✅ 3분 이내 배너 광고 다시 나타남
 SET 
   ad_app_open_enabled = false,
   ad_interstitial_enabled = false,
@@ -525,8 +673,9 @@ jarsigner -verify -verbose app/release/app-release.apk
 #### 버전 확인
 ```kotlin
 // app/build.gradle.kts
-versionCode = ?  // 이전보다 +1
-versionName = "?" // 적절한 버전
+// versionCode: 이전 값보다 +1로 설정하세요 (예: 이전=100 -> versionCode = 101)
+versionCode = /* previous_version_code + 1 */  // placeholder: 실제 값을 넣어주세요
+versionName = "x.y.z" // 적절한 버전 (예: "1.2.3")
 ```
 
 **체크리스트**:
@@ -582,18 +731,57 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 6. 완료 체크리스트
+## 7 완료 체크리스트
 
-### 1 시나리오 통과 여부
+### 7.1 RLS 정책 수정 확인
+- [ ] ✅ RLS 정책 수정 SQL 실행 완료
+- [ ] ✅ `USING (true)` 정책 적용 확인
+- [ ] ✅ is_active = false 테스트 통과
+
+### 7.2 시나리오 통과 여부
 
 | 시나리오 | 결과 | 비고 |
 |----------|------|------|
-| S1: 전체 광고 ON/OFF | ⬜ PASS / ⬜ FAIL | |
+| S1: is_active 전체 제어 | ⬜ PASS / ⬜ FAIL | **중요: RLS 수정 후 테스트** |
 | S2: App Open 제어 | ⬜ PASS / ⬜ FAIL | |
 | S3: Interstitial 제어 | ⬜ PASS / ⬜ FAIL | |
 | S4: Banner 제어 | ⬜ PASS / ⬜ FAIL | |
 | S5: 빈도 제한 (선택) | ⬜ PASS / ⬜ FAIL / ⬜ SKIP | |
 | S6: 최종 확인 | ⬜ PASS / ⬜ FAIL | |
+
+### 7.3 배포 준비
+
+**최종 체크리스트**:
+- [ ] ✅ RLS 정책 수정 완료
+- [ ] ✅ 모든 시나리오 테스트 통과
+- [ ] ✅ is_active 정상 작동 확인
+- [ ] ✅ 문서 업데이트 완료
+- [ ] ✅ Release 빌드 성공
+- [ ] ✅ Play Store 업로드 준비 완료
+
+**승인자**: _______________  
+**배포 일시**: 2025-__-__
+
+---
+
+## 8 참고 문서
+
+### 관련 문서
+- `docs/sql/fix-rls-policy.sql` - RLS 정책 수정 SQL
+- `docs/archive/IS-ACTIVE-FIX-COMPLETE.md` - is_active 근본 해결 완전 가이드
+- `docs/archive/RLS-POLICY-ANALYSIS.md` - RLS 정책 설계 분석
+- `docs/archive/AD-POLICY-SETTINGS-2025-11-10.md` - 광고 정책 설정 상세
+
+### 변경 이력
+- **v3.1 (2025-11-11)**: is_active 근본 해결, RLS 정책 수정, 3분 캐싱 최적화
+- **v3.0 (2025-11-10)**: 1분 캐싱 도입, 기본값 true 변경
+- **v2.0**: ad_policy 테이블 분리
+
+---
+
+**문서 작성**: GitHub Copilot  
+**최종 업데이트**: 2025-11-11  
+**버전**: v3.1
 
 ### 2 최종 상태 확인
 
@@ -603,7 +791,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ### 3 발견된 이슈
 
-```
+- **v3.1 (2025-11-11)**: is_active 근본 해결, RLS 정책 수정, 3분 캐싱
 1. _____________________________________________
 2. _____________________________________________
 3. _____________________________________________
@@ -621,4 +809,3 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 **테스트 완료 일시**: ___________  
 **테스트 담당자**: ___________  
 **결과**: ⬜ PASS / ⬜ FAIL
-
