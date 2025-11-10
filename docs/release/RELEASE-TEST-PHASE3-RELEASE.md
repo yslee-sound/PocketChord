@@ -220,7 +220,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 - **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 전체 릴리즈 테스트
 - **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency (팝업 시스템 개요)
-- **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update Policy
+- **[RELEASE-TEST-PHASE2.1-RELEASE.md](RELEASE-TEST-PHASE2.1-RELEASE.md)** - Phase 2: Update Policy
 
 ---
 

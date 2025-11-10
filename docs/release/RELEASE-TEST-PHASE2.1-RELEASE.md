@@ -37,11 +37,11 @@
 | **선택적 업데이트** | `is_force_update = false` | "나중에" 버튼 있음 | 일반 업데이트 |
 | **강제 업데이트** | `is_force_update = true` | "나중에" 버튼 없음, 뒤로가기 차단 | 중요 버그, 보안 이슈 |
 
-### 3 시간 기반 재표시 (Phase 2.5)
+### 3 시간 기반 재표시 (Phase 2.2)
 
 **"나중에" 클릭 후 일정 시간이 지나면 다시 팝업 표시**
 
-**⚠️ 상세 내용**: [PHASE2.5 문서](RELEASE-TEST-PHASE2.5-SETUP.md) 참조
+**⚠️ 상세 내용**: [PHASE2.2 문서](RELEASE-TEST-PHASE2.2-SETUP.md) 참조
 
 ---
 
@@ -51,7 +51,7 @@
 
 - 강제 업데이트 (뒤로가기 차단)
 - 선택적 업데이트 ("나중에" 버튼)
-- SharedPreferences 추적
+- SharedPreferences 추적 - "나중에" 클릭 횟수 및 재표시 시간 관리
 
 **동작**:
 ```
@@ -59,19 +59,9 @@
 4회차: laterCount >= 3 → 강제 전환 (나중에 버튼 숨김)
 ```
 
-**⚠️ 중요**: Phase 2.5는 별도 문서 참조:
-- [RELEASE-TEST-PHASE2.5-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)
-- [RELEASE-TEST-PHASE2.5-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
-
----
-
-## 2 Phase 2 테스트
-
-### 1 목표
-
-- 강제 업데이트 (뒤로가기 차단)
-- 선택적 업데이트 ("나중에" 버튼)
-- SharedPreferences 추적
+**⚠️ 중요**: Phase 2.2는 별도 문서 참조:
+- [RELEASE-TEST-PHASE2.2-SETUP.md](RELEASE-TEST-PHASE2.2-SETUP.md)
+- [RELEASE-TEST-PHASE2.4-SCENARIOS.md](RELEASE-TEST-PHASE2.4-SCENARIOS.md)
 
 ---
 
@@ -308,8 +298,8 @@ adb shell pm clear com.sweetapps.pocketchord
 ## 📚 관련 문서
 
 - **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 전체 릴리즈 테스트
-- **[RELEASE-TEST-PHASE2.5-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)** - Phase 2.5: 시간 기반 재표시
-- **[RELEASE-TEST-PHASE2.5-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)** - Phase 2.5: 시나리오 테스트
+- **[RELEASE-TEST-PHASE2.2-SETUP.md](RELEASE-TEST-PHASE2.2-SETUP.md)** - Phase 2.2: 시간 기반 재표시 설정
+- **[RELEASE-TEST-PHASE2.4-SCENARIOS.md](RELEASE-TEST-PHASE2.4-SCENARIOS.md)** - Phase 2.4: 시나리오 테스트
 - **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency (팝업 시스템 개요)
 
 ---

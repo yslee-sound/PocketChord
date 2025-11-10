@@ -25,10 +25,10 @@
 - 릴리즈 서명
 
 #### 3️⃣ Update Policy 가이드
-👉 **[release/RELEASE-TEST-PHASE2-RELEASE.md](release/RELEASE-TEST-PHASE2-RELEASE.md)** ⭐
+👉 **[release/RELEASE-TEST-PHASE2.1-RELEASE.md](release/RELEASE-TEST-PHASE2.1-RELEASE.md)** ⭐
 
 - 업데이트 정책 완전 가이드
-- 시간 기반 재표시 (Phase 2.5)
+- 시간 기반 재표시 (Phase 2.2~2.4)
 - 강제 전환 메커니즘
 
 ---
@@ -45,9 +45,11 @@ docs/
 ├── release/ (릴리즈 관련 문서 - 11개)
 │   ├── RELEASE-TEST-CHECKLIST.md (테스트 환경 선택 + release 폴더 안내)
 │   ├── RELEASE-TEST-PHASE1-RELEASE.md (팝업 시스템 개요 포함)
-│   ├── RELEASE-TEST-PHASE2-RELEASE.md (Update Policy 가이드 포함)
+│   ├── RELEASE-TEST-PHASE2.1-RELEASE.md (Update Policy 가이드 포함)
 │   ├── RELEASE-TEST-PHASE3~5-RELEASE.md
-│   ├── RELEASE-TEST-PHASE2.5-*.md (3개)
+│   ├── RELEASE-TEST-PHASE2.2-SETUP.md
+│   ├── RELEASE-TEST-PHASE2.3-ADVANCED.md
+│   ├── RELEASE-TEST-PHASE2.4-SCENARIOS.md
 │   └── a_RELEASE_SIGNING.md
 │
 ├── 기타 가이드 (5개)
@@ -70,7 +72,7 @@ docs/
 | 문서 | 설명 | 대상 |
 |------|------|------|
 | **[release/RELEASE-TEST-PHASE1-RELEASE.md](release/RELEASE-TEST-PHASE1-RELEASE.md)** | 팝업 시스템 개요 + Emergency 테스트 | 전체 개발자 |
-| **[release/RELEASE-TEST-PHASE2-RELEASE.md](release/RELEASE-TEST-PHASE2-RELEASE.md)** | Update Policy 가이드 + 테스트 | 업데이트 관리자 |
+| **[release/RELEASE-TEST-PHASE2.1-RELEASE.md](release/RELEASE-TEST-PHASE2.1-RELEASE.md)** | Update Policy 가이드 + 테스트 | 업데이트 관리자 |
 | **[release/RELEASE-TEST-CHECKLIST.md](release/RELEASE-TEST-CHECKLIST.md)** | 전체 릴리즈 테스트 + 폴더 안내 | 릴리즈 담당자/QA |
 
 ---
@@ -85,8 +87,8 @@ docs/
 
 #### Phase별 테스트
 1. **[Phase 1](release/RELEASE-TEST-PHASE1-RELEASE.md)** - Emergency Policy
-2. **[Phase 2](release/RELEASE-TEST-PHASE2-RELEASE.md)** - Update Policy
-3. **[Phase 2.5](release/RELEASE-TEST-PHASE2.5-SETUP.md)** - Update 시간 재표시 (3개 문서)
+2. **[Phase 2.1](release/RELEASE-TEST-PHASE2.1-RELEASE.md)** - Update Policy
+3. **[Phase 2.2~2.4](release/RELEASE-TEST-PHASE2.2-SETUP.md)** - Update 시간 재표시 (3개 문서)
 4. **[Phase 3](release/RELEASE-TEST-PHASE3-RELEASE.md)** - Notice Policy
 5. **[Phase 4](release/RELEASE-TEST-PHASE4-RELEASE.md)** - 우선순위 테스트
 6. **[Phase 5](release/RELEASE-TEST-PHASE5-RELEASE.md)** - Ad Policy 테스트
@@ -120,9 +122,10 @@ docs/
 
 ### Update Policy 관리
 ```
-1. release/RELEASE-TEST-PHASE2-RELEASE.md (완전 가이드)
-2. release/RELEASE-TEST-PHASE2-RELEASE.md (기본 테스트)
-3. release/RELEASE-TEST-PHASE2.5-*.md (시간 재표시)
+1. release/RELEASE-TEST-PHASE2.1-RELEASE.md (완전 가이드)
+2. release/RELEASE-TEST-PHASE2.2-SETUP.md (시간 재표시 설정)
+3. release/RELEASE-TEST-PHASE2.3-ADVANCED.md (고급 테스트)
+4. release/RELEASE-TEST-PHASE2.4-SCENARIOS.md (시나리오 테스트)
 ```
 
 ### 광고 제어
@@ -148,7 +151,7 @@ docs/
 
 2. **문서 통합** ✨
    - POPUP-SYSTEM-GUIDE → PHASE1 (팝업 시스템 개요 통합)
-   - UPDATE-POLICY-GUIDE → PHASE2 (Update Policy 가이드 통합) ✨
+   - UPDATE-POLICY-GUIDE → PHASE2.1 (Update Policy 가이드 통합) ✨
    - TEST-ENVIRONMENT-GUIDE → CHECKLIST (테스트 환경 통합)
    - 중복 제거 및 내용 강화
 
@@ -159,7 +162,7 @@ docs/
 4. **신규 문서 생성** ✨
    - release/README.md (릴리즈 가이드)
    - RELEASE-TEST-PHASE1-RELEASE.md v2.0 (팝업 시스템 개요 포함)
-   - RELEASE-TEST-PHASE2-RELEASE.md v3.0 (Update Policy 가이드 포함)
+   - RELEASE-TEST-PHASE2.1-RELEASE.md v3.0 (Update Policy 가이드 포함)
    - RELEASE-TEST-PHASE5-RELEASE.md v2.0 (배포 체크리스트 포함)
 
 ---
@@ -168,7 +171,7 @@ docs/
 
 ### Q: 어느 문서부터 읽어야 하나요?
 **A**: 역할에 따라:
-- **개발자**: release/RELEASE-TEST-PHASE1-RELEASE.md → release/RELEASE-TEST-PHASE2-RELEASE.md
+- **개발자**: release/RELEASE-TEST-PHASE1-RELEASE.md → release/RELEASE-TEST-PHASE2.1-RELEASE.md
 - **릴리즈 담당자**: release/README.md → Phase 1~5
 - **테스터**: release/RELEASE-TEST-CHECKLIST.md (테스트 환경 설명 포함)
 
@@ -178,15 +181,15 @@ docs/
 - 체크리스트
 - 배포 가이드
 
-### Q: Phase 2.5가 무엇인가요?
+### Q: Phase 2.2~2.4가 무엇인가요?
 **A**: Update Policy의 시간 기반 재표시 기능입니다.
 - "나중에" 클릭 후 일정 시간 경과 시 재표시
-- 3개 문서로 구성 (SETUP, SCENARIOS, ADVANCED)
+- 3개 문서로 구성 (SETUP, ADVANCED, SCENARIOS)
 
 ### Q: 문서가 너무 많아요!
 **A**: 핵심 2개만 보세요:
 1. **release/RELEASE-TEST-PHASE1-RELEASE.md** (팝업 시스템)
-2. **release/RELEASE-TEST-PHASE2-RELEASE.md** (업데이트 정책)
+2. **release/RELEASE-TEST-PHASE2.1-RELEASE.md** (업데이트 정책)
 3. **release/RELEASE-TEST-CHECKLIST.md** (릴리즈 테스트)
 
 ### Q: archive 폴더는 무엇인가요?
@@ -206,7 +209,7 @@ docs/
 | 찾는 내용 | 문서 |
 |----------|------|
 | 팝업 시스템 전체 | release/RELEASE-TEST-PHASE1-RELEASE.md |
-| 업데이트 정책 | release/RELEASE-TEST-PHASE2-RELEASE.md |
+| 업데이트 정책 | release/RELEASE-TEST-PHASE2.1-RELEASE.md |
 | 릴리즈 테스트 | release/RELEASE-TEST-CHECKLIST.md |
 | 광고 제어 | release/RELEASE-TEST-PHASE5-RELEASE.md |
 | 배포 준비 | release/RELEASE-TEST-PHASE5-RELEASE.md (섹션 5) |

@@ -12,8 +12,10 @@
 |------|------|------|
 | **RELEASE-TEST-CHECKLIST.md** | v3.0 | 이 문서 (전체 가이드) |
 | **RELEASE-TEST-PHASE1-RELEASE.md** | v3.0 | Emergency + 팝업 시스템 개요 |
-| **RELEASE-TEST-PHASE2-RELEASE.md** | v4.0 | Update + 가이드 |
-| **RELEASE-TEST-PHASE2.5-*.md** (3개) | - | Update 시간 재표시 |
+| **RELEASE-TEST-PHASE2.1-RELEASE.md** | v4.0 | Update + 가이드 |
+| **RELEASE-TEST-PHASE2.2-SETUP.md** | - | Update 시간 재표시 설정 |
+| **RELEASE-TEST-PHASE2.3-ADVANCED.md** | - | Update 고급 테스트 |
+| **RELEASE-TEST-PHASE2.4-SCENARIOS.md** | - | Update 시나리오 테스트 |
 | **RELEASE-TEST-PHASE3-RELEASE.md** | v3.0 | Notice + 버전 관리 |
 | **RELEASE-TEST-PHASE4-RELEASE.md** | v3.0 | 우선순위 테스트 |
 | **RELEASE-TEST-PHASE5-RELEASE.md** | v3.0 | Ad Policy + 배포 |
@@ -108,7 +110,7 @@ ad_policy: is_active = _____
 
 ## 3 Phase 2: Update Policy
 
-**상세 테스트**: 👉 **[PHASE2 문서](RELEASE-TEST-PHASE2-RELEASE.md)**
+**상세 테스트**: 👉 **[PHASE2.1 문서](RELEASE-TEST-PHASE2.1-RELEASE.md)**
 
 ### 빠른 체크리스트
 
@@ -120,9 +122,9 @@ ad_policy: is_active = _____
 | SharedPreferences 초기화 | ⬜ |
 | 정리 (target_version_code=1) | ⬜ |
 
-**⚠️ Phase 2.5 (시간 재표시)**: 별도 테스트 필요 시
-- [PHASE2-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)
-- [PHASE2-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
+**⚠️ Phase 2.2 (시간 재표시)**: 별도 테스트 필요 시
+- [PHASE2.2-SETUP.md](RELEASE-TEST-PHASE2.2-SETUP.md)
+- [PHASE2.4-SCENARIOS.md](RELEASE-TEST-PHASE2.4-SCENARIOS.md)
 
 ---
 
@@ -306,7 +308,7 @@ SET is_active = true,
 
 **목적**: Update Policy 동작 검증 (강제/선택적 업데이트)
 
-**상세 테스트**: 👉 **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)**
+**상세 테스트**: 👉 **[RELEASE-TEST-PHASE2.1-RELEASE.md](RELEASE-TEST-PHASE2.1-RELEASE.md)**
 
 ### 빠른 체크리스트
 
@@ -318,10 +320,10 @@ SET is_active = true,
 | SharedPreferences 초기화 | ⬜ |
 | 정리 (target_version_code=1) | ⬜ |
 
-**⚠️ Phase 2.5 (시간 기반 재표시)**: 별도 문서 참조
-- [PHASE2.5-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)
-- [PHASE2.5-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
-- [PHASE2.5-ADVANCED.md](RELEASE-TEST-PHASE2.5-ADVANCED.md)
+**⚠️ Phase 2.2~2.4 (시간 기반 재표시)**: 별도 문서 참조
+- [PHASE2.2-SETUP.md](RELEASE-TEST-PHASE2.2-SETUP.md)
+- [PHASE2.3-ADVANCED.md](RELEASE-TEST-PHASE2.3-ADVANCED.md)
+- [PHASE2.4-SCENARIOS.md](RELEASE-TEST-PHASE2.4-SCENARIOS.md)
 
 ---
 

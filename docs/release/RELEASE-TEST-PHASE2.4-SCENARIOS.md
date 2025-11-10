@@ -1,13 +1,13 @@
-# 릴리즈 테스트 SQL 스크립트 - Phase 2.5 시나리오 테스트 (섹션 4~6)
+# 릴리즈 테스트 SQL 스크립트 - Phase 2.4 시나리오 테스트 (섹션 4~6)
 
 - **버전**: v3.1.2  
 - **최종 업데이트**: 2025-11-10 03:15:00 KST  
-- **이전 문서**: [Phase 2.5 설정 가이드](RELEASE-TEST-PHASE2.5-SETUP.md)
+- **이전 문서**: [Phase 2.2 설정 가이드](RELEASE-TEST-PHASE2.2-SETUP.md)
 
 ---
 
 **DB 설정을 아직 완료하지 않았다면:**
-➡️ **[Phase 2.5 설정 가이드](RELEASE-TEST-PHASE2.5-SETUP.md)로 이동하여 섹션 3을 먼저 완료하세요**
+➡️ **[Phase 2.2 설정 가이드](RELEASE-TEST-PHASE2.2-SETUP.md)로 이동하여 섹션 3을 먼저 완료하세요**
 
 **이미 DB 설정을 완료했다면:**
 ➡️ 아래 **S1. DB 변경 및 초기 설정**부터 시작하세요

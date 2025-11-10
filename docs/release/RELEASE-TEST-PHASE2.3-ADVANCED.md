@@ -1,15 +1,15 @@
-# 릴리즈 테스트 SQL 스크립트 - Phase 2.5 고급 테스트 (섹션 5~6)
+# 릴리즈 테스트 SQL 스크립트 - Phase 2.3 고급 테스트 (섹션 5~6)
 
 - **버전**: v3.1.2  
 - **최종 업데이트**: 2025-11-10 03:15:00 KST  
-- **이전 문서**: [Phase 2.5 시나리오 테스트](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
+- **이전 문서**: [Phase 2.4 시나리오 테스트](RELEASE-TEST-PHASE2.4-SCENARIOS.md)
 
 ---
 
 ## 📋 시작하기 전에
 
 **기본 시나리오 테스트(S1~S6)를 아직 완료하지 않았다면:**
-➡️ **[Phase 2.5 시나리오 테스트](RELEASE-TEST-PHASE2.5-SCENARIOS.md)로 이동하세요**
+➡️ **[Phase 2.4 시나리오 테스트](RELEASE-TEST-PHASE2.4-SCENARIOS.md)로 이동하세요**
 
 **기본 시나리오를 모두 완료했다면:**
 ➡️ 아래 에지 케이스 및 초기화 방법을 확인하세요
