@@ -344,28 +344,7 @@ AdPolicyRepo: ===== Ad Policy Fetch Completed =====
 - [ ] PocketChord 프로젝트 선택
 - [ ] SQL Editor 열기
 
-#### Step 2: RLS 정책 확인
-
-```sql
--- RLS 정책 확인
-SELECT schemaname, tablename, policyname, cmd, qual
-FROM pg_policies
-WHERE tablename = 'ad_policy';
-```
-
-**기대 결과**:
-```
-schemaname | tablename | policyname            | cmd    | qual
------------|-----------|----------------------|--------|------
-public     | ad_policy | ad_policy_select_all | SELECT | true
-```
-
-**확인 사항**:
-- [ ] ✅ `policyname` = `ad_policy_select_all`
-- [ ] ✅ `cmd` = `SELECT`
-- [ ] ✅ `qual` = `true` (모든 행 조회 가능)
-
-#### Step 3: 테이블 데이터 확인
+#### Step 2: 테이블 데이터 확인
 
 ```sql
 SELECT * FROM ad_policy 
@@ -400,32 +379,11 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 **배포 승인 체크리스트**:
 - [ ] ✅ 모든 테스트 통과
-- [ ] ✅ RLS 정책 수정 완료
 - [ ] ✅ is_active 정상 작동 확인
 - [ ] ✅ 모든 광고 타입 정상 작동
 - [ ] ✅ 빈도 제한 정상 작동 (테스트 완료 or SKIP)
 - [ ] ✅ Supabase 최종 확인 완료
-- [ ] ✅ 문서 업데이트 완료
 - [ ] ✅ Play Store 업로드 준비 완료 (별도 문서 참고)
-
-**승인자**: _______________  
-**배포 일시**: 2025-__-__  
-**배포 버전**: v___  
-
----
-
-### 5.3 발견된 이슈
-
-**Phase 5.1, 5.2, 5.3 테스트 중 발견된 이슈**:
-
-1. _____________________________________________
-2. _____________________________________________
-3. _____________________________________________
-
-**해결 여부**:
-- [ ] ⬜ 모든 이슈 해결됨
-- [ ] ⬜ 일부 이슈 남음 (배포 전 해결 필요)
-- [ ] ⬜ 이슈 없음
 
 ---
 
@@ -434,22 +392,21 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 ### 6.1 광고가 표시되지 않을 때
 
 **체크리스트**:
-1. **RLS 정책 수정 확인** (Phase 5.1)
-2. **Supabase 설정 확인**
+1. **Supabase 설정 확인**
    ```sql
    SELECT * FROM ad_policy WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
    ```
-3. **정책 반영 확인**
+2. **정책 반영 확인**
    - 앱 재시작 (즉시 반영) 또는 3분 대기
-4. **Logcat 확인**
+3. **Logcat 확인**
    ```bash
    adb logcat | findstr "AdPolicyRepo"
    ```
-5. **앱 데이터 초기화** (최후 수단)
+4. **앱 데이터 초기화** (최후 수단)
    ```bash
    adb shell pm clear com.sweetapps.pocketchord.debug
    ```
-6. **캐시 초기화** (최후 수단)
+5. **캐시 초기화** (최후 수단)
    ```bash
    adb shell pm clear com.sweetapps.pocketchord
    ```
