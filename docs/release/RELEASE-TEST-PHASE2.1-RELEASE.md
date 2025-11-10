@@ -47,7 +47,7 @@
   - DB는 `is_force_update = false`로 유지
   - 1~3회차: "나중에" 버튼 있음 (사용자 친화적)
   - 4회차부터: 클라이언트에서 `isForce = true`로 동적 전환
-  - "나중에" 버튼 사라지고 "필수" 배지 표시
+  - "나중에" 버튼 사라짐
 
 [PHASE2.2 문서](RELEASE-TEST-PHASE2.2-SETUP.md) 참조
 
@@ -90,7 +90,6 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 #### 검증
 - [ ] 앱 실행 → 업데이트 팝업 표시
 - [ ] 제목: "새 버전 사용 가능"
-- [ ] 배지: "필수" 표시
 - [ ] **"나중에" 버튼 없음** ⭐
 - [ ] release_notes 내용 표시
 - [ ] 뒤로가기 **차단됨** (테스트 필요)
@@ -105,7 +104,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - DB: `is_force_update = false` 유지 (변경 없음)
 - 1~3회차: "나중에" 버튼 있음
 - 4회차: `laterCount >= 3` 도달 → **클라이언트에서** `isForce = true`로 동적 전환
-- 결과: "나중에" 버튼 사라지고 "필수" 배지 표시
+- 결과: "나중에" 버튼 사라짐
 
 **시간 기반 설정**:
 - "나중에" 클릭 후 → `reshow_interval_seconds` 경과 시 재표시
@@ -149,7 +148,6 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - [ ] **60초 대기** ⏱️
 - [ ] 60초 후 앱 재실행 → 팝업 **다시 표시됨** ⭐
 - [ ] **"나중에" 버튼 없음** (강제 업데이트로 전환됨)
-- [ ] 배지: "필수" 표시
 - [ ] laterCount = 3 도달 → 클라이언트에서 `isForce = true`로 동적 전환
 - [ ] **참고**: DB는 여전히 `is_force_update = false`, 클라이언트에서만 전환됨
 
