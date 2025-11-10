@@ -32,18 +32,14 @@
 
 ### 2 업데이트 타입
 
-| 타입 | 설정 | 사용자 경험 | 사용 시기 |
-|------|------|-----------|----------|
-| **선택적 업데이트** | `is_force_update = false` | "나중에" 버튼 있음 | 일반 업데이트 |
-| **강제 업데이트** | `is_force_update = true` | "나중에" 버튼 없음, 뒤로가기 차단 | 중요 버그, 보안 이슈 |
+| 타입 | 설정 | 사용자 경험 | 시간 기반 설정 | 사용 시기 |
+|------|------|-----------|--------------|----------|
+| **강제 업데이트** | `is_force_update = true` | "나중에" 버튼 없음, 뒤로가기 차단 | ❌ 설정 무관<br>(항상 즉시 표시) | 중요 버그, 보안 이슈 |
+| **선택적 업데이트** | `is_force_update = false` | "나중에" 버튼 있음 | ✅ `reshow_interval_hours`<br>✅ `max_later_count` | 일반 업데이트 |
 
-**💡 참고**: 강제 업데이트는 `reshow_interval_hours`, `max_later_count` 설정의 영향을 받지 않습니다. "나중에" 버튼이 없으므로 재표시 로직 자체가 작동하지 않습니다.
-
-### 3 시간 기반 재표시 (Phase 2.2)
-
-**"나중에" 클릭 후 일정 시간이 지나면 다시 팝업 표시**
-
-**⚠️ 상세 내용**: [PHASE2.2 문서](RELEASE-TEST-PHASE2.2-SETUP.md) 참조
+**💡 참고**: 
+- **강제 업데이트**: `reshow_interval_hours`, `max_later_count` 설정 무관. "나중에" 버튼이 없으므로 재표시 로직 자체가 작동하지 않습니다.
+- **선택적 업데이트**: 시간 기반 설정에 따라 재표시 및 강제 전환이 자동으로 관리됩니다. [PHASE2.2 문서](RELEASE-TEST-PHASE2.2-SETUP.md) 참조
 
 ---
 
@@ -93,26 +89,51 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ---
 
-### 3 시나리오 2: 선택적 업데이트
+### 3 시나리오 2: 선택적 업데이트 (디버그 테스트)
+
+**💡 참고**: 선택적 업데이트는 `reshow_interval_seconds`, `max_later_count` 설정에 따라 동작합니다.
+- "나중에" 클릭 후 → `reshow_interval_seconds` 경과 시 재표시
+- `laterCount >= max_later_count` 도달 시 → **강제 업데이트로 자동 전환** ("나중에" 버튼 숨김)
 
 #### SQL
 ```sql
--- 선택적 업데이트 활성화
+-- 선택적 업데이트 활성화 (디버그용 - 60초 간격)
 UPDATE update_policy
 SET is_active = true,
     target_version_code = 4,
     is_force_update = false,
     release_notes = '중요 업데이트',
-    download_url = 'https://play.google.com/'
+    download_url = 'https://play.google.com/',
+    reshow_interval_seconds = 60,  -- 60초 후 재표시 (테스트용)
+    max_later_count = 3             -- 3회 클릭 후 강제 업데이트로 전환
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 #### 검증
+
+**1회차 테스트**:
 - [ ] 앱 실행 → 업데이트 팝업 표시
 - [ ] **"나중에" 버튼 있음** ⭐
 - [ ] "업데이트" 버튼 있음
 - [ ] "나중에" 클릭 → 팝업 닫힘
 - [ ] 앱 재실행 → 팝업 **표시 안 됨** (SharedPreferences 추적)
+- [ ] **60초 대기** ⏱️
+- [ ] 60초 후 앱 재실행 → 팝업 **다시 표시됨** ✅
+
+**2회차 테스트**:
+- [ ] "나중에" 클릭 → 팝업 닫힘
+- [ ] **60초 대기** ⏱️
+- [ ] 60초 후 앱 재실행 → 팝업 **다시 표시됨** ✅
+
+**3회차 테스트**:
+- [ ] "나중에" 클릭 → 팝업 닫힘 (총 3회 클릭)
+- [ ] **60초 대기** ⏱️
+- [ ] 60초 후 앱 재실행 → 팝업 **다시 표시됨** ⭐
+- [ ] **"나중에" 버튼 없음** (강제 업데이트로 전환됨)
+- [ ] 배지: "필수" 표시
+- [ ] laterCount = 3 도달 → 강제 업데이트로 전환 (정상 동작)
+
+**⚠️ 운영 환경**: `reshow_interval_hours = 24`로 설정 필요
 
 #### SharedPreferences 확인
 ```bash
