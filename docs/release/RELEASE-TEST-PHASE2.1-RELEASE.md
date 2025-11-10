@@ -153,11 +153,45 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 **⚠️ 운영 환경**: `reshow_interval_hours = 24`로 설정 필요
 
-#### SharedPreferences 확인
+---
+
+#### 📊 SharedPreferences 추적 데이터 확인 (선택사항)
+
+**목적**: "나중에" 클릭 횟수와 시간 추적이 정상 작동하는지 확인
+
+**확인할 데이터**:
+- `update_dismissed_time`: 마지막 "나중에" 클릭 시간 (밀리초)
+- `update_later_count`: "나중에" 클릭 횟수
+- `dismissedVersionCode`: 마지막으로 숨긴 버전 코드
+
+**명령어**:
 ```bash
-# 추적 데이터 확인 (선택사항)
-adb shell run-as com.sweetapps.pocketchord cat /data/data/com.sweetapps.pocketchord/shared_prefs/update_policy_prefs.xml
+# 업데이트 추적 데이터 확인
+adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug cat /data/data/com.sweetapps.pocketchord.debug/shared_prefs/update_preferences.xml
+
+# 만약 "more than one device/emulator" 오류가 발생하면:
+# 1. 연결된 디바이스 목록 확인
+adb devices
+
+# 2. 목록에서 사용할 에뮬레이터 확인 (예: emulator-5554)
+# 3. -s 옵션으로 디바이스 지정
+adb -s <디바이스명> shell run-as com.sweetapps.pocketchord.debug cat /data/data/com.sweetapps.pocketchord.debug/shared_prefs/update_preferences.xml
 ```
+
+**예상 출력**:
+```xml
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <long name="update_dismissed_time" value="1762757809072" />
+    <int name="dismissedVersionCode" value="4" />
+    <int name="update_later_count" value="3" />
+</map>
+```
+
+**확인 포인트**:
+- ✅ `update_later_count`가 "나중에" 클릭 횟수와 일치하는가?
+- ✅ `update_dismissed_time`이 최근 클릭 시간과 일치하는가?
+- ✅ 3회 클릭 후 `update_later_count = 3`인가?
 
 ---
 
@@ -168,12 +202,12 @@ adb shell run-as com.sweetapps.pocketchord cat /data/data/com.sweetapps.pocketch
 
 #### 방법 1: 앱 데이터 전체 삭제 (권장)
 ```bash
-adb shell pm clear com.sweetapps.pocketchord
+adb -s emulator-5554 shell pm clear com.sweetapps.pocketchord.debug
 ```
 
 #### 방법 2: SharedPreferences만 삭제
 ```bash
-adb shell run-as com.sweetapps.pocketchord rm -r /data/data/com.sweetapps.pocketchord/shared_prefs/
+adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug rm -r /data/data/com.sweetapps.pocketchord.debug/shared_prefs/
 ```
 
 #### 검증
@@ -301,7 +335,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ```bash
 # SharedPreferences 초기화
-adb shell pm clear com.sweetapps.pocketchord
+adb -s emulator-5554 shell pm clear com.sweetapps.pocketchord.debug
 ```
 
 ---
