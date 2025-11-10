@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -65,6 +66,10 @@ fun MainScreen(navController: NavHostController) {
     val gson = remember { Gson() }
     var showNetworkHelpDialog by remember { mutableStateOf(false) }
 
+    // 팝업 체크 완료 플래그 (화면 재구성 및 화면 전환 시에도 유지)
+    // rememberSaveable 사용으로 화면을 벗어났다 돌아와도 플래그 유지
+    val hasCheckedPopups = rememberSaveable { mutableStateOf(false) }
+
     // 스토어 열기 시도(보통/권장 UX 포함): 오프라인이면 도움말, market:// → https:// 폴백
     fun tryOpenStore(info: UpdateInfo) {
         if (!isOnline(context)) {
@@ -94,7 +99,12 @@ fun MainScreen(navController: NavHostController) {
     }
 
     // 화면이 처음 표시될 때 팝업 확인 (우선순위: emergency > 강제업데이트 > 선택적 업데이트 > 공지)
+    // hasCheckedPopups 플래그로 화면 재구성 시 중복 실행 방지
     LaunchedEffect(Unit) {
+        if (hasCheckedPopups.value) {
+            Log.d("HomeScreen", "Popup check already completed, skipping...")
+            return@LaunchedEffect
+        }
         try {
             Log.d("HomeScreen", "Startup: SUPABASE_APP_ID=${com.sweetapps.pocketchord.BuildConfig.SUPABASE_APP_ID}, VERSION_CODE=${com.sweetapps.pocketchord.BuildConfig.VERSION_CODE}")
             Log.d("HomeScreen", "Supabase configured=${app.isSupabaseConfigured}")
@@ -358,6 +368,10 @@ fun MainScreen(navController: NavHostController) {
             }
         } catch (e: Exception) {
             Log.e("HomeScreen", "Exception while loading policy", e)
+        } finally {
+            // 팝업 체크 완료 플래그 설정 (화면 재구성 시 중복 실행 방지)
+            hasCheckedPopups.value = true
+            Log.d("HomeScreen", "Popup check completed, flag set to true")
         }
     }
 

@@ -118,7 +118,7 @@ UPDATE update_policy
 SET is_active = true,
     target_version_code = 4,
     is_force_update = false,
-    release_notes = '중요 업데이트',
+    release_notes = '선택적 업데이트 3회 -> 강제',
     download_url = 'https://play.google.com/',
     reshow_interval_seconds = 60,  -- 60초 후 재표시 (테스트용)
     max_later_count = 3             -- 3회 클릭 후 강제 업데이트로 전환
@@ -140,6 +140,9 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - [ ] "나중에" 클릭 → 팝업 닫힘
 - [ ] **60초 대기** ⏱️
 - [ ] 60초 후 앱 재실행 → 팝업 **다시 표시됨** ✅
+- [ ] **추가 테스트**: 60초 경과 후 다른 화면(코드 등) → 홈 화면 복귀
+  - [ ] 팝업 **표시 안 됨** (정상) ✅
+  - [ ] 앱을 완전히 종료 → 재시작 → 팝업 **표시됨** (정상) ✅
 
 **3회차 테스트**:
 - [ ] "나중에" 클릭 → 팝업 닫힘 (총 3회 클릭)
@@ -312,6 +315,53 @@ adb shell pm clear com.sweetapps.pocketchord
 **해결** (재표시가 필요한 경우):
 - 앱 데이터 삭제
 - 또는 `target_version_code` 증가
+
+---
+
+### 3 화면 전환 시 팝업이 다시 표시됨 (✅ 해결됨)
+
+**이전 현상** (수정됨): 
+- "나중에" 클릭 후 60초(또는 24시간) 경과
+- 앱을 재시작하지 않고 다른 화면(코드 등) → 홈 화면 복귀
+- 팝업이 다시 표시됨
+
+**원인**: 
+- `LaunchedEffect(Unit)` 사용
+- HomeScreen이 **재구성(recomposition)될 때마다** 실행됨
+
+**해결 방법** (✅ 적용 완료):
+```kotlin
+// 팝업 체크 완료 플래그 추가 (화면 전환 시에도 유지)
+val hasCheckedPopups = rememberSaveable { mutableStateOf(false) }
+
+LaunchedEffect(Unit) {
+    if (hasCheckedPopups.value) {
+        return@LaunchedEffect  // 이미 체크했으면 건너뜀
+    }
+    
+    // ... 팝업 체크 로직 ...
+    
+    finally {
+        hasCheckedPopups.value = true  // 체크 완료 표시
+    }
+}
+```
+
+**핵심 포인트**:
+- `rememberSaveable` 사용: 화면 전환(코드 → 홈) 시에도 플래그 유지
+- `LaunchedEffect(Unit)`: 컴포저블 생성 시 한 번만 실행
+- 플래그 체크: 이미 체크했으면 즉시 return
+
+**수정 후 동작**:
+- ✅ 앱 시작 시: 팝업 체크 실행
+- ✅ 화면 전환 (코드 → 홈): 팝업 체크 **건너뜀** (재표시 안 됨)
+- ✅ 앱 재시작 시: 팝업 체크 다시 실행 (정상 재표시)
+
+**테스트 방법**:
+1. 선택적 업데이트 팝업 표시 → "나중에" 클릭
+2. 60초 대기
+3. 코드 화면 → 홈 화면 복귀 → 팝업 **표시 안 됨** ✅
+4. 앱 완전 종료 → 재시작 → 팝업 **표시됨** ✅
 
 ---
 
