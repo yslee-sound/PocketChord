@@ -145,7 +145,26 @@ FROM ad_policy;
 - [ ] Supabase SQL Editor 접속 완료
 - [ ] **RLS 정책 수정 완료** (섹션 2)
 - [ ] 테스트 기기/에뮬레이터 연결 확인
-- [ ] Logcat 필터 설정: `tag:AdPolicyRepo`
+- [ ] **Logcat 필터 설정** (Android Studio):
+  
+  **방법 1: 태그 필터 사용 (권장)**
+  - Logcat 창 상단의 필터 입력란에 입력:
+  ```
+  tag:AdPolicyRepo | tag:InterstitialAdManager | tag:AppOpenAdManager | tag:MainActivity
+  ```
+  - 또는 간단히:
+  ```
+  tag:AdPolicyRepo | tag:InterstitialAdManager
+  ```
+  - `|` (파이프)는 OR 조건으로, 여러 태그를 동시에 볼 수 있습니다
+  
+  **방법 2: 텍스트 검색**
+  - 필터 입력란에 `policy` 또는 `광고` 입력 (대소문자 구분 없음)
+  
+  **확인**: 로그가 보이지 않으면
+  - Logcat 레벨이 **"Verbose"** 또는 **"Debug"**로 설정되었는지 확인
+  - 앱이 실행 중인지 확인
+  - 패키지: `com.sweetapps.pocketchord.debug` 선택 확인
 
 ### 3.2 초기 상태 확인
 
@@ -203,23 +222,46 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 ### 4.3 Step 2: 앱 실행 및 검증
 
 **방법 A: 즉시 반영 (권장)**
+
+**1) 앱 재시작**
 - [ ] 앱 완전 종료 (백그라운드에서 제거)
 - [ ] 앱 재실행
-- [ ] **검증**: App Open 광고 표시 안 됨 ✅ (즉시 반영)
-- [ ] 코드 여러 개 조회
+
+**2) App Open 광고 테스트**
+- [ ] 홈 버튼으로 백그라운드 전환
+- [ ] 앱 아이콘 터치하여 다시 포그라운드로 복귀
+- [ ] **검증**: App Open 광고 표시 안 됨 ✅
+
+**3) Interstitial 광고 테스트**
+- [ ] 코드 선택 → 상세 화면 → 뒤로가기 (3회 반복)
+- [ ] 60초 대기 (전면광고 간격 제한 - 3분 캐싱과는 별개)
+  > 📌 전면광고는 이전 광고 표시 후 60초가 지나야 다음 광고 표시 가능 (하드코딩된 조건)
+- [ ] 다시 코드 선택 → 뒤로가기
 - [ ] **검증**: Interstitial 광고 표시 안 됨 ✅
+
+**4) Banner 광고 테스트**
+- [ ] 앱의 배너 광고 위치 확인
 - [ ] **검증**: Banner 광고 표시 안 됨 ✅
 
+---
+
 **방법 B: 앱 실행 중 대기 (캐싱 테스트)**
+
 - [ ] 앱을 종료하지 않고 계속 실행
 - [ ] **최대 3분 대기** (캐시 만료)
 - [ ] 배너 광고가 자동으로 사라지는지 확인
 - [ ] **검증**: 3분 이내 배너 광고 사라짐 ✅
 
+**참고**: 
+- App Open 광고는 앱이 포그라운드로 복귀할 때만 표시됩니다
+- Interstitial 광고는 특정 화면 전환 패턴에서만 표시됩니다
+
 ### 4.4 Logcat 확인
 
+**필터 설정**: `tag:AdPolicyRepo | tag:InterstitialAdManager`
+
+**예상 로그**:
 ```
-예상 로그:
 AdPolicyRepo: ===== Ad Policy Fetch Started =====
 AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
 AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug
@@ -232,9 +274,21 @@ AdPolicyRepo:   - Banner Ad: true
 AdPolicyRepo:   - Max Per Hour: 2
 AdPolicyRepo:   - Max Per Day: 15
 AdPolicyRepo: ===== Ad Policy Fetch Completed =====
-InterstitialAdManager: [정책] is_active = false - 모든 광고 비활성화
-MainActivity: [정책] is_active = false - 모든 광고 비활성화
+InterstitialAdManager: 전면광고 로드 성공
 ```
+
+**추가로 확인할 로그** (is_active = false 검증):
+```
+InterstitialAdManager: [정책] is_active = false - 모든 광고 비활성화
+AppOpenAdManager: [정책] is_active = false - 모든 광고 비활성화
+MainActivity: [정책] is_active = false - 모든 광고 비활성화
+MainActivity: 🔄 배너 광고 정책 변경: 활성화 → 비활성화
+```
+
+**참고**: 
+- 실제 로그에는 타임스탬프와 프로세스 정보가 포함됩니다
+- ✅ **`전면광고 로드 성공`은 정상입니다**: 광고 SDK가 광고를 미리 준비한 것으로, 실제 표시와는 별개입니다
+- is_active = false 체크는 **광고 표시 시도 시** 나타나며, 이때 비로소 광고가 차단됩니다
 
 ### 4.5 Step 3: 복구
 
