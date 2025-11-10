@@ -133,8 +133,6 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - **1분(60초) 경과 후**에는 `dismissedVersionCode`를 무시하고 재표시됨 (S3에서 테스트)
 - 현재는 **시간 미경과 + 이미 거부한 버전**이므로 스킵되는 것이 정상
 
----
-
 **S2 완료 조건**: ✅ 모든 단계(1~4) 통과
 
 ---
@@ -341,12 +339,4 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - "나중에" 버튼 없음, 뒤로가기 차단 ✅
 
 ---
-
-## ✅ 시나리오 테스트 완료!
-
-모든 시나리오(S1~S6)를 완료했습니다.
-
-**다음 단계:**
-- ➡️ **[Phase 2.5 고급 테스트 (에지 케이스 & 초기화)](RELEASE-TEST-PHASE2.5-ADVANCED.md)** - 에지 케이스 및 복구 방법
-- ⬅️ **[Phase 2.5 설정 가이드로 돌아가기](RELEASE-TEST-PHASE2.5-SETUP.md)** - DB 설정 재확인
 
