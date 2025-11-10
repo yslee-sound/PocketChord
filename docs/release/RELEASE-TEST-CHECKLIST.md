@@ -1,21 +1,42 @@
 # 🚀 릴리즈 테스트 체크리스트
 
 **작성일**: 2025-11-09  
+**최종 업데이트**: 2025-11-10 (release 폴더 가이드 통합)  
 **목적**: 4개 테이블 팝업 시스템 완전 검증  
-**소요 시간**: 약 30-40분  
+**소요 시간**: 약 30-40분
+
+---
+
+## 📦 Release 폴더 구조
+
+이 폴더(`docs/release`)에는 릴리즈 관련 모든 문서가 있습니다:
+
+| 문서 | 설명 |
+|------|------|
+| **RELEASE-TEST-CHECKLIST.md** | 이 문서 (전체 테스트 가이드) |
+| **RELEASE-TEST-PHASE1-RELEASE.md** | Emergency Policy + 팝업 시스템 개요 |
+| **RELEASE-TEST-PHASE2-RELEASE.md** | Update Policy + 가이드 |
+| **RELEASE-TEST-PHASE2.5-*.md** (3개) | Update 시간 재표시 (SETUP/SCENARIOS/ADVANCED) |
+| **RELEASE-TEST-PHASE3-RELEASE.md** | Notice Policy |
+| **RELEASE-TEST-PHASE4-RELEASE.md** | 우선순위 테스트 |
+| **RELEASE-TEST-PHASE5-RELEASE.md** | Ad Policy + 배포 체크리스트 |
+| **a_RELEASE_SIGNING.md** | 릴리즈 서명 |
 
 ---
 
 ## 📋 목차
 
 1. [사전 준비](#사전-준비)
-2. [테스트 환경 설정](#테스트-환경-설정)
-3. [Phase 1: emergency_policy 테스트](#phase-1-emergency_policy-테스트)
-4. [Phase 2: update_policy 테스트](#phase-2-update_policy-테스트)
-5. [Phase 3: notice_policy 테스트](#phase-3-notice_policy-테스트)
-6. [Phase 4: 우선순위 테스트](#phase-4-우선순위-테스트)
-7. [Phase 5: 종합 시나리오 테스트](#phase-5-종합-시나리오-테스트)
-8. [최종 확인](#최종-확인)
+2. [Phase 1: emergency_policy 테스트](#phase-1-emergency_policy-테스트)
+3. [Phase 2: update_policy 테스트](#phase-2-update_policy-테스트)
+4. [Phase 3: notice_policy 테스트](#phase-3-notice_policy-테스트)
+5. [Phase 4: 우선순위 테스트](#phase-4-우선순위-테스트)
+6. [Phase 5: 종합 시나리오](#phase-5-종합-시나리오)
+7. [최종 확인](#최종-확인)
+
+**💡 Phase별 상세 테스트는 각 PHASE 문서 참조**:
+- Phase 1~4: 기본 팝업 테스트 (Emergency, Update, Notice, 우선순위)
+- Phase 5: Ad Policy 테스트 + 배포 → **[PHASE5 문서](RELEASE-TEST-PHASE5-RELEASE.md)** 참조
 
 ---
 
@@ -23,31 +44,19 @@
 
 ### 1. 테스트 환경 선택 ⭐
 
-**중요**: 어떤 환경을 테스트할지 먼저 결정하세요!
+**질문**: 어떤 빌드 타입을 테스트하나요?
 
-#### 옵션 A: 프로덕션(릴리즈) 테스트 ✅ **권장**
-```
-app_id: 'com.sweetapps.pocketchord'
-목적: 실제 사용자가 받을 릴리즈 빌드 검증
-언제: 릴리즈 전 최종 검증
-SQL 파일: docs/sql/test-scripts-release.sql ⭐
-```
+| 빌드 타입 | app_id | 용도 | 권장 시기 |
+|----------|--------|------|----------|
+| **릴리즈** ✅ | `com.sweetapps.pocketchord` | 실제 사용자 환경 검증 | 릴리즈 전 최종 검증 |
+| Debug | `com.sweetapps.pocketchord.debug` | 개발 중 빠른 테스트 | 개발 단계 |
 
-#### 옵션 B: 개발(Debug) 테스트
-```
-app_id: 'com.sweetapps.pocketchord.debug'
-목적: 개발 중 빠른 테스트
-언제: 개발 단계, 빠른 검증
-SQL 파일: docs/sql/test-scripts-debug.sql ⭐
-```
+**💡 Tip**:
+- 릴리즈 테스트 = **프로덕션 데이터** 사용 (실제 사용자 경험과 동일)
+- Debug 테스트 = 프로덕션 데이터 보호, 실험 가능
+- **이 체크리스트 기본값**: `'com.sweetapps.pocketchord'` (릴리즈)
 
-**빠른 시작**:
-1. 위의 SQL 파일 중 하나를 선택
-2. 파일 열기
-3. 필요한 SQL 복사해서 Supabase에서 실행
-
-**이 체크리스트의 기본값**: `'com.sweetapps.pocketchord'` (프로덕션)
-
+**Debug로 변경하려면**: SQL의 모든 WHERE 절을 `.debug`로 변경
 
 ---
 
@@ -157,39 +166,23 @@ ad_policy: is_active = _____, open = _____, inter = _____, banner = _____
 
 ## 🔥 Phase 1: emergency_policy 테스트
 
-### 시나리오 1-1: 긴급 팝업 (X 버튼 있음)
+**목적**: Emergency Policy 동작 검증 (최우선 팝업)
 
-#### Step 1: 활성화
-```sql
-UPDATE emergency_policy 
-SET is_active = true,
-    is_dismissible = true,
-    content = '🚨 [테스트] 긴급 테스트입니다. X 버튼으로 닫을 수 있습니다.'
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
+**상세 테스트**: 👉 **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)**
 
-#### Step 2: 앱 실행
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-- [ ] **예상**: 긴급 팝업 즉시 표시
+### 빠른 체크리스트
 
-#### Step 3: 검증
-- [ ] ✅ 긴급 팝업 표시됨
-- [ ] ✅ 제목: "🚨 긴급공지"
-- [ ] ✅ 배지: "긴급" 표시
-- [ ] ✅ **X 버튼 있음** (우측 상단)
-- [ ] ✅ 내용: 설정한 content 표시
-- [ ] ✅ "새 앱 설치하기" 버튼 있음
+| 항목 | 확인 |
+|------|------|
+| X 버튼 있음 (is_dismissible=true) | ⬜ |
+| X 버튼 없음 (is_dismissible=false) | ⬜ |
+| 뒤로가기 차단 (강제 모드) | ⬜ |
+| 재실행 시 다시 표시 (추적 없음) | ⬜ |
+| 정리 (비활성화) | ⬜ |
 
-#### Step 4: X 버튼 클릭
-- [ ] X 버튼 클릭
-- [ ] **예상**: 팝업 닫힘
-- [ ] ✅ 팝업 닫힘
-- [ ] ✅ 홈 화면 정상 표시
+---
 
-#### Step 5: 재실행 (추적 없음 확인)
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
+## 🔄 Phase 2: update_policy 테스트
 - [ ] **예상**: 긴급 팝업 다시 표시 (추적 안 함!)
 - [ ] ✅ 긁급 팝업 **다시 표시됨** ⭐
 
@@ -250,162 +243,65 @@ SET is_active = true,
     is_force_update = true,
     message = '[테스트] 필수 업데이트가 있습니다',
     release_notes = '• [테스트] 중요 보안 패치\n• [테스트] 필수 기능 추가'
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-#### Step 2: 앱 실행
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-
-#### Step 3: 검증
-- [ ] ✅ 강제 업데이트 팝업 표시
-- [ ] ✅ 제목: "앱 업데이트"
-- [ ] ✅ **"나중에" 버튼 없음** ⭐
-- [ ] ✅ "지금 업데이트" 버튼만 있음
-- [ ] ✅ 릴리즈 노트 표시됨
-- [ ] ✅ 뒤로가기 차단됨 (테스트)
-
-#### Step 4: 재실행 확인
-- [ ] 앱 완전 종료 (업데이트 안 함)
-- [ ] 앱 재실행
-- [ ] **예상**: 강제 업데이트 팝업 다시 표시
-- [ ] ✅ 팝업 다시 표시됨 ⭐
-
-#### Logcat 확인
-```
-예상 로그:
-✅ "Phase 1: Trying update_policy"
-✅ "update_policy found: targetVersion=999, isForce=true"
-✅ "Decision: FORCE UPDATE from update_policy"
-```
-
-- [ ] ✅ 로그 확인 완료
-
 ---
 
-### 시나리오 2-2: 선택적 업데이트
+## 🔄 Phase 2: update_policy 테스트
 
-#### Step 1: 수정
-```sql
-UPDATE update_policy 
-SET is_force_update = false,  -- 선택적으로 변경
-    message = '[테스트] 새로운 기능이 추가되었습니다',
-    release_notes = '• [테스트] 다크 모드 추가\n• [테스트] 성능 개선\n• [테스트] UI 업데이트'
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
+**목적**: Update Policy 동작 검증 (강제/선택적 업데이트)
 
-#### Step 2: SharedPreferences 초기화
-- [ ] 앱 데이터 삭제 (설정 → 앱 → PocketChord → 데이터 삭제)
-- [ ] 또는: 앱 재설치
+**상세 테스트**: 👉 **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)**
 
-#### Step 3: 앱 실행
-- [ ] 앱 실행
+### 빠른 체크리스트
 
-#### Step 4: 검증
-- [ ] ✅ 선택적 업데이트 팝업 표시
-- [ ] ✅ **"나중에" 버튼 있음** ⭐
-- [ ] ✅ "지금 업데이트" 버튼 있음
-- [ ] ✅ 릴리즈 노트 표시됨
+| 항목 | 확인 |
+|------|------|
+| 강제 업데이트 (is_force_update=true) | ⬜ |
+| 선택적 업데이트 (is_force_update=false) | ⬜ |
+| "나중에" 클릭 후 추적 | ⬜ |
+| SharedPreferences 초기화 | ⬜ |
+| 정리 (target_version_code=1) | ⬜ |
 
-#### Step 5: "나중에" 클릭
-- [ ] "나중에" 버튼 클릭
-- [ ] **예상**: 팝업 닫힘
-- [ ] ✅ 팝업 닫힘
-
-#### Step 6: 재실행 (추적 확인)
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-- [ ] **예상**: 업데이트 팝업 표시 **안 됨** ⭐
-- [ ] ✅ 팝업 표시 안 됨 (추적됨)
-
-#### Step 7: 버전 증가 테스트
-```sql
--- 버전을 더 높게 변경
-UPDATE update_policy 
-SET target_version_code = 1000  -- 더 높은 버전
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-- [ ] 앱 재실행
-- [ ] **예상**: 업데이트 팝업 **다시 표시됨** ⭐
-- [ ] ✅ 팝업 다시 표시됨 (새 버전)
-
-#### Logcat 확인
-```
-예상 로그:
-✅ "Decision: OPTIONAL UPDATE from update_policy (target=1000)"
-```
-
-- [ ] ✅ 로그 확인 완료
-
-#### Step 8: 정리
-```sql
--- 테스트 완료 후 target을 낮게
-UPDATE update_policy 
-SET target_version_code = 1
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
-
-- [ ] ✅ 정리 완료
+**⚠️ Phase 2.5 (시간 기반 재표시)**: 별도 문서 참조
+- [PHASE2.5-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)
+- [PHASE2.5-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
+- [PHASE2.5-ADVANCED.md](RELEASE-TEST-PHASE2.5-ADVANCED.md)
 
 ---
 
 ## 📢 Phase 3: notice_policy 테스트
 
-### 시나리오 3-1: 공지사항 표시
+**목적**: Notice Policy 동작 검증 (버전 기반 추적)
 
-#### Step 1: 준비
-```sql
--- 현재 상태 확인
-SELECT notice_version, title, is_active 
-FROM notice_policy 
-WHERE app_id = 'com.sweetapps.pocketchord';
-```
+**상세 테스트**: 👉 **[RELEASE-TEST-PHASE3-RELEASE.md](RELEASE-TEST-PHASE3-RELEASE.md)**
 
-**기록**: `notice_version = _____`
+### 빠른 체크리스트
 
-#### Step 2: SharedPreferences 초기화
-- [ ] 앱 데이터 삭제
-- [ ] 또는: 앱 재설치
-
-#### Step 3: 앱 실행
-- [ ] 앱 실행
-
-#### Step 4: 검증
-- [ ] ✅ 공지사항 팝업 표시
-- [ ] ✅ 제목 표시됨
-- [ ] ✅ 내용 표시됨
-- [ ] ✅ X 버튼 있음
-
-#### Step 5: X 클릭
-- [ ] X 버튼 클릭
-- [ ] ✅ 팝업 닫힘
-
-#### Step 6: 재실행 (추적 확인)
-- [ ] 앱 완전 종료
-- [ ] 앱 재실행
-- [ ] **예상**: 공지 팝업 표시 **안 됨** ⭐
-- [ ] ✅ 팝업 표시 안 됨 (추적됨)
-
-#### Logcat 확인
-```
-예상 로그:
-✅ "Phase 3: Checking notice_policy"
-✅ "notice_policy found: version=1, title=환영합니다! 🎉"
-✅ "Notice already viewed (version=1), skipping"
-```
-
-- [ ] ✅ 로그 확인 완료
+| 항목 | 확인 |
+|------|------|
+| 공지 활성화 및 표시 | ⬜ |
+| 오타 수정 (버전 유지) → 재표시 안 됨 | ⬜ |
+| 새 공지 (버전 증가) → 재표시됨 | ⬜ |
+| 정리 (비활성화) | ⬜ |
 
 ---
 
-### 시나리오 3-2: 오타 수정 (버전 유지)
+## 🎯 Phase 4: 우선순위 테스트
 
-#### Step 1: 오타 수정
-```sql
--- content만 수정 (버전은 그대로!)
-UPDATE notice_policy 
-SET content = 'PocketChord를 이용해 주셔서 정말 감사합니다!'  -- 약간 수정
+**목적**: 팝업 우선순위 로직 검증 (emergency > update > notice)
+
+**상세 테스트**: 👉 **[RELEASE-TEST-PHASE4-RELEASE.md](RELEASE-TEST-PHASE4-RELEASE.md)**
+
+### 빠른 체크리스트
+
+| 항목 | 확인 |
+|------|------|
+| Emergency + Update → Emergency만 표시 | ⬜ |
+| Update + Notice → Update만 표시 | ⬜ |
+| 모두 비활성화 → 팝업 없음 | ⬜ |
+
+---
+
+## 🎬 Phase 5: 종합 시나리오
 WHERE app_id = 'com.sweetapps.pocketchord';
 -- notice_version은 변경하지 않음!
 ```

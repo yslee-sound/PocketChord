@@ -1,104 +1,246 @@
-# 릴리즈 테스트 SQL 스크립트 - Phase 3 (릴리즈용)
+# 릴리즈 테스트 - Phase 3 (Notice Policy)
 
-**버전**: v1.6.0  
-**최종 업데이트**: 2025-11-09 16:39:35 KST  
+**버전**: v2.0.0  
+**최종 업데이트**: 2025-11-10  
 **app_id**: `com.sweetapps.pocketchord` (프로덕션)  
-**포함 내용**: Notice 테스트 (버전 관리)
+**포함 내용**: Notice Policy 테스트 + 버전 관리 가이드
 
 ---
 
-## 📋 Phase 3 개요 (간결)
+## 📋 목차
 
-목표: 공지사항(notice_policy)의 동작(활성화, 재표시 조건, 버전 관리)을 검증합니다.
-핵심 시나리오:
-1) 공지 활성화 → 표시 확인
-2) 동일 버전(오타 수정) → 재표시 안 됨
-3) 버전 증가 → 모든 사용자에게 재표시
-
-소요 시간: 약 10~15분
+1. [Notice Policy 개념](#1-notice-policy-개념)
+2. [Phase 3 테스트](#2-phase-3-테스트)
+3. [버전 관리 가이드](#3-버전-관리-가이드)
+4. [체크리스트](#4-체크리스트)
 
 ---
 
-## 📢 핵심 테스트 절차
+## 1. Notice Policy 개념
 
-> 사전: 필요 시 앱 데이터 초기화(SharedPreferences 또는 앱 데이터 삭제) 후 시작
+### 1.1 notice_policy 테이블 구조
 
-### 1) 공지 활성화
 ```sql
--- 1-1. 공지 활성화 - 릴리즈 & 디버그
+CREATE TABLE notice_policy (
+    id BIGINT PRIMARY KEY,
+    app_id TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT FALSE,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    notice_version INTEGER NOT NULL,
+    button_text TEXT DEFAULT '확인'
+);
+```
+
+**핵심 필드**:
+- `is_active`: 공지 ON/OFF
+- `notice_version`: 버전 번호 (추적용)
+- `title`, `content`: 공지 내용
+
+### 1.2 버전 추적 메커니즘
+
+**SharedPreferences 추적**:
+```
+사용자가 notice_version = 251109를 본 경우
+→ SharedPreferences에 "251109" 저장
+→ 동일 버전(251109) 재표시 안 됨
+→ 새 버전(251110)이면 다시 표시
+```
+
+**특징**:
+- ✅ 사용자별 추적 (각자 다른 시점에 봄)
+- ✅ 버전만 증가하면 자동 재표시
+- ✅ X 버튼으로 닫기 가능
+
+---
+
+## 2. Phase 3 테스트
+
+### 2.1 목표
+
+`notice_policy` 동작 검증:
+- 공지 표시
+- 버전 추적 (동일 버전 재표시 안 됨)
+- 버전 증가 시 재표시
+
+**소요 시간**: 약 10-15분
+
+---
+
+### 2.2 시나리오 1: 공지 활성화
+
+#### SQL
+```sql
+-- 공지 활성화
 UPDATE notice_policy
 SET is_active = true,
-    title = CASE 
-        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 공지: 서비스 안내'
-        ELSE '공지: 서비스 안내'
-    END,
-    content = CASE 
-        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 테스트용 공지 내용입니다.'
-        ELSE '중요 공지입니다. 앱을 최신 버전으로 유지해 주세요.'
-    END,
+    title = '서비스 안내',
+    content = '중요 공지입니다. 앱을 최신 버전으로 유지해 주세요.',
     notice_version = 251109  -- YYMMDD 형식 권장
-WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
+WHERE app_id = 'com.sweetapps.pocketchord';
 ```
-검증: 앱 실행 → 팝업 표시 / X로 닫기 → 재실행 시 재표시 여부 확인(정상: 재표시 안 됨)
+
+#### 검증
+- [ ] 앱 실행 → 공지 팝업 표시
+- [ ] 제목: "서비스 안내"
+- [ ] **X 버튼 있음**
+- [ ] 내용 확인
+- [ ] X 버튼 클릭 → 팝업 닫힘
+- [ ] 앱 재실행 → 팝업 **표시 안 됨** (추적됨)
 
 ---
 
-### 2) 오타 수정(버전 유지)
+### 2.3 시나리오 2: 내용 수정 (버전 유지)
 
-요약: 같은 `notice_version`으로는 이미 본 사용자에게 재표시되지 않습니다. 따라서 단순 오타 수정은 버전을 변경하지 마세요.
+#### 목적
+동일 버전으로 내용만 수정하면 이미 본 사용자에게 재표시되지 않음 (오타 수정용)
 
+#### SQL
 ```sql
--- 오타 수정 - 릴리즈 & 디버그
+-- 오타 수정 (버전 유지)
 UPDATE notice_policy 
-SET content = CASE 
-    WHEN app_id LIKE '%.debug' THEN '[DEBUG] 수정된 내용'
-    ELSE '수정된 내용'
-END
-WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
+SET content = '수정된 내용입니다. 오타를 바로잡았습니다.'
+WHERE app_id = 'com.sweetapps.pocketchord';
+-- notice_version은 그대로 251109
 ```
-검증: 이미 본 사용자는 변경 후에도 팝업 재표시 안 됨.
+
+#### 검증
+- [ ] 앱 재실행
+- [ ] 팝업 **표시 안 됨** ✅ (이미 251109 버전을 봄)
+
+**💡 Tip**: 오타 수정은 버전 변경하지 말 것!
 
 ---
 
-### 3) 새 공지(버전 증가)
+### 2.4 시나리오 3: 새 공지 (버전 증가)
+
+#### SQL
 ```sql
--- 3-1. 새 공지 (버전 증가) - 릴리즈 & 디버그
+-- 새 공지 (버전 증가)
 UPDATE notice_policy
-SET title = CASE 
-        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 🎉 11월 이벤트'
-        ELSE '🎉 11월 이벤트'
-    END,
-    content = CASE 
-        WHEN app_id LIKE '%.debug' THEN '[DEBUG] 이벤트 내용'
-        ELSE '11월 특별 이벤트가 시작되었습니다! 참여하세요.'
-    END,
+SET title = '🎉 11월 이벤트',
+    content = '11월 특별 이벤트가 시작되었습니다! 참여하세요.',
     notice_version = 251110  -- 이전(251109)보다 큰 값
-WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
+WHERE app_id = 'com.sweetapps.pocketchord';
 ```
-검증: 앱 재시작 → 팝업이 모든 사용자에게 재표시되어야 함 → X 클릭 후 재실행 시 재표시 안 됨(버전 추적)
+
+#### 검증
+- [ ] 앱 재실행
+- [ ] 팝업 **다시 표시됨** ✅ (새 버전 251110)
+- [ ] 제목: "🎉 11월 이벤트"
+- [ ] X 버튼 클릭
+- [ ] 앱 재실행 → 팝업 **표시 안 됨** (251110 추적됨)
 
 ---
 
-## 🔧 버전 관리 권장(간결)
+### 2.5 정리: 비활성화
 
-권장: 날짜 기반(YYMMDD) 또는 날짜+시간(YYMMDDHH) 사용.
-- 날짜 기반(YYMMDD): 간단하고 직관적 (단, 하루 1건 권장)
-- 날짜+시간(YYMMDDHH): 하루 여러 건 필요 시 사용
-- 자동 증가: DB에서 `notice_version = notice_version + 1` 방식은 실수 방지에 안전함
+#### SQL
+```sql
+-- 공지 비활성화
+UPDATE notice_policy
+SET is_active = false
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
 
-중요: 절대 자릿수를 혼용(예: 6자리와 7자리 혼합)하지 마세요 — 숫자 비교가 깨집니다.
-
----
-
-## ✅ 최소 검사 목록
-- [ ] 릴리즈/디버그에 각각 SQL 적용
-- [ ] 앱에서 팝업 표시 확인
-- [ ] 동일 버전 수정 시 재표시 안 됨 확인
-- [ ] 버전 증가 시 재표시 확인
+#### 검증
+- [ ] 앱 재실행 → 팝업 **표시 안 됨**
+- [ ] Phase 3 완료! ✅
 
 ---
 
-### 정리: 초기화
+## 3. 버전 관리 가이드
+
+### 3.1 버전 번호 형식 (권장)
+
+| 형식 | 예시 | 용도 | 장점 |
+|------|------|------|------|
+| **YYMMDD** | 251109 | 일반적 (하루 1건) | 간단, 직관적 |
+| **YYMMDDHH** | 25110915 | 하루 여러 건 | 시간까지 구분 |
+| **자동 증가** | +1 방식 | 간단한 증가 | 실수 방지 |
+
+### 3.2 버전 관리 규칙
+
+**✅ DO**:
+```sql
+-- 날짜 기반 (권장)
+UPDATE notice_policy SET notice_version = 251110;
+
+-- 자동 증가 (안전)
+UPDATE notice_policy SET notice_version = notice_version + 1;
+```
+
+**❌ DON'T**:
+```sql
+-- 자릿수 혼합 금지 (비교 오류 발생)
+UPDATE notice_policy SET notice_version = 251109;  -- 6자리
+UPDATE notice_policy SET notice_version = 2511091; -- 7자리 ❌
+```
+
+### 3.3 운영 시나리오
+
+#### 시나리오 1: 신규 공지
+```sql
+UPDATE notice_policy
+SET is_active = true,
+    title = '새로운 기능 안내',
+    content = '...',
+    notice_version = 251111  -- 오늘 날짜
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+#### 시나리오 2: 오타 발견
+```sql
+-- 버전 변경 없이 수정 (이미 본 사용자는 안 봄)
+UPDATE notice_policy
+SET content = '수정된 내용'
+WHERE app_id = 'com.sweetapps.pocketchord';
+-- notice_version 그대로
+```
+
+#### 시나리오 3: 모든 사용자에게 다시 알림
+```sql
+-- 버전 증가 (모든 사용자에게 재표시)
+UPDATE notice_policy
+SET title = '긴급 공지',
+    content = '중요한 변경사항',
+    notice_version = notice_version + 1
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+---
+
+## 4. 체크리스트
+
+### 4.1 테스트 완료 여부
+
+| 시나리오 | 결과 | 비고 |
+|----------|------|------|
+| 공지 활성화 | ⬜ PASS / ⬜ FAIL | |
+| 내용 수정 (버전 유지) | ⬜ PASS / ⬜ FAIL | |
+| 새 공지 (버전 증가) | ⬜ PASS / ⬜ FAIL | |
+| 정리 (비활성화) | ⬜ PASS / ⬜ FAIL | |
+
+### 4.2 발견된 이슈
+
+```
+1. _____________________________________________
+2. _____________________________________________
+3. _____________________________________________
+```
+
+---
+
+## 📚 관련 문서
+
+- **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 전체 릴리즈 테스트
+- **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency (팝업 시스템 개요)
+- **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update Policy
+
+---
+
+**문서 버전**: v2.0.0 (구조 개선 및 가이드 통합)  
+**마지막 수정**: 2025-11-10
 ```sql
 -- 3-4. Notice 정리 (초기화) - 릴리즈 & 디버그
 UPDATE notice_policy
