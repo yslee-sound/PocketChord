@@ -129,17 +129,6 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 | 1. 앱 강제 종료 | `UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)` ← ✅ 팝업 스킵! | ✅ 시간 미경과로 팝업 스킵됨 |
 | 2. 즉시 재시작 (1분 경과 안 함) | | ✅ 팝업이 표시되지 않고 메인 화면으로 진입 |
 
-**왜 팝업이 스킵되는가?**
-1. **S2.3단계**에서 "나중에" 클릭 시 `dismissedVersionCode = 10` 저장됨
-2. **재시작 시** 조건 확인:
-   - `currentVersion (3) < targetVersion (10)` → true (업데이트 필요함) ✅
-   - `isForceUpdate` → false (선택적 업데이트) ✅
-   - **코드 조건**: `dismissedVersionCode (10) != targetVersionCode (10)` → **false** ❌
-     - 실제 값 비교: `10 == 10` → true (같음)
-     - 코드는 `!=` (같지 않음)을 확인하므로 → false
-3. **판단**: `!=` 조건이 false이므로 팝업 표시 조건 불충족 → 팝업 스킵 (시간 미경과)
-
-
 **참고**: 
 - **1분(60초) 경과 후**에는 `dismissedVersionCode`를 무시하고 재표시됨 (S3에서 테스트)
 - 현재는 **시간 미경과 + 이미 거부한 버전**이므로 스킵되는 것이 정상
