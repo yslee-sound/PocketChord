@@ -37,6 +37,8 @@
 | **선택적 업데이트** | `is_force_update = false` | "나중에" 버튼 있음 | 일반 업데이트 |
 | **강제 업데이트** | `is_force_update = true` | "나중에" 버튼 없음, 뒤로가기 차단 | 중요 버그, 보안 이슈 |
 
+**💡 참고**: 강제 업데이트는 `reshow_interval_hours`, `max_later_count` 설정의 영향을 받지 않습니다. "나중에" 버튼이 없으므로 재표시 로직 자체가 작동하지 않습니다.
+
 ### 3 시간 기반 재표시 (Phase 2.2)
 
 **"나중에" 클릭 후 일정 시간이 지나면 다시 팝업 표시**
@@ -72,11 +74,11 @@
 -- 강제 업데이트 활성화
 UPDATE update_policy
 SET is_active = true,
-    target_version_code = 100,  -- 현재보다 높게
+    target_version_code = 4,  -- 현재보다 높게
     is_force_update = true,
-    release_notes = '• 중요 보안 패치\n• 필수 업데이트',
-    download_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord'
-WHERE app_id = 'com.sweetapps.pocketchord';
+    release_notes = '중요 업데이트',
+    download_url = 'https://play.google.com/'
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 #### 검증
@@ -87,6 +89,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 - [ ] release_notes 내용 표시
 - [ ] 뒤로가기 **차단됨** (테스트 필요)
 - [ ] "업데이트" 버튼 클릭 → Play Store 이동
+- [ ] **참고**: `reshow_interval_hours`, `max_later_count` 설정 무관 (항상 즉시 표시)
 
 ---
 
@@ -97,11 +100,11 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 -- 선택적 업데이트 활성화
 UPDATE update_policy
 SET is_active = true,
-    target_version_code = 100,
+    target_version_code = 4,
     is_force_update = false,
-    release_notes = '• 다크 모드 추가\n• 성능 개선',
-    download_url = 'https://play.google.com/store/apps/details?id=com.sweetapps.pocketchord'
-WHERE app_id = 'com.sweetapps.pocketchord';
+    release_notes = '중요 업데이트',
+    download_url = 'https://play.google.com/'
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 #### 검증
