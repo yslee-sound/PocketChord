@@ -58,15 +58,57 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 ### 2.4 Logcat 확인
 
+**필터 설정**: `tag:AdPolicyRepo | tag:AppOpenAdManager`
+
+**예상 로그**:
 ```
-예상 로그:
+AdPolicyRepo: ===== Ad Policy Fetch Started =====
+AdPolicyRepo: 🔄 Supabase에서 광고 정책 새로 가져오기
+AdPolicyRepo: Target app_id: com.sweetapps.pocketchord.debug
+AdPolicyRepo: Total rows fetched: 2
 AdPolicyRepo: ✅ 광고 정책 발견!
 AdPolicyRepo:   - is_active: true
 AdPolicyRepo:   - App Open Ad: false
 AdPolicyRepo:   - Interstitial Ad: true
 AdPolicyRepo:   - Banner Ad: true
-AppOpenAdManager: [정책] App Open Ad 비활성화
+AdPolicyRepo:   - Max Per Hour: 2
+AdPolicyRepo:   - Max Per Day: 15
+AdPolicyRepo: ===== Ad Policy Fetch Completed =====
+AppOpenAdManager: 앱 오프닝 광고 로드 성공
 ```
+
+**백그라운드 복귀 시 로그**:
+```
+AppOpenAdManager: 앱이 포그라운드로 왔습니다 (백그라운드에서 복귀)
+AdPolicyRepo: ✅ 광고 정책 발견!
+AdPolicyRepo:   - App Open Ad: false
+AppOpenAdManager: [정책] 앱 오픈 광고 비활성화
+AppOpenAdManager: 🔍 앱 오픈 광고 정책 확인:
+AppOpenAdManager:   - Supabase 정책: 비활성화
+AppOpenAdManager: ❌ Supabase 정책: 앱 오픈 광고 비활성화
+```
+
+**로그 순서 설명**:
+1. **`[정책] 앱 오픈 광고 비활성화`**: 
+   - 정책 조회 함수에서 출력
+   - Supabase에서 정책 값을 가져와서 확인
+   
+2. **`🔍 앱 오픈 광고 정책 확인:`**: 
+   - 광고 표시 함수에서 출력
+   - 조회한 정책을 **실제로 적용**하는 단계
+   
+3. **`❌ Supabase 정책: 앱 오픈 광고 비활성화`**: 
+   - 최종 결정: 광고 표시 안 함
+   
+**💡 왜 2번 체크하는가?**
+- 1단계: 정책 **조회** (isAppOpenEnabledFromPolicy)
+- 2단계: 정책 **적용** (showAdIfAvailable)
+- 중복이 아니라 **조회 → 적용**의 2단계 프로세스입니다
+
+**참고**:
+- `앱 오프닝 광고 로드 성공`은 정상입니다 (광고 준비 단계)
+- 실제 차단은 백그라운드 복귀 시 발생합니다
+- `❌ Supabase 정책: 앱 오픈 광고 비활성화` 로그가 나오면 성공적으로 차단된 것입니다
 
 ### 2.5 Step 3: 복구
 
@@ -131,6 +173,41 @@ Interstitial 광고만 개별 제어 + 표시 조건 이해
 - 단순히 여러 화면을 이동하는 것만으로는 표시되지 않습니다.
 - 특정 패턴의 화면 전환이 3회 누적되어야 합니다.
 - 이전 광고를 본 후 60초가 지나야 다음 광고가 나옵니다.
+
+**💡 60초 간격이 적절한 이유**:
+
+✅ **현재 설정 (60초 + 시간당 2회 + 일일 15회)은 최적의 균형입니다!**
+
+| 측면 | 평가 | 설명 |
+|------|------|------|
+| **사용자 경험** | ✅ 좋음 | 1분은 충분히 긴 간격 |
+| **광고 빈도** | ✅ 적절 | 시간당 제한이 실질적 제약 |
+| **수익성** | ✅ 균형적 | 과도하지 않고 적절함 |
+| **업계 표준** | ✅ 준수 | 60~120초가 일반적 |
+
+**3중 보호 시스템**:
+```
+레벨 1: 60초 간격 (즉각 보호)
+  → "방금 광고 봤는데 또?" 방지
+
+레벨 2: 시간당 2회 (중기 보호)
+  → "1시간에 광고 너무 많아" 방지
+
+레벨 3: 일일 15회 (장기 보호)
+  → "하루 종일 광고만 봤어" 방지
+```
+
+**실제 효과**:
+- 60초 간격만 있으면 이론상 시간당 60회 가능
+- 하지만 **시간당 2회 제한**이 실질적으로 광고 빈도 결정
+- 따라서 60초는 "연속 광고 방지"용으로 충분하며, 더 늘릴 필요 없음
+
+**조정 고려 사항**:
+- ✅ **현재 유지 권장**: 60초는 적절함
+- 📊 **모니터링**: Play Store 리뷰, 사용자 유지율 관찰
+- ⚠️ **조정 시나리오**:
+  - 부정적 리뷰 증가 시 → 90초로 증가 고려
+  - 수익 극대화 필요 시 → 45초로 감소 (주의 필요)
 
 ---
 
