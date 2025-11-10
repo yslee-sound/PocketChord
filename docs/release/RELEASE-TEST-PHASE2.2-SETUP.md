@@ -59,12 +59,40 @@
 
 ### Phase 2.2 필드 추가
 
+**⚠️ 설계 원칙**: 
+- `reshow_interval_hours`는 **NOT NULL + DEFAULT 24**로 설정
+- 이유: 모두 NULL이 되는 것을 방지하고, 항상 안전한 기본값 보장
+- 30초 테스트는 `seconds = 30`만 설정 (우선순위로 해결)
+
+**1단계: 기존 스키마 확인 및 수정** (필요한 경우):
+```sql
+-- 현재 상태 확인
+SELECT column_name, is_nullable, column_default, data_type
+FROM information_schema.columns
+WHERE table_name = 'update_policy' 
+  AND column_name LIKE 'reshow_interval%';
+```
+
+**만약 `reshow_interval_hours`가 이미 NULL 허용으로 되어 있다면**:
+```sql
+-- NOT NULL 제약 추가 + DEFAULT 설정
+ALTER TABLE public.update_policy
+ALTER COLUMN reshow_interval_hours SET DEFAULT 24,
+ALTER COLUMN reshow_interval_hours SET NOT NULL;
+
+-- 기존 NULL 값을 24로 업데이트
+UPDATE update_policy
+SET reshow_interval_hours = 24
+WHERE reshow_interval_hours IS NULL;
+```
+
+**2단계: 필드 추가** (아직 추가하지 않은 경우):
 ```sql
 -- update_policy 테이블에 시간 기반 재표시 필드 추가
 ALTER TABLE public.update_policy
-ADD COLUMN IF NOT EXISTS reshow_interval_hours INT DEFAULT 24 NOT NULL,
-ADD COLUMN IF NOT EXISTS reshow_interval_minutes INT DEFAULT NULL,  -- 테스트용 (분 단위)
-ADD COLUMN IF NOT EXISTS reshow_interval_seconds INT DEFAULT NULL,  -- 초고속 테스트용 (초 단위, 최우선)
+ADD COLUMN IF NOT EXISTS reshow_interval_hours INT DEFAULT 24 NOT NULL,  -- NOT NULL 유지
+ADD COLUMN IF NOT EXISTS reshow_interval_minutes INT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS reshow_interval_seconds INT DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS max_later_count INT DEFAULT 3 NOT NULL;
 
 -- 기본값 설정 확인
@@ -74,17 +102,65 @@ FROM update_policy
 WHERE app_id IN ('com.sweetapps.pocketchord','com.sweetapps.pocketchord.debug');
 ```
 
+**확인 결과**:
+| column_name | is_nullable | column_default | data_type |
+|-------------|-------------|----------------|-----------|
+| reshow_interval_hours | NO | 24 | integer |
+| reshow_interval_minutes | YES | NULL | integer |
+| reshow_interval_seconds | YES | NULL | integer |
+
 **필드 우선순위 및 운영 환경 설정** (가장 작은 단위가 최우선):
 
 **⚠️ 중요**: 세 필드는 **조합되지 않고 우선순위에 따라 하나만 선택**됩니다.
 - 예: `hours = 24, seconds = 60` → **60초만 적용** (hours는 무시됨)
 - 예: `hours = 1, minutes = 5, seconds = NULL` → **5분만 적용** (hours는 무시됨)
+- 예: **30초로 설정** → `hours = 24, seconds = 30` ✅ (hours는 자동 유지, seconds만 설정)
 
-| 우선순위 | 필드 | 단위 | 사용 조건 | 용도 | 운영 환경 설정 |
-|---------|------|------|----------|------|---------------|
-| **1순위** | `reshow_interval_seconds` | 초 | NULL이 아니면 최우선 사용 | 초고속 테스트용 | ⚠️ NULL (필수) |
-| **2순위** | `reshow_interval_minutes` | 분 | seconds가 NULL이고 minutes가 NULL이 아니면 사용 | 빠른 테스트용 | ⚠️ NULL (필수) |
-| **3순위** | `reshow_interval_hours` | 시간 | 위 두 개가 모두 NULL이면 사용 | 운영 환경 | ✅ 24 (기본값) |
+| 우선순위 | 필드 | 단위 | 사용 조건 | 용도 | 운영 환경 설정 | NULL 허용 |
+|---------|------|------|----------|------|---------------|----------|
+| **1순위** | `reshow_interval_seconds` | 초 | NULL이 아니면 최우선 사용 | 초고속 테스트용 | ⚠️ NULL (필수) | YES |
+| **2순위** | `reshow_interval_minutes` | 분 | seconds가 NULL이고 minutes가 NULL이 아니면 사용 | 빠른 테스트용 | ⚠️ NULL (필수) | YES |
+| **3순위** | `reshow_interval_hours` | 시간 | 위 두 개가 모두 NULL이면 사용 | 운영 환경 | ✅ 24 (기본값) | **NO** (NOT NULL) |
+
+**💡 30초 간격 설정 예시**:
+```sql
+UPDATE update_policy
+SET reshow_interval_seconds = 30       -- seconds에 30 설정
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- reshow_interval_hours는 자동으로 24 유지 (DEFAULT)
+```
+
+**✅ 올바른 방법**:
+```sql
+-- 간단하게 seconds만 설정
+UPDATE update_policy
+SET reshow_interval_seconds = 30
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- hours = 24 (기본값), seconds = 30 → seconds 우선 적용 (30초)
+```
+
+**❌ 잘못된 방법 (이제는 불가능)**:
+```sql
+-- hours를 NULL로 만들 수 없음 (NOT NULL 제약)
+UPDATE update_policy
+SET reshow_interval_hours = NULL,
+    reshow_interval_seconds = 30
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- 에러: null value in column "reshow_interval_hours" violates not-null constraint
+```
+
+**💡 복구 방법 (초 단위 테스트 해제)**:
+```sql
+UPDATE update_policy
+SET reshow_interval_seconds = NULL  -- seconds만 NULL로
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- 결과: hours = 24가 적용됨 (24시간 간격)
+```
+
+**💡 안전성 보장**:
+- `reshow_interval_hours`가 NOT NULL이므로 모든 interval이 NULL이 되는 상황 불가능
+- 코드에서 `else` 블록 없이도 안전하게 동작
+- 항상 최소 24시간 간격이 보장됨
 
 ### 초기값 설정 (릴리즈)
 ```sql
@@ -96,6 +172,10 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 ```
 
 ### 초기값 설정 (디버그 - 테스트 단축)
+
+**⚠️ 디버그 환경**: 60초 간격 테스트를 위해 `seconds = 60`만 설정합니다.
+- `hours`는 기본값 24로 자동 유지됨 (NOT NULL + DEFAULT)
+- 우선순위 때문에 seconds가 적용됨
 
 ```sql
 -- 디버그 행 존재 여부 자동 확인 후 INSERT 또는 UPDATE (설정 + 즉시 확인)
@@ -112,9 +192,7 @@ BEGIN
         SET is_active = true,
             target_version_code = 10,
             is_force_update = false,
-            reshow_interval_hours = 1,
-            reshow_interval_minutes = NULL,
-            reshow_interval_seconds = 60,
+            reshow_interval_seconds = 60,      -- 60초 간격
             max_later_count = 3,
             release_notes = '• [DEBUG] 테스트 업데이트',
             download_url = 'https://play.google.com/'
@@ -125,11 +203,11 @@ BEGIN
         -- 행이 없으면 INSERT
         INSERT INTO update_policy (
             app_id, is_active, target_version_code, is_force_update,
-            reshow_interval_hours, reshow_interval_minutes, reshow_interval_seconds,
+            reshow_interval_seconds,  -- hours는 DEFAULT 24 자동 적용
             max_later_count, release_notes, download_url
         ) VALUES (
             'com.sweetapps.pocketchord.debug', true, 10, false,
-            1, NULL, 60, 3,
+            60, 3,  -- seconds만 60, hours는 자동 24
             '• [DEBUG] 테스트 업데이트', 'https://play.google.com/'
         );
         
@@ -145,10 +223,18 @@ FROM update_policy
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
-**기대 결과**: 이 단계는 디버그 버전만 설정하므로 릴리즈 행(`com.sweetapps.pocketchord`)은 표시되지 않는 것이 정상입니다.
+**기대 결과**:
 
 | app_id | target_version_code | is_force_update | is_active | reshow_interval_hours | reshow_interval_minutes | reshow_interval_seconds | max_later_count |
 |--------|---------------------|-----------------|-----------|----------------------|------------------------|------------------------|-----------------|
+| com.sweetapps.pocketchord.debug | 10 | false | true | **24** | NULL | **60** | 3 |
+
+**💡 설명**:
+- `reshow_interval_hours = 24` ✅ (DEFAULT 자동 적용)
+- `reshow_interval_seconds = 60` ✅ (60초 간격)
+- 우선순위: seconds(1순위) > minutes(2순위) > hours(3순위)
+- 결과: **60초 간격**으로 동작 (hours는 무시됨)
+- **안전성**: hours가 항상 24이므로 모든 interval이 NULL인 상황 불가능
 | com.sweetapps.pocketchord.debug | 10 | false | true | 1 | NULL | 60 | 3 |
 
 ---

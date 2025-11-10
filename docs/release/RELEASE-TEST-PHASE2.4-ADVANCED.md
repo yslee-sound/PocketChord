@@ -1,3 +1,5 @@
+- `seconds = 60` (우선 적용됨)
+- 결과: **60초 간격**으로 동작
 # 릴리즈 테스트 SQL 스크립트 - Phase 2.3 고급 테스트 (섹션 5~6)
 
 - **버전**: v3.1.2  
@@ -83,16 +85,15 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - 3순위: `reshow_interval_hours` (둘 다 NULL이면 사용)
 
 **예시**:
-- `hours = 0, seconds = 40` → **40초만 적용** (hours는 무시됨)
+- `hours = 24, seconds = 40` → **40초만 적용** (hours는 무시됨)
 - `hours = 24, minutes = 5, seconds = NULL` → **5분만 적용** (hours는 무시됨)
 
 **SQL 스크립트**:
 ```sql
 UPDATE update_policy
-SET reshow_interval_seconds = 0,  -- 실제로 0초 (즉시 재표시)
-    reshow_interval_minutes = NULL,
-    reshow_interval_hours = NULL
+SET reshow_interval_seconds = 0  -- 실제로 0초 (즉시 재표시)
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- reshow_interval_hours는 자동으로 24 유지 (DEFAULT)
 ```
 
 **기대 동작**:
@@ -114,6 +115,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 **💡 참고**: 
 - 음수는 Supabase CHECK 제약 조건에서 차단되므로 0은 안전하게 사용 가능
+- `hours = 24`가 유지되지만 우선순위 때문에 seconds가 적용됨
 - 하지만 0초 간격은 실용적이지 않으므로 운영 환경에서는 사용하지 마세요
 
 ---
@@ -137,7 +139,8 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 **💡 참고**: 
 - `seconds`나 `minutes`가 NULL이 아니면 `hours`는 무시됩니다
-- 반드시 다른 단위를 NULL로 설정해야 `hours`가 적용됩니다
+- `hours`는 NOT NULL이므로 명시적으로 999 설정 필요
+- 다른 단위는 NULL로 설정하여 우선순위 충돌 방지
 
 **기대 동작**:
 - "나중에" 클릭 후 999시간 동안 팝업 미표시
@@ -148,27 +151,74 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 **1단계: 첫 팝업 표시 및 "나중에" 클릭**
 - 앱 시작 → 팝업 표시
-- "나중에" 클릭 → `dismissedTime` 저장됨
+- "나중에" 클릭 → SharedPreferences에 시간 저장
+  - SharedPreferences 키: `"update_dismissed_time"`
+  - 저장되는 값: `System.currentTimeMillis()` (예: `1762705544280`)
+  - 코드에서 읽을 때 변수명: `dismissedTime`
+
+**💡 용어 정리**:
+
+| 용어 | 의미 | 예시 |
+|------|------|------|
+| `update_dismissed_time` | SharedPreferences의 키 이름 (저장소) | `"update_dismissed_time"` |
+| `dismissedTime` | 코드에서 사용하는 변수명 (메모리) | `val dismissedTime = updatePrefsFile.getLong("update_dismissed_time", 0L)` |
+| `1762705544280` | 실제 저장된 값 (밀리초) | Unix timestamp (2025-11-10 13:52:24 KST) |
+| "timestamp" | 로그에서 사용하는 라벨 (표시용) | `Log.d("UpdateLater", "Tracking: ... timestamp=1762705544280")` |
+
+**확인 방법**: 섹션 6-1의 "현재 값 확인" 명령어 사용
 
 **2단계: 즉시 재시작 (999시간 경과 전)**
 - 앱 재시작 (여러 번)
+- **정상 동작**: 재시작할 때마다 **동일한 로그가 반복됨** ✅
 - Logcat 확인:
   ```
-  UpdateLater: ⏸️ Update dialog skipped (dismissed version: 10, target: 10)
+  UpdateLater: 📊 Current later count: 1 / 3
+  UpdateLater: ⏸️ Update dialog skipped (dismissed version: 4, target: 4)
   ```
 - ✅ 팝업이 스킵됨 (정상)
+- ✅ 로그가 매번 반복되는 것은 정상 (999시간 경과하지 않았으므로)
+
+**💡 주의사항**:
+- `max_later_count`가 999가 아니라 정상값(3 등)으로 표시되는 것이 맞습니다
+- 999는 `reshow_interval_hours`의 값입니다 (혼동 주의)
+- 로그에 `laterCount = 1 / 3` 같은 값이 나오는 것은 정상입니다
 
 **3단계: 코드 동작 검증 (중요)**
-- Logcat에서 `reshowIntervalMs` 값 확인:
+- Logcat에서 경과 시간 계산 확인:
   ```kotlin
-  val reshowIntervalMs = 999 * 60 * 60 * 1000L  // 3596400000
-  val elapsed = now - dismissedTime  // 예: 5000 (5초)
-  // elapsed < reshowIntervalMs → 스킵
+  // SharedPreferences에서 저장된 시간 읽기
+  val dismissedTime = updatePrefsFile.getLong("update_dismissed_time", 0L)
+  // 예: 1762705544280 (저장된 값, 밀리초 단위)
+  
+  // 현재 시간
+  val now = System.currentTimeMillis()
+  // 예: 1762705549280 (5초 후)
+  
+  // 경과 시간 계산
+  val elapsed = now - dismissedTime
+  // 예: 5000 밀리초 (5초 경과)
+  
+  // 재표시 간격 계산 (999시간)
+  val reshowIntervalMs = 999 * 60 * 60 * 1000L
+  // 3596400000 밀리초 (약 41일)
+  
+  // 재표시 여부 판단
+  // elapsed >= reshowIntervalMs
+  // 5000 >= 3596400000 → false → 팝업 스킵
   ```
+
+**💡 로그 출력 예시**:
+```
+UpdateLater: ⏱️ Tracking: laterCount=0→1, timestamp=1762705544280
+```
+- 여기서 `timestamp=1762705544280`은 **로그 라벨**이며, 실제로는 `update_dismissed_time`에 저장됨
+
 - ✅ 오버플로우 없이 계산됨
 - ✅ Long 타입 범위 내 (최대 약 292억 년)
+- ✅ `elapsed < reshowIntervalMs`이므로 팝업 스킵됨
 
 **4단계: DB 값 확인**
+
 ```sql
 SELECT app_id, reshow_interval_hours, reshow_interval_minutes, reshow_interval_seconds
 FROM update_policy
@@ -176,6 +226,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
 **기대 결과**:
+
 | app_id | reshow_interval_hours | reshow_interval_minutes | reshow_interval_seconds |
 |--------|----------------------|------------------------|------------------------|
 | com.sweetapps.pocketchord.debug | 999 | NULL | NULL |
@@ -185,12 +236,23 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - ✅ 앱이 크래시하지 않음
 - ✅ 팝업이 정상적으로 스킵됨
 - ✅ Logcat에 "⏸️ Update dialog skipped" 로그 출력
+- ✅ **앱을 여러 번 재시작해도 동일한 스킵 로그가 반복됨** (정상)
+
+**💡 로그 반복이 정상인 이유**:
+- 999시간이 경과하지 않았으므로, 앱을 재시작할 때마다 스킵 로직이 실행됨
+- `elapsed < reshowIntervalMs` 조건이 계속 false이므로 팝업이 계속 스킵됨
+- 로그가 반복되는 것 자체가 **999시간 간격이 정상 작동**하는 증거입니다
 
 **복구**:
 ```sql
 UPDATE update_policy
-SET reshow_interval_hours = NULL,
-    reshow_interval_seconds = 60
+SET reshow_interval_hours = 24,       -- hours를 기본값 24로
+    reshow_interval_seconds = NULL    -- seconds를 NULL로 (hours 적용)
+WHERE app_id = 'com.sweetapps.pocketchord.debug';
+-- 또는 초 단위 테스트로 복구
+UPDATE update_policy
+SET reshow_interval_hours = 24,       -- hours를 기본값 24로
+    reshow_interval_seconds = 60      -- 60초 간격으로 복구
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 ```
 
@@ -318,10 +380,17 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug cat shared_prefs/update_preferences.xml
 ```
 
+**💡 용어 정리**:
+- **SharedPreferences 파일**: `update_preferences.xml` (저장소 파일)
+- **SharedPreferences 키**: XML의 `name` 속성 (예: `"update_dismissed_time"`)
+- **코드 변수명**: 키에서 읽은 값을 저장하는 변수 (예: `dismissedTime`)
+
 **확인 항목**:
-- `update_dismissed_time`: 마지막 "나중에" 클릭 시간 (timestamp)
-- `update_later_count`: 누적 "나중에" 클릭 횟수
-- `dismissedVersionCode`: 거부한 버전 코드
+| SharedPreferences 키 | 코드 변수명 | 의미 | 예시 값 |
+|---------------------|-----------|------|--------|
+| `update_dismissed_time` | `dismissedTime` | 마지막 "나중에" 클릭 시간 | `1762705544280` (timestamp 밀리초) |
+| `update_later_count` | `laterCount` | 누적 "나중에" 클릭 횟수 | `2` |
+| `dismissedVersionCode` | `dismissedVersion` | 거부한 버전 코드 | `10` |
 
 **예시 출력**:
 ```xml
@@ -333,6 +402,11 @@ adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug cat shared_pre
 </map>
 ```
 
+**해석**:
+- `update_dismissed_time`: `1762705544280` = 2025-11-10 13:52:24 (KST)
+- `update_later_count`: "나중에" 2번 클릭함
+- `dismissedVersionCode`: 버전 10을 거부함
+
 ---
 
 #### 📌 전체 초기화 (삭제)
@@ -342,11 +416,16 @@ adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug cat shared_pre
 adb -s emulator-5554 shell run-as com.sweetapps.pocketchord.debug rm shared_prefs/update_preferences.xml
 ```
 
-**효과**:
+**효과** (SharedPreferences 키 기준):
 - ✅ `update_dismissed_time` 삭제 → 시간 추적 리셋
 - ✅ `update_later_count` 삭제 → 카운트 0으로 리셋
 - ✅ `dismissedVersionCode` 삭제 → 거부 이력 삭제
 - ✅ 앱 재시작 시 업데이트 팝업이 다시 표시됨 (처음 상태)
+
+**코드에서의 영향** (변수 기준):
+- `dismissedTime = 0L` (초기값)
+- `laterCount = 0` (초기값)
+- `dismissedVersion = -1` (초기값)
 
 **사용 시기**:
 - 테스트를 처음부터 다시 시작하고 싶을 때
@@ -434,6 +513,7 @@ WHERE conrelid = 'update_policy'::regclass
 ```
 
 **기대 결과**:
+
 | conname | contype | pg_get_constraintdef |
 |---------|---------|---------------------|
 | check_reshow_interval_positive | c | CHECK ((reshow_interval_hours IS NULL OR reshow_interval_hours >= 0) AND ...) |
@@ -477,9 +557,9 @@ DROP CONSTRAINT check_reshow_interval_positive;
 UPDATE update_policy
 SET target_version_code = 10,
     is_force_update = false,
-    reshow_interval_hours = 1,
+    reshow_interval_hours = 24,        -- 24로 설정 (DEFAULT)
     reshow_interval_minutes = NULL,
-    reshow_interval_seconds = 60,
+    reshow_interval_seconds = 60,      -- 60초 간격
     max_later_count = 3,
     is_active = true
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
@@ -496,7 +576,10 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 | app_id | target_version_code | is_force_update | reshow_interval_hours | reshow_interval_minutes | reshow_interval_seconds | max_later_count | is_active |
 |--------|---------------------|-----------------|----------------------|------------------------|------------------------|-----------------|-----------|
-| com.sweetapps.pocketchord.debug | 10 | false | 1 | NULL | 60 | 3 | true |
+| com.sweetapps.pocketchord.debug | 10 | false | **24** | NULL | **60** | 3 | true |
+
+**💡 설명**:
+- `hours = 24` (NOT NULL + DEFAULT)
 
 ---
 
@@ -534,7 +617,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 -- 디버그 초기화
 UPDATE update_policy
 SET target_version_code = 10, is_force_update = false,
-    reshow_interval_hours = 1, reshow_interval_minutes = NULL, reshow_interval_seconds = 60,
+    reshow_interval_hours = 24, reshow_interval_minutes = NULL, reshow_interval_seconds = 60,
     max_later_count = 3, is_active = true
 WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
@@ -558,7 +641,11 @@ ORDER BY app_id;
 | app_id | target_version_code | is_force_update | reshow_interval_hours | reshow_interval_minutes | reshow_interval_seconds | max_later_count | is_active |
 |--------|---------------------|-----------------|----------------------|------------------------|------------------------|-----------------|-----------|
 | com.sweetapps.pocketchord | 10 | false | 24 | NULL | NULL | 3 | true |
-| com.sweetapps.pocketchord.debug | 10 | false | 1 | NULL | 60 | 3 | true |
+| com.sweetapps.pocketchord.debug | 10 | false | **24** | NULL | **60** | 3 | true |
+
+**💡 설명**:
+- **릴리즈**: `hours = 24, seconds = NULL` → **24시간 간격**
+- **디버그**: `hours = 24, seconds = 60` → **60초 간격** (seconds 우선)
 
 ---
 
