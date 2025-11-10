@@ -1,9 +1,10 @@
 # 릴리즈 테스트 SQL 스크립트 - Phase 5 (광고 정책)
 
-- **버전**: v1.0.0  
+- **버전**: v2.0.0  
 - **최종 업데이트**: 2025-11-10 KST  
 - **대상 app_id**: `com.sweetapps.pocketchord` (릴리즈) / `com.sweetapps.pocketchord.debug` (디버그)  
 - **테스트 상태**: ✅ 준비 완료
+- **변경 이력**: v2.0.0 - ads-guide.md 통합 (광고 구현 가이드 추가)
 
 ---
 
@@ -521,7 +522,290 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 6. 운영 가이드
+## 7. 광고 구현 가이드
+
+### 7.1 광고 종류 및 특징
+
+#### App Open Ad (앱 오픈 광고)
+
+**특징**:
+- 앱 시작 시 또는 백그라운드에서 복귀 시 표시
+- 첫 실행 시에는 표시 안 함
+- 4시간마다 1회 제한
+
+**구현 위치**:
+- `AppOpenAdManager.kt`
+- `PocketChordApplication.kt`
+
+**제어 코드**:
+```kotlin
+// Supabase에서 제어
+val adPolicy = adPolicyRepository.getPolicy()
+val enabled = adPolicy?.adAppOpenEnabled ?: true
+
+if (enabled) {
+    // 광고 표시
+}
+```
+
+**테스트 방법**:
+1. 앱 시작 → 광고 표시 안 됨 (첫 실행)
+2. 백그라운드 → 포그라운드 복귀 → 광고 표시 ✅
+
+---
+
+#### Interstitial Ad (전면 광고)
+
+**특징**:
+- 화면 전환 시 표시
+- 조건:
+  - 60초 간격
+  - 3회 화면 전환 필요
+  - 빈도 제한: 시간당 2회, 하루 15회
+
+**구현 위치**:
+- `InterstitialAdManager.kt`
+- 각 화면의 `NavController`
+
+**제어 코드**:
+```kotlin
+// Supabase에서 제어
+val adPolicy = adPolicyRepository.getPolicy()
+val enabled = adPolicy?.adInterstitialEnabled ?: true
+val maxPerHour = adPolicy?.adInterstitialMaxPerHour ?: 2
+val maxPerDay = adPolicy?.adInterstitialMaxPerDay ?: 15
+```
+
+**빈도 제한 구현**:
+
+시간당 제한:
+```kotlin
+private suspend fun checkFrequencyLimit(): Boolean {
+    val hourlyCount = sharedPreferences.getInt("ad_count_hourly", 0)
+    val maxPerHour = adPolicy?.adInterstitialMaxPerHour ?: 2
+    
+    if (hourlyCount >= maxPerHour) {
+        Log.d(TAG, "⚠️ 시간당 빈도 제한 초과: $hourlyCount/$maxPerHour")
+        return false
+    }
+    return true
+}
+```
+
+일일 제한:
+```kotlin
+val dailyCount = sharedPreferences.getInt("ad_count_daily", 0)
+val maxPerDay = adPolicy?.adInterstitialMaxPerDay ?: 15
+
+if (dailyCount >= maxPerDay) {
+    Log.d(TAG, "⚠️ 일일 빈도 제한 초과: $dailyCount/$maxPerDay")
+    return false
+}
+```
+
+**테스트 방법**:
+1. 홈 → 코드 → 홈 (3회 반복)
+2. 60초 경과
+3. 전면 광고 표시 ✅
+
+---
+
+#### Banner Ad (배너 광고)
+
+**특징**:
+- 하단 고정 표시
+- 자동 새로고침 (30-120초)
+- AdView 컴포저블 사용
+
+**구현 위치**:
+- `MainActivity.kt` - `AdBannerView` 컴포저블
+
+**제어 코드**:
+```kotlin
+// Supabase에서 제어
+LaunchedEffect(Unit) {
+    val adPolicyRepo = AdPolicyRepository(app.supabase)
+    
+    while (true) {
+        val adPolicy = adPolicyRepo.getPolicy().getOrNull()
+        val bannerEnabled = adPolicy?.adBannerEnabled ?: true
+        
+        if (isBannerEnabled != bannerEnabled) {
+            isBannerEnabled = bannerEnabled
+        }
+        
+        delay(5 * 60 * 1000L) // 5분마다 체크
+    }
+}
+```
+
+**테스트 방법**:
+1. 앱 실행
+2. 하단 배너 광고 표시 ✅
+
+---
+
+### 7.2 테스트 모드
+
+#### Debug 빌드
+```kotlin
+// BuildConfig에서 테스트 광고 ID 사용
+val adUnitId = if (BuildConfig.DEBUG) {
+    "ca-app-pub-3940256099942544/3419835294" // 테스트 ID
+} else {
+    BuildConfig.INTERSTITIAL_AD_UNIT_ID // 실제 ID
+}
+```
+
+#### 테스트 광고 ID
+```
+App Open: ca-app-pub-3940256099942544/3419835294
+Interstitial: ca-app-pub-3940256099942544/1033173712
+Banner: ca-app-pub-3940256099942544/6300978111
+```
+
+#### 실제 광고 ID
+```
+BuildConfig:
+- APP_OPEN_AD_UNIT_ID
+- INTERSTITIAL_AD_UNIT_ID
+- BANNER_AD_UNIT_ID
+```
+
+---
+
+### 7.3 빈도 제한 상세
+
+#### 카운트 증가
+```kotlin
+private fun incrementFrequencyCount() {
+    val hourlyCount = sharedPreferences.getInt("ad_count_hourly", 0)
+    val dailyCount = sharedPreferences.getInt("ad_count_daily", 0)
+    
+    sharedPreferences.edit {
+        putInt("ad_count_hourly", hourlyCount + 1)
+        putInt("ad_count_daily", dailyCount + 1)
+    }
+}
+```
+
+#### 자동 리셋
+- **시간당**: 1시간 경과 시 자동 리셋
+- **일일**: 24시간 경과 시 자동 리셋
+
+---
+
+### 7.4 Supabase 제어 상세
+
+#### ad_policy 테이블 구조
+```sql
+CREATE TABLE ad_policy (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMP,
+  app_id TEXT UNIQUE NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  
+  -- 광고 ON/OFF
+  ad_app_open_enabled BOOLEAN DEFAULT true,
+  ad_interstitial_enabled BOOLEAN DEFAULT true,
+  ad_banner_enabled BOOLEAN DEFAULT true,
+  
+  -- 빈도 제한
+  ad_interstitial_max_per_hour INT DEFAULT 2,
+  ad_interstitial_max_per_day INT DEFAULT 15
+);
+```
+
+#### 실시간 제어 방법
+
+**모든 광고 끄기**:
+```sql
+UPDATE ad_policy 
+SET is_active = false 
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+**특정 광고만 끄기**:
+```sql
+-- 배너만
+UPDATE ad_policy 
+SET ad_banner_enabled = false
+WHERE app_id = 'com.sweetapps.pocketchord';
+
+-- 전면 광고만
+UPDATE ad_policy 
+SET ad_interstitial_enabled = false
+WHERE app_id = 'com.sweetapps.pocketchord';
+
+-- 앱 오픈 광고만
+UPDATE ad_policy 
+SET ad_app_open_enabled = false
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+**빈도 제한 조정**:
+```sql
+-- 더 보수적으로 (광고 적게)
+UPDATE ad_policy 
+SET 
+  ad_interstitial_max_per_hour = 1,
+  ad_interstitial_max_per_day = 10
+WHERE app_id = 'com.sweetapps.pocketchord';
+
+-- 더 적극적으로 (광고 많이)
+UPDATE ad_policy 
+SET 
+  ad_interstitial_max_per_hour = 3,
+  ad_interstitial_max_per_day = 20
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+#### 반영 시간
+- **캐싱**: 5분
+- **즉시 반영**: 앱 재시작
+- **자동 반영**: 5분 이내
+
+---
+
+### 7.5 문제 해결
+
+#### 광고가 안 나올 때
+
+**1. Supabase 확인**:
+```sql
+SELECT * FROM ad_policy 
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+확인 사항:
+- ✅ `is_active = true`인가?
+- ✅ 해당 광고 플래그가 `true`인가?
+
+**2. 로그 확인**:
+```bash
+adb logcat | findstr "AdPolicyRepo"
+adb logcat | findstr "InterstitialAdManager"
+adb logcat | findstr "AppOpenAdManager"
+```
+
+**3. 빈도 제한 확인**:
+```
+D/InterstitialAdManager: ⚠️ 시간당 빈도 제한 초과: 2/2
+```
+→ 1시간 기다리거나 앱 데이터 삭제
+
+**4. 캐시 초기화**:
+```bash
+adb shell pm clear com.sweetapps.pocketchord.debug
+```
+
+**5. 네트워크 확인**:
+- AdMob 서버 연결 확인
+- 테스트 광고 ID 사용 여부 확인
+
+---
+
+## 8. 운영 가이드 (기존 섹션 6)
 
 ### 📊 일반적인 광고 설정 조합
 
@@ -592,10 +876,9 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 - **[POPUP-SYSTEM-GUIDE.md](POPUP-SYSTEM-GUIDE.md)** - 전체 팝업 시스템 가이드
 - **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 릴리즈 테스트 체크리스트
-- **[ads-guide.md](ads-guide.md)** - 광고 구현 가이드
 
 ---
 
-**문서 버전**: v1.0.0  
+**문서 버전**: v2.0.0 (광고 구현 가이드 통합)  
 **마지막 수정**: 2025-11-10 KST
 

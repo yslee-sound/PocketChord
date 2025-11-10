@@ -103,9 +103,9 @@ Phase 2.5는 3개 문서로 구성되어 있습니다:
 ## 📚 관련 문서 (docs 루트)
 
 릴리즈 테스트 외 참고 문서:
-- **[../POPUP-SYSTEM-GUIDE.md](../POPUP-SYSTEM-GUIDE.md)** - 팝업 시스템 전체 가이드
-- **[../UPDATE-POLICY-GUIDE.md](../UPDATE-POLICY-GUIDE.md)** - Update Policy 완전 가이드
-- **[../TEST-ENVIRONMENT-GUIDE.md](../TEST-ENVIRONMENT-GUIDE.md)** - 테스트 환경 설정
+- **[../POPUP-SYSTEM-GUIDE.md](POPUP-SYSTEM-GUIDE.md)** - 팝업 시스템 전체 가이드
+- **[../UPDATE-POLICY-GUIDE.md](UPDATE-POLICY-GUIDE.md)** - Update Policy 완전 가이드
+- **[../TEST-ENVIRONMENT-GUIDE.md](TEST-ENVIRONMENT-GUIDE.md)** - 테스트 환경 설정
 
 ---
 

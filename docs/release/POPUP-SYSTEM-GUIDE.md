@@ -382,24 +382,24 @@ WHERE app_id = 'your.app.id';
 - **[TEST-ENVIRONMENT-GUIDE.md](TEST-ENVIRONMENT-GUIDE.md)** - 테스트 환경 선택 가이드
 
 ### 릴리즈 테스트
-- **[release/RELEASE-TEST-PHASE1-RELEASE.md](release/RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency
-- **[release/RELEASE-TEST-PHASE2-RELEASE.md](release/RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update
-- **[release/RELEASE-TEST-PHASE3-RELEASE.md](release/RELEASE-TEST-PHASE3-RELEASE.md)** - Phase 3: Notice
-- **[release/RELEASE-TEST-PHASE4-RELEASE.md](release/RELEASE-TEST-PHASE4-RELEASE.md)** - Phase 4: 우선순위
-- **[release/RELEASE-TEST-PHASE5-RELEASE.md](release/RELEASE-TEST-PHASE5-RELEASE.md)** - Phase 5: Ad Policy
+- **[release/RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency
+- **[release/RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update
+- **[release/RELEASE-TEST-PHASE3-RELEASE.md](RELEASE-TEST-PHASE3-RELEASE.md)** - Phase 3: Notice
+- **[release/RELEASE-TEST-PHASE4-RELEASE.md](RELEASE-TEST-PHASE4-RELEASE.md)** - Phase 4: 우선순위
+- **[release/RELEASE-TEST-PHASE5-RELEASE.md](RELEASE-TEST-PHASE5-RELEASE.md)** - Phase 5: Ad Policy
 
 ### SQL 스크립트
-- **[sql/01-create-update-policy.sql](sql/01-create-update-policy.sql)** - update_policy 테이블
-- **[sql/02-create-emergency-policy.sql](sql/02-create-emergency-policy.sql)** - emergency_policy 테이블
-- **[sql/03-create-notice-policy.sql](sql/03-create-notice-policy.sql)** - notice_policy 테이블
-- **[sql/07-create-debug-test-data.sql](sql/07-create-debug-test-data.sql)** - 디버그 테스트 데이터
-- **[sql/10-update-policy-remove-message.sql](sql/10-update-policy-remove-message.sql)** - message 필드 제거 마이그레이션
-- **[sql/11-fix-download-url-default.sql](sql/11-fix-download-url-default.sql)** - download_url 기본값 수정
-- **[sql/12-diagnose-update-policy.sql](sql/12-diagnose-update-policy.sql)** - update_policy 진단 스크립트
+- **[sql/01-create-update-policy.sql](../sql/01-create-update-policy.sql)** - update_policy 테이블
+- **[sql/02-create-emergency-policy.sql](../sql/02-create-emergency-policy.sql)** - emergency_policy 테이블
+- **[sql/03-create-notice-policy.sql](../sql/03-create-notice-policy.sql)** - notice_policy 테이블
+- **[sql/07-create-debug-test-data.sql](../sql/07-create-debug-test-data.sql)** - 디버그 테스트 데이터
+- **[sql/10-update-policy-remove-message.sql](../sql/10-update-policy-remove-message.sql)** - message 필드 제거 마이그레이션
+- **[sql/11-fix-download-url-default.sql](../sql/11-fix-download-url-default.sql)** - download_url 기본값 수정
+- **[sql/12-diagnose-update-policy.sql](../sql/12-diagnose-update-policy.sql)** - update_policy 진단 스크립트
 
 ### 변경 이력
 - **[UPDATE-POLICY-MESSAGE-REMOVAL-COMPLETE.md](UPDATE-POLICY-MESSAGE-REMOVAL-COMPLETE.md)** - message 제거 완료 보고서
-- **[archive/NEW-APP-ID-REMOVAL-HISTORY.md](archive/NEW-APP-ID-REMOVAL-HISTORY.md)** - new_app_id 제거 기록
+- **[archive/NEW-APP-ID-REMOVAL-HISTORY.md](../archive/NEW-APP-ID-REMOVAL-HISTORY.md)** - new_app_id 제거 기록
 
 ---
 
