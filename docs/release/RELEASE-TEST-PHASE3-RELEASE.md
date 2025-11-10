@@ -1,9 +1,8 @@
 # 릴리즈 테스트 - Phase 3 (Notice Policy)
 
-**버전**: v2.0.0  
+**버전**: v3.0  
 **최종 업데이트**: 2025-11-10  
-**app_id**: `com.sweetapps.pocketchord` (프로덕션)  
-**포함 내용**: Notice Policy 테스트 + 버전 관리 가이드
+**소요 시간**: 약 10-15분
 
 ---
 
@@ -16,28 +15,16 @@
 
 ---
 
-## 1. Notice Policy 개념
+## 1 Notice Policy 개념
 
-### 1.1 notice_policy 테이블 구조
-
-```sql
-CREATE TABLE notice_policy (
-    id BIGINT PRIMARY KEY,
-    app_id TEXT NOT NULL,
-    is_active BOOLEAN DEFAULT FALSE,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    notice_version INTEGER NOT NULL,
-    button_text TEXT DEFAULT '확인'
-);
-```
+### 1 테이블 구조
 
 **핵심 필드**:
 - `is_active`: 공지 ON/OFF
 - `notice_version`: 버전 번호 (추적용)
 - `title`, `content`: 공지 내용
 
-### 1.2 버전 추적 메커니즘
+### 2 버전 추적 메커니즘
 
 **SharedPreferences 추적**:
 ```
@@ -48,26 +35,24 @@ CREATE TABLE notice_policy (
 ```
 
 **특징**:
-- ✅ 사용자별 추적 (각자 다른 시점에 봄)
+- ✅ 사용자별 추적
 - ✅ 버전만 증가하면 자동 재표시
 - ✅ X 버튼으로 닫기 가능
 
 ---
 
-## 2. Phase 3 테스트
+## 2 Phase 3 테스트
 
-### 2.1 목표
+### 1 목표
 
-`notice_policy` 동작 검증:
 - 공지 표시
 - 버전 추적 (동일 버전 재표시 안 됨)
 - 버전 증가 시 재표시
 
-**소요 시간**: 약 10-15분
 
 ---
 
-### 2.2 시나리오 1: 공지 활성화
+### 2 시나리오 1: 공지 활성화
 
 #### SQL
 ```sql
@@ -90,7 +75,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 2.3 시나리오 2: 내용 수정 (버전 유지)
+### 3 시나리오 2: 내용 수정 (버전 유지)
 
 #### 목적
 동일 버전으로 내용만 수정하면 이미 본 사용자에게 재표시되지 않음 (오타 수정용)
@@ -112,7 +97,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 2.4 시나리오 3: 새 공지 (버전 증가)
+### 4 시나리오 3: 새 공지 (버전 증가)
 
 #### SQL
 ```sql
@@ -133,7 +118,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 2.5 정리: 비활성화
+### 5 정리: 비활성화
 
 #### SQL
 ```sql
@@ -149,9 +134,9 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 3. 버전 관리 가이드
+## 3 버전 관리 가이드
 
-### 3.1 버전 번호 형식 (권장)
+### 1 버전 번호 형식 (권장)
 
 | 형식 | 예시 | 용도 | 장점 |
 |------|------|------|------|
@@ -159,7 +144,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 | **YYMMDDHH** | 25110915 | 하루 여러 건 | 시간까지 구분 |
 | **자동 증가** | +1 방식 | 간단한 증가 | 실수 방지 |
 
-### 3.2 버전 관리 규칙
+### 2 버전 관리 규칙
 
 **✅ DO**:
 ```sql
@@ -177,7 +162,7 @@ UPDATE notice_policy SET notice_version = 251109;  -- 6자리
 UPDATE notice_policy SET notice_version = 2511091; -- 7자리 ❌
 ```
 
-### 3.3 운영 시나리오
+### 3 운영 시나리오
 
 #### 시나리오 1: 신규 공지
 ```sql
@@ -210,9 +195,9 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 4. 체크리스트
+## 4 체크리스트
 
-### 4.1 테스트 완료 여부
+### 1 테스트 완료 여부
 
 | 시나리오 | 결과 | 비고 |
 |----------|------|------|
@@ -221,7 +206,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 | 새 공지 (버전 증가) | ⬜ PASS / ⬜ FAIL | |
 | 정리 (비활성화) | ⬜ PASS / ⬜ FAIL | |
 
-### 4.2 발견된 이슈
+### 2 발견된 이슈
 
 ```
 1. _____________________________________________

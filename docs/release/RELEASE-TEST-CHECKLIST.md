@@ -1,89 +1,60 @@
 # 🚀 릴리즈 테스트 체크리스트
 
-**작성일**: 2025-11-09  
-**최종 업데이트**: 2025-11-10 (release 폴더 가이드 통합)  
-**목적**: 4개 테이블 팝업 시스템 완전 검증  
-**소요 시간**: 약 30-40분
+**버전**: v3.0  
+**최종 업데이트**: 2025-11-10  
+**소요 시간**: 약 40-50분
 
 ---
 
-## 📦 Release 폴더 구조
+## 📦 Release 폴더 문서
 
-이 폴더(`docs/release`)에는 릴리즈 관련 모든 문서가 있습니다:
-
-| 문서 | 설명 |
-|------|------|
-| **RELEASE-TEST-CHECKLIST.md** | 이 문서 (전체 테스트 가이드) |
-| **RELEASE-TEST-PHASE1-RELEASE.md** | Emergency Policy + 팝업 시스템 개요 |
-| **RELEASE-TEST-PHASE2-RELEASE.md** | Update Policy + 가이드 |
-| **RELEASE-TEST-PHASE2.5-*.md** (3개) | Update 시간 재표시 (SETUP/SCENARIOS/ADVANCED) |
-| **RELEASE-TEST-PHASE3-RELEASE.md** | Notice Policy |
-| **RELEASE-TEST-PHASE4-RELEASE.md** | 우선순위 테스트 |
-| **RELEASE-TEST-PHASE5-RELEASE.md** | Ad Policy + 배포 체크리스트 |
-| **a_RELEASE_SIGNING.md** | 릴리즈 서명 |
+| 문서 | 버전 | 설명 |
+|------|------|------|
+| **RELEASE-TEST-CHECKLIST.md** | v3.0 | 이 문서 (전체 가이드) |
+| **RELEASE-TEST-PHASE1-RELEASE.md** | v3.0 | Emergency + 팝업 시스템 개요 |
+| **RELEASE-TEST-PHASE2-RELEASE.md** | v4.0 | Update + 가이드 |
+| **RELEASE-TEST-PHASE2.5-*.md** (3개) | - | Update 시간 재표시 |
+| **RELEASE-TEST-PHASE3-RELEASE.md** | v3.0 | Notice + 버전 관리 |
+| **RELEASE-TEST-PHASE4-RELEASE.md** | v3.0 | 우선순위 테스트 |
+| **RELEASE-TEST-PHASE5-RELEASE.md** | v3.0 | Ad Policy + 배포 |
+| **a_RELEASE_SIGNING.md** | - | 릴리즈 서명 |
 
 ---
 
 ## 📋 목차
 
-1. [사전 준비](#사전-준비)
-2. [Phase 1: emergency_policy 테스트](#phase-1-emergency_policy-테스트)
-3. [Phase 2: update_policy 테스트](#phase-2-update_policy-테스트)
-4. [Phase 3: notice_policy 테스트](#phase-3-notice_policy-테스트)
-5. [Phase 4: 우선순위 테스트](#phase-4-우선순위-테스트)
-6. [Phase 5: 종합 시나리오](#phase-5-종합-시나리오)
-7. [최종 확인](#최종-확인)
+1. [사전 준비](#1-사전-준비)
+2. [Phase 1: Emergency Policy](#2-phase-1-emergency-policy)
+3. [Phase 2: Update Policy](#3-phase-2-update-policy)
+4. [Phase 3: Notice Policy](#4-phase-3-notice-policy)
+5. [Phase 4: 우선순위 테스트](#5-phase-4-우선순위-테스트)
+6. [Phase 5: 종합 시나리오](#6-phase-5-종합-시나리오)
+7. [최종 확인](#7-최종-확인)
 
-**💡 Phase별 상세 테스트는 각 PHASE 문서 참조**:
-- Phase 1~4: 기본 팝업 테스트 (Emergency, Update, Notice, 우선순위)
-- Phase 5: Ad Policy 테스트 + 배포 → **[PHASE5 문서](RELEASE-TEST-PHASE5-RELEASE.md)** 참조
+**💡 Tip**: Phase별 상세 내용은 각 PHASE 문서 참조
 
 ---
 
-## ✅ 사전 준비
+## 1 사전 준비
 
-### 1. 테스트 환경 선택 ⭐
+### 테스트 환경 선택
 
-**질문**: 어떤 빌드 타입을 테스트하나요?
+| 빌드 타입 | app_id | 용도 |
+|----------|--------|------|
+| **릴리즈** ✅ | `com.sweetapps.pocketchord` | 실제 사용자 환경 검증 (권장) |
+| Debug | `com.sweetapps.pocketchord.debug` | 개발 중 빠른 테스트 |
 
-| 빌드 타입 | app_id | 용도 | 권장 시기 |
-|----------|--------|------|----------|
-| **릴리즈** ✅ | `com.sweetapps.pocketchord` | 실제 사용자 환경 검증 | 릴리즈 전 최종 검증 |
-| Debug | `com.sweetapps.pocketchord.debug` | 개발 중 빠른 테스트 | 개발 단계 |
+### 준비 사항
 
-**💡 Tip**:
-- 릴리즈 테스트 = **프로덕션 데이터** 사용 (실제 사용자 경험과 동일)
-- Debug 테스트 = 프로덕션 데이터 보호, 실험 가능
-- **이 체크리스트 기본값**: `'com.sweetapps.pocketchord'` (릴리즈)
-
-**Debug로 변경하려면**: SQL의 모든 WHERE 절을 `.debug`로 변경
-
----
-
-### 2. Supabase 접속
 - [ ] Supabase 대시보드 접속
-- [ ] PocketChord 프로젝트 선택
-- [ ] SQL Editor 열기 준비
-
-### 3. Android Studio 준비
-- [ ] 프로젝트 열기
+- [ ] Android Studio 프로젝트 열기
 - [ ] Logcat 준비 (필터: "HomeScreen")
-- [ ] 테스트 기기/에뮬레이터 연결 확인
-- [ ] **빌드 타입 확인**: Release 또는 Debug
+- [ ] 테스트 기기 연결 확인
 
----
-
-### 4. 초기 상태 확인
-
-**목적**: 테스트 시작 전 각 팝업의 현재 상태를 기록합니다.
-- ✅ 어떤 팝업이 활성화되어 있는지
-- ✅ 각 팝업의 설정 값 (버전, 강제 여부 등)
-- ✅ 테스트 후 원래대로 복구하기 위한 기준점
-
-#### 📋 릴리즈(프로덕션) 버전 ⭐ 권장
+### 초기 상태 확인
 
 ```sql
--- 현재 상태 확인 (릴리즈용)
+-- 현재 상태 확인
 SELECT 'emergency_policy' as table_name, 
        CAST(is_active AS TEXT) as is_active, 
        LEFT(content, 30) as content_preview 
@@ -99,6 +70,92 @@ UNION ALL
 SELECT 'notice_policy', 
        CAST(is_active AS TEXT), 
        CONCAT('v', notice_version, ': ', LEFT(title, 20))
+FROM notice_policy 
+WHERE app_id = 'com.sweetapps.pocketchord'
+UNION ALL
+SELECT 'ad_policy', 
+       CAST(is_active AS TEXT), 
+       CONCAT('open:', ad_app_open_enabled, ' inter:', ad_interstitial_enabled, ' banner:', ad_banner_enabled)
+FROM ad_policy 
+WHERE app_id = 'com.sweetapps.pocketchord';
+```
+
+**기록**:
+```
+emergency: is_active = _____
+update: target = _____, force = _____
+notice: version = _____
+ad_policy: is_active = _____
+```
+
+---
+
+## 2 Phase 1: Emergency Policy
+
+**상세 테스트**: 👉 **[PHASE1 문서](RELEASE-TEST-PHASE1-RELEASE.md)**
+
+### 빠른 체크리스트
+
+| 항목 | 확인 |
+|------|------|
+| X 버튼 있음 (is_dismissible=true) | ⬜ |
+| X 버튼 없음 (is_dismissible=false) | ⬜ |
+| 뒤로가기 차단 (강제 모드) | ⬜ |
+| 재실행 시 다시 표시 (추적 없음) | ⬜ |
+| 정리 (비활성화) | ⬜ |
+
+---
+
+## 3 Phase 2: Update Policy
+
+**상세 테스트**: 👉 **[PHASE2 문서](RELEASE-TEST-PHASE2-RELEASE.md)**
+
+### 빠른 체크리스트
+
+| 항목 | 확인 |
+|------|------|
+| 강제 업데이트 (is_force_update=true) | ⬜ |
+| 선택적 업데이트 (is_force_update=false) | ⬜ |
+| "나중에" 클릭 후 추적 | ⬜ |
+| SharedPreferences 초기화 | ⬜ |
+| 정리 (target_version_code=1) | ⬜ |
+
+**⚠️ Phase 2.5 (시간 재표시)**: 별도 테스트 필요 시
+- [PHASE2.5-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)
+- [PHASE2.5-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)
+
+---
+
+## 4 Phase 3: Notice Policy
+
+**상세 테스트**: 👉 **[PHASE3 문서](RELEASE-TEST-PHASE3-RELEASE.md)**
+
+### 빠른 체크리스트
+
+| 항목 | 확인 |
+|------|------|
+| 공지 활성화 및 표시 | ⬜ |
+| 오타 수정 (버전 유지) → 재표시 안 됨 | ⬜ |
+| 새 공지 (버전 증가) → 재표시됨 | ⬜ |
+| 정리 (비활성화) | ⬜ |
+
+---
+
+## 5 Phase 4: 우선순위 테스트
+
+**상세 테스트**: 👉 **[PHASE4 문서](RELEASE-TEST-PHASE4-RELEASE.md)**
+
+### 빠른 체크리스트
+
+| 항목 | 확인 |
+|------|------|
+| Emergency + Update → Emergency만 표시 | ⬜ |
+| Update + Notice → Update만 표시 | ⬜ |
+| 모두 비활성화 → 팝업 없음 | ⬜ |
+
+---
+
+## 6 Phase 5: 종합 시나리오
 FROM notice_policy 
 WHERE app_id = 'com.sweetapps.pocketchord'
 UNION ALL
@@ -621,77 +678,57 @@ ad_policy: is_active = true, 광고 설정 = 프로덕션 (평상시)
 
 ### 기능 체크리스트
 
-#### Emergency Policy
-- [ ] ✅ 최우선순위 작동 (다른 팝업 무시)
-- [ ] ✅ is_dismissible=true → X 버튼 있음
-- [ ] ✅ is_dismissible=false → X 버튼 없음
-- [ ] ✅ 추적 없음 (매번 표시)
-- [ ] ✅ 뒤로가기 차단
+---
 
-#### Update Policy
-- [ ] ✅ 강제 업데이트: "나중에" 없음
-- [ ] ✅ 선택적 업데이트: "나중에" 있음
-- [ ] ✅ "나중에" 클릭 후 추적됨
-- [ ] ✅ 새 버전 나오면 다시 표시
-- [ ] ✅ 릴리즈 노트 표시
-- [ ] ✅ 강제 업데이트 시 뒤로가기 차단
+## 7 최종 확인
 
-#### Notice Policy
-- [ ] ✅ 버전 기반 추적
-- [ ] ✅ 오타 수정 (버전 유지) → 재표시 안 됨
-- [ ] ✅ 새 공지 (버전 증가) → 재표시됨
-- [ ] ✅ X 클릭 후 추적됨
+### 핵심 동작 확인
 
-#### 우선순위
-- [ ] ✅ emergency > update > notice
-- [ ] ✅ 상위 우선순위 있으면 하위 무시
+| Policy | 핵심 확인 사항 | 완료 |
+|--------|---------------|------|
+| **Emergency** | 최우선 표시, X 버튼 제어, 추적 없음 | ⬜ |
+| **Update** | 강제/선택적 모드, 버전 추적 | ⬜ |
+| **Notice** | 버전 추적, 버전 증가 시 재표시 | ⬜ |
+| **우선순위** | emergency > update > notice | ⬜ |
 
 ---
 
 ## 📊 테스트 결과 요약
 
-### 테스트 통과 여부
-
-| Phase | 테스트 항목 | 결과 | 비고 |
-|-------|-----------|------|------|
-| Phase 1 | emergency (X 있음) | ⬜ PASS / ⬜ FAIL | |
-| Phase 1 | emergency (X 없음) | ⬜ PASS / ⬜ FAIL | |
-| Phase 2 | 강제 업데이트 | ⬜ PASS / ⬜ FAIL | |
-| Phase 2 | 선택적 업데이트 | ⬜ PASS / ⬜ FAIL | |
-| Phase 3 | 공지 표시 | ⬜ PASS / ⬜ FAIL | |
-| Phase 3 | 오타 수정 (버전 유지) | ⬜ PASS / ⬜ FAIL | |
-| Phase 3 | 새 공지 (버전 증가) | ⬜ PASS / ⬜ FAIL | |
-| Phase 4 | emergency > update | ⬜ PASS / ⬜ FAIL | |
-| Phase 4 | update > notice | ⬜ PASS / ⬜ FAIL | |
-| Phase 5 | 깨끗한 상태 | ⬜ PASS / ⬜ FAIL | |
-| Phase 5 | 프로덕션 상태 | ⬜ PASS / ⬜ FAIL | |
+| Phase | 항목 | 결과 | 비고 |
+|-------|------|------|------|
+| Phase 1 | Emergency (X 있음/없음) | ⬜ PASS / ⬜ FAIL | |
+| Phase 2 | Update (강제/선택적) | ⬜ PASS / ⬜ FAIL | |
+| Phase 3 | Notice (버전 관리) | ⬜ PASS / ⬜ FAIL | |
+| Phase 4 | 우선순위 | ⬜ PASS / ⬜ FAIL | |
+| Phase 5 | 종합 시나리오 | ⬜ PASS / ⬜ FAIL | |
 
 ### 발견된 이슈
 
 ```
 1. _____________________________________________
 2. _____________________________________________
-3. _____________________________________________
 ```
 
 ---
 
 ## ✅ 릴리즈 승인
 
-### 승인 조건
-- [ ] ✅ 모든 Phase 테스트 PASS
-- [ ] ✅ 이슈 0개 또는 모두 해결됨
-- [ ] ✅ 프로덕션 상태 확인 완료
-- [ ] ✅ 데이터베이스 상태 정상
+**승인 조건**:
+- [ ] 모든 Phase 테스트 PASS
+- [ ] 이슈 0개 또는 모두 해결됨
+- [ ] 프로덕션 상태 확인 완료
 
-### 최종 승인
-- [ ] ✅ **릴리즈 준비 완료** 🚀
+**최종 승인**:
+- [ ] **릴리즈 준비 완료** 🚀
 
 **테스트 완료 일시**: _______________  
-**테스터**: _______________  
-**승인자**: _______________
+**테스터**: _______________
 
 ---
+
+**문서 버전**: v3.0  
+**마지막 수정**: 2025-11-10
 
 ## 📝 부록
 

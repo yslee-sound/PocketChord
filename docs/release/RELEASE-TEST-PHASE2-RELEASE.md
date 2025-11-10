@@ -1,9 +1,8 @@
 # 릴리즈 테스트 - Phase 2 (Update Policy)
 
-**버전**: v3.0.0  
+**버전**: v4.0  
 **최종 업데이트**: 2025-11-10  
-**app_id**: `com.sweetapps.pocketchord` (프로덕션)  
-**포함 내용**: Update Policy 가이드 + 테스트
+**소요 시간**: 약 15분
 
 ---
 
@@ -17,9 +16,9 @@
 
 ---
 
-## 1. Update Policy 개념
+## 1 Update Policy 개념
 
-### 1.1 target_version_code란?
+### 1 target_version_code란?
 
 **Play Store에 올릴 다음 버전의 versionCode입니다.**
 
@@ -31,23 +30,28 @@
 → 버전 10 사용자에게 "업데이트하세요" 팝업 표시
 ```
 
-### 1.2 업데이트 타입
+### 2 업데이트 타입
 
 | 타입 | 설정 | 사용자 경험 | 사용 시기 |
 |------|------|-----------|----------|
 | **선택적 업데이트** | `is_force_update = false` | "나중에" 버튼 있음 | 일반 업데이트 |
 | **강제 업데이트** | `is_force_update = true` | "나중에" 버튼 없음, 뒤로가기 차단 | 중요 버그, 보안 이슈 |
 
-### 1.3 시간 기반 재표시 (Phase 2.5)
+### 3 시간 기반 재표시 (Phase 2.5)
 
 **"나중에" 클릭 후 일정 시간이 지나면 다시 팝업 표시**
 
-| 필드 | 설명 | 운영값 |
-|------|------|--------|
-| `reshow_interval_hours` | 재표시 간격 (시간) | 24 (권장) |
-| `max_later_count` | 최대 "나중에" 횟수 | 3 (권장) |
-| `reshow_interval_seconds` | 테스트용 (초) | NULL (운영 필수) |
-| `reshow_interval_minutes` | 테스트용 (분) | NULL (운영 필수) |
+**⚠️ 상세 내용**: [PHASE2.5 문서](RELEASE-TEST-PHASE2.5-SETUP.md) 참조
+
+---
+
+## 2 Phase 2 테스트
+
+### 목표
+
+- 강제 업데이트 (뒤로가기 차단)
+- 선택적 업데이트 ("나중에" 버튼)
+- SharedPreferences 추적
 
 **동작**:
 ```
@@ -61,20 +65,17 @@
 
 ---
 
-## 2. Phase 2 테스트
+## 2 Phase 2 테스트
 
-### 2.1 목표
+### 1 목표
 
-`update_policy` 동작 검증:
 - 강제 업데이트 (뒤로가기 차단)
 - 선택적 업데이트 ("나중에" 버튼)
 - SharedPreferences 추적
 
-**소요 시간**: 약 15분
-
 ---
 
-### 2.2 시나리오 1: 강제 업데이트
+### 2 시나리오 1: 강제 업데이트
 
 #### SQL
 ```sql
@@ -99,7 +100,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 2.3 시나리오 2: 선택적 업데이트
+### 3 시나리오 2: 선택적 업데이트
 
 #### SQL
 ```sql
@@ -128,7 +129,7 @@ adb shell run-as com.sweetapps.pocketchord cat /data/data/com.sweetapps.pocketch
 
 ---
 
-### 2.4 시나리오 3: SharedPreferences 초기화
+### 4 시나리오 3: SharedPreferences 초기화
 
 #### 목적
 "나중에"로 숨긴 팝업을 다시 표시하려면 추적 데이터 삭제 필요
@@ -150,7 +151,7 @@ adb shell run-as com.sweetapps.pocketchord rm -r /data/data/com.sweetapps.pocket
 
 ---
 
-### 2.5 정리: 비활성화
+### 5 정리: 비활성화
 
 #### SQL
 ```sql
@@ -167,9 +168,9 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 3. 운영 가이드
+## 3 운영 가이드
 
-### 3.1 새 버전 출시 절차
+### 1 새 버전 출시 절차
 
 #### Step 1: 새 버전 빌드
 ```
@@ -211,7 +212,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3.2 상황별 설정
+### 2 상황별 설정
 
 | 상황 | is_force_update | 설명 |
 |------|----------------|------|
@@ -222,7 +223,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3.3 긴급 상황 대응
+### 3 긴급 상황 대응
 
 #### 상황: 배포된 버전에 심각한 버그 발견
 
@@ -240,9 +241,9 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 4. 문제 해결
+## 4 문제 해결
 
-### 4.1 팝업이 표시되지 않음
+### 1 팝업이 표시되지 않음
 
 **확인**:
 ```sql
@@ -273,7 +274,7 @@ adb shell pm clear com.sweetapps.pocketchord
 
 ---
 
-### 4.2 "나중에" 후 영구히 숨김
+### 2 "나중에" 후 영구히 숨김
 
 **원인**: SharedPreferences에 추적됨 (정상 동작)
 
@@ -283,9 +284,9 @@ adb shell pm clear com.sweetapps.pocketchord
 
 ---
 
-## 5. 체크리스트
+## 5 체크리스트
 
-### 5.1 테스트 완료 여부
+### 1 테스트 완료 여부
 
 | 시나리오 | 결과 | 비고 |
 |----------|------|------|
@@ -294,7 +295,7 @@ adb shell pm clear com.sweetapps.pocketchord
 | SharedPreferences 초기화 | ⬜ PASS / ⬜ FAIL | |
 | 정리 (비활성화) | ⬜ PASS / ⬜ FAIL | |
 
-### 5.2 발견된 이슈
+### 2 발견된 이슈
 
 ```
 1. _____________________________________________

@@ -1,9 +1,8 @@
-# 릴리즈 테스트 - Phase 5 (광고 정책)
+# 릴리즈 테스트 - Phase 5 (Ad Policy + 배포)
 
-**버전**: v2.0.0  
+**버전**: v3.0  
 **최종 업데이트**: 2025-11-10  
-**대상**: ad_policy 테이블 기반 광고 제어 시스템  
-**소요 시간**: 약 20-30분 (배포 체크리스트 포함)
+**소요 시간**: 약 20-30분
 
 ---
 
@@ -18,42 +17,29 @@
 
 ---
 
-## 1. 개요
+## 1 개요
 
-### 1.1 테스트 목적
+### 1 ad_policy 테이블 구조
 
-**ad_policy 테이블을 통한 광고 제어 시스템 검증**
-
-| 항목 | 설명 |
-|------|------|
-| **테스트 대상** | ad_policy 테이블 |
-| **광고 타입** | App Open, Interstitial, Banner |
-| **제어 방식** | Supabase 실시간 제어 |
-| **검증 사항** | ON/OFF 제어, 빈도 제한 |
-
-### 1.2 ad_policy 테이블 구조
-
-| 필드명 | 타입 | 기본값 | 설명 |
-|--------|------|--------|------|
-| `is_active` | boolean | true | 전체 광고 ON/OFF |
-| `ad_app_open_enabled` | boolean | true | App Open 광고 ON/OFF |
-| `ad_interstitial_enabled` | boolean | true | Interstitial 광고 ON/OFF |
-| `ad_banner_enabled` | boolean | true | Banner 광고 ON/OFF |
-| `ad_interstitial_max_per_hour` | integer | 2 | 시간당 최대 Interstitial 수 |
-| `ad_interstitial_max_per_day` | integer | 15 | 일일 최대 Interstitial 수 |
+| 필드명 | 기본값 | 설명 |
+|--------|--------|------|
+| `is_active` | true | 전체 광고 ON/OFF |
+| `ad_app_open_enabled` | true | App Open 광고 |
+| `ad_interstitial_enabled` | true | Interstitial 광고 |
+| `ad_banner_enabled` | true | Banner 광고 |
+| `ad_interstitial_max_per_hour` | 2 | 시간당 최대 횟수 |
+| `ad_interstitial_max_per_day` | 15 | 일일 최대 횟수 |
 
 ---
 
-## 2. 테스트 준비
+## 2 테스트 준비
 
-### 2.1 사전 확인
-
-**체크리스트**:
+### 1 사전 확인
 - [ ] Supabase SQL Editor 접속 완료
 - [ ] 테스트 기기/에뮬레이터 연결 확인
 - [ ] Logcat 필터 설정: `tag:AdPolicy` 또는 `tag:AdMob`
 
-### 2.2 초기 상태 확인
+### 2 초기 상태 확인
 
 **SQL 스크립트**:
 ```sql
@@ -91,9 +77,9 @@ max_per_day: _____
 
 ---
 
-## 3. 시나리오 테스트
+## 3 시나리오 테스트
 
-### 3.S1. 전체 광고 비활성화
+### 1 전체 광고 비활성화
 
 #### 목적
 `is_active = false` 설정 시 모든 광고가 표시되지 않는지 확인
@@ -130,7 +116,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3.S2. App Open 광고 제어
+### 2 App Open 광고 제어
 
 #### 목적
 App Open 광고만 개별 제어
@@ -168,7 +154,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3.S3. Interstitial 광고 제어
+### 3 Interstitial 광고 제어
 
 #### 목적
 Interstitial 광고만 개별 제어
@@ -203,7 +189,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3.S4. Banner 광고 제어
+### 4 Banner 광고 제어
 
 #### 목적
 Banner 광고만 개별 제어
@@ -238,7 +224,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3.S5. 빈도 제한 테스트 (선택사항)
+### 5 빈도 제한 테스트 (선택사항)
 
 #### 목적
 Interstitial 광고 빈도 제한 동작 확인
@@ -273,7 +259,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 3.S6. 최종 확인
+### 6 최종 확인
 
 #### Step 1: 모든 광고 정상화 확인
 ```sql
@@ -303,9 +289,9 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 4. 문제 해결
+## 4 문제 해결
 
-### 4.1 광고가 표시되지 않을 때
+### 1 광고가 표시되지 않을 때
 
 **체크리스트**:
 1. **Supabase 설정 확인**
@@ -331,7 +317,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
    adb shell pm clear com.sweetapps.pocketchord
    ```
 
-### 4.2 긴급 조치
+### 2 긴급 조치
 
 **모든 광고 즉시 끄기**:
 ```sql
@@ -360,9 +346,9 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 5. 배포 체크리스트
+## 5 배포 체크리스트
 
-### 5.1 Supabase 작업
+### 1 Supabase 작업
 
 #### Step 1: Supabase Dashboard 로그인
 - [ ] URL: https://supabase.com 접속
@@ -435,7 +421,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 5.2 로컬 빌드 테스트
+### 2 로컬 빌드 테스트
 
 #### Debug 빌드
 ```bash
@@ -461,7 +447,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ---
 
-### 5.3 Supabase 제어 테스트
+### 3 Supabase 제어 테스트
 
 #### 테스트 1: 배너 광고 제어
 ```sql
@@ -510,7 +496,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 5.4 Release 빌드
+### 4 Release 빌드
 
 #### Step 1: Release 빌드
 ```bash
@@ -534,7 +520,7 @@ jarsigner -verify -verbose app/release/app-release.apk
 
 ---
 
-### 5.5 Play Store 준비
+### 5 Play Store 준비
 
 #### 버전 확인
 ```kotlin
@@ -560,7 +546,7 @@ versionName = "?" // 적절한 버전
 
 ---
 
-### 5.6 최종 상태 확인
+### 6 최종 상태 확인
 
 #### Supabase 테이블 상태
 ```sql
@@ -583,7 +569,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-### 5.7 배포 승인
+### 7 배포 승인
 
 **최종 체크리스트**:
 - [ ] ✅ 모든 테스트 완료
@@ -598,7 +584,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ## 6. 완료 체크리스트
 
-### 6.1 시나리오 통과 여부
+### 1 시나리오 통과 여부
 
 | 시나리오 | 결과 | 비고 |
 |----------|------|------|
@@ -609,13 +595,13 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 | S5: 빈도 제한 (선택) | ⬜ PASS / ⬜ FAIL / ⬜ SKIP | |
 | S6: 최종 확인 | ⬜ PASS / ⬜ FAIL | |
 
-### 6.2 최종 상태 확인
+### 2 최종 상태 확인
 
 - [ ] ✅ 모든 광고 설정이 운영 기본값으로 복구됨
 - [ ] ✅ 실제 광고 동작 정상 확인
 - [ ] ✅ Phase 5 테스트 완료
 
-### 6.3 발견된 이슈
+### 3 발견된 이슈
 
 ```
 1. _____________________________________________
