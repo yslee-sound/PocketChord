@@ -157,7 +157,7 @@ UPDATE notice_policy SET notice_version = notice_version + 1;
 
 **❌ DON'T**:
 ```sql
--- 자릿수 혼합 금지 (비교 오류 발생)
+-- 자리수 혼합 금지 (비교 오류 발생)
 UPDATE notice_policy SET notice_version = 251109;  -- 6자리
 UPDATE notice_policy SET notice_version = 2511091; -- 7자리 ❌
 ```
@@ -176,7 +176,7 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 #### 시나리오 2: 오타 발견
 ```sql
--- 버전 변경 없이 수정 (이미 본 사용자는 안 봄)
+-- 버전 변경 없이 수정 (이미 본 사용자들은 안 봄)
 UPDATE notice_policy
 SET content = '수정된 내용'
 WHERE app_id = 'com.sweetapps.pocketchord';
@@ -201,10 +201,10 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 | 시나리오 | 결과 | 비고 |
 |----------|------|------|
-| 공지 활성화 | ⬜ PASS / ⬜ FAIL | |
-| 내용 수정 (버전 유지) | ⬜ PASS / ⬜ FAIL | |
-| 새 공지 (버전 증가) | ⬜ PASS / ⬜ FAIL | |
-| 정리 (비활성화) | ⬜ PASS / ⬜ FAIL | |
+| 공지 활성화 | ☐ PASS / ☐ FAIL | |
+| 내용 수정 (버전 유지) | ☐ PASS / ☐ FAIL | |
+| 새 공지 (버전 증가) | ☐ PASS / ☐ FAIL | |
+| 정리 (비활성화) | ☐ PASS / ☐ FAIL | |
 
 ### 2 발견된 이슈
 
@@ -219,22 +219,10 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 ## 📚 관련 문서
 
 - **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 전체 릴리즈 테스트
-- **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency (팝업 시스템 개요)
+- **[RELEASE-TEST-PHASE1-Emergency.md](RELEASE-TEST-PHASE1-Emergency.md)** - Phase 1: Emergency (팝업 시스템 개요)
 - **[RELEASE-TEST-PHASE2.1-RELEASE.md](RELEASE-TEST-PHASE2.1-RELEASE.md)** - Phase 2: Update Policy
 
 ---
 
-**문서 버전**: v2.0.0 (구조 개선 및 가이드 통합)  
+**문서 버전**: v3.0  
 **마지막 수정**: 2025-11-10
-```sql
--- 3-4. Notice 정리 (초기화) - 릴리즈 & 디버그
-UPDATE notice_policy
-SET is_active = false,
-    notice_version = 251109
-WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
-```
-
----
-
-**문서 버전**: v1.6.0  
-**마지막 수정**: 2025-11-09 16:39:35 KST

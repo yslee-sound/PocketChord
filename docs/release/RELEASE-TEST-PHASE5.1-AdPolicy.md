@@ -162,7 +162,7 @@ FROM ad_policy;
   - 필터 입력란에 `policy` 또는 `광고` 입력 (대소문자 구분 없음)
   
   **확인**: 로그가 보이지 않으면
-  - Logcat 레벨이 **"Verbose"** 또는 **"Debug"**로 설정되었는지 확인
+  - Logcat 레벨이 **"Verbose"** 또는 **"Debug"**로 설정됐는지 확인
   - 앱이 실행 중인지 확인
   - 패키지: `com.sweetapps.pocketchord.debug` 선택 확인
 
@@ -331,7 +331,7 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 - 📋 **전면광고 조건**: 상세한 표시 조건 이해
 - 📋 **Logcat 분석**: 각 광고 타입별 로그 확인
 
-**Phase 5.2 문서**: [RELEASE-TEST-PHASE5.2-RELEASE.md](RELEASE-TEST-PHASE5.2-RELEASE.md)
+**Phase 5.2 문서**: [RELEASE-TEST-PHASE5.2-AdPolicy.md](RELEASE-TEST-PHASE5.2-AdPolicy.md)
 
 ---
 
@@ -385,7 +385,7 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 ### 관련 문서
 - `docs/sql/fix-rls-policy.sql` - RLS 정책 수정 SQL
 - `docs/archive/IS-ACTIVE-FIX-COMPLETE.md` - is_active 근본 해결 완전 가이드
-- `docs/release/RELEASE-TEST-PHASE5.2-RELEASE.md` - Phase 5.2: 개별 광고 제어
+- `docs/release/RELEASE-TEST-PHASE5.2-AdPolicy.md` - Phase 5.2: 개별 광고 제어
 
 ### 변경 이력
 - **v3.1 (2025-11-11)**: is_active 근본 해결, RLS 정책 수정, 3분 캐싱
@@ -396,4 +396,3 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 **최종 업데이트**: 2025-11-11  
 **버전**: v3.1  
 **Phase 5.1 완료**: ⬜ PASS / ⬜ FAIL
-
