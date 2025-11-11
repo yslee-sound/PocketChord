@@ -248,12 +248,30 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TopBannerAd() {
+    val context = LocalContext.current
     // BuildConfig에서 광고 ID 가져오기 (디버그: 테스트 ID, 릴리즈: 실제 ID)
     val bannerAdUnitId = BuildConfig.BANNER_AD_UNIT_ID
     // Keep a reference to destroy AdView when disposed
     var adView by remember { mutableStateOf<com.google.android.gms.ads.AdView?>(null) }
-    // 배너 광고의 표준 높이 (50dp)
-    val bannerHeight = 50.dp
+
+    // Adaptive Banner 사이즈 계산 (화면 너비 기반)
+    val adSize = remember {
+        val windowManager = context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        val outMetrics = android.util.DisplayMetrics()
+        windowManager.defaultDisplay.getMetrics(outMetrics)
+        val density = outMetrics.density
+        val adWidthPixels = outMetrics.widthPixels.toFloat()
+        val adWidth = (adWidthPixels / density).toInt()
+        AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth)
+    }
+
+    // Adaptive Banner의 실제 높이를 dp로 변환
+    val bannerHeight = remember(adSize) {
+        adSize.getHeightInPixels(context).let { heightPx ->
+            val density = context.resources.displayMetrics.density
+            (heightPx / density).dp
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -269,9 +287,9 @@ fun TopBannerAd() {
                 .background(Color.White)
         ) {
             AndroidView(
-                factory = { context ->
-                    com.google.android.gms.ads.AdView(context).apply {
-                        setAdSize(AdSize.BANNER)
+                factory = { ctx ->
+                    com.google.android.gms.ads.AdView(ctx).apply {
+                        setAdSize(adSize)
                         setAdUnitId(bannerAdUnitId)
                         loadAd(AdRequest.Builder().build())
                         adView = this
@@ -299,8 +317,27 @@ fun TopBannerAd() {
 
 @Composable
 fun TopBannerAdPlaceholder() {
-    // 배너 광고가 없을 때 같은 크기의 빈 공간
-    val bannerHeight = 50.dp
+    val context = LocalContext.current
+
+    // Adaptive Banner와 동일한 사이즈 계산
+    val adSize = remember {
+        val windowManager = context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        val outMetrics = android.util.DisplayMetrics()
+        windowManager.defaultDisplay.getMetrics(outMetrics)
+        val density = outMetrics.density
+        val adWidthPixels = outMetrics.widthPixels.toFloat()
+        val adWidth = (adWidthPixels / density).toInt()
+        AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth)
+    }
+
+    // 배너 광고가 없을 때도 같은 높이를 유지하여 레이아웃 일관성 유지
+    val bannerHeight = remember(adSize) {
+        adSize.getHeightInPixels(context).let { heightPx ->
+            val density = context.resources.displayMetrics.density
+            (heightPx / density).dp
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
