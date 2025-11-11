@@ -222,10 +222,3 @@ DROP TABLE IF EXISTS public.update_policy CASCADE;
 **이제 오류 없이 실행됩니다!** 🚀
 
 ---
-
-## 📚 관련 문서
-
-- `SQL-FIX-COMPLETE.md` - 이전 WHERE 절 오류 수정
-- `DEBUG-DATA-ADDED.md` - Debug 데이터 추가
-- `phase-complete-all.md` - 전체 완료 가이드
-

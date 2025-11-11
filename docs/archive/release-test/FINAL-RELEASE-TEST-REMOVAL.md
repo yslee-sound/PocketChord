@@ -150,18 +150,7 @@ Product Flavors:
 
 ---
 
-## 📚 관련 문서
-
-- ✅ **RELEASE-TEST-REMOVED.md** - 제거 상세 내역
-- ✅ **debug-mode-button-fix.md** - 디버그 모드 버튼 구현
-- 📦 **QUICKSTART-RELEASE-TEST.md** - 아카이브 (참고용)
-- 📦 **RELEASE-TEST-CORRECTION.md** - 아카이브 (참고용)
-- 📦 **release-test-guide.md** - 아카이브 (참고용)
-
----
-
 **작성일**: 2025-11-08  
 **상태**: ✅ **완료 - Debug + Release 2개 빌드만 유지**
 
 이제 프로젝트가 더 단순하고 표준적인 구조가 되었습니다! 🎉
-

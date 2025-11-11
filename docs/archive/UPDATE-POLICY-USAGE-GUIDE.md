@@ -271,14 +271,6 @@ target_version_code = 15
 
 ---
 
-## 📚 관련 문서
-
-- `POPUP-SYSTEM-GUIDE.md` - 전체 팝업 시스템 가이드
-- `sql/01-create-update-policy.sql` - 테이블 생성 SQL
-
----
-
 **문서 버전**: v1.0.1  
 **마지막 수정**: 2025-11-09 06:35 KST  
 **작성자**: GitHub Copilot
-

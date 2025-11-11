@@ -149,7 +149,7 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 - [ ] 60초 후 앱 재실행 → 팝업 **다시 표시됨** ⭐
 - [ ] **"나중에" 버튼 없음** (강제 업데이트로 전환됨)
 - [ ] laterCount = 3 도달 → 클라이언트에서 `isForce = true`로 동적 전환
-- [ ] **참고**: DB는 여전히 `is_force_update = false`, 클라이언트에서만 전환됨
+- [ ] **참고**: DB는 여전히 `is_force_update = false`, 클라이언트에서만 전환
 
 **⚠️ 운영 환경**: `reshow_interval_hours = 24`로 설정 필요
 
@@ -403,27 +403,10 @@ LaunchedEffect(Unit) {
 
 | 시나리오 | 결과 | 비고 |
 |----------|------|------|
-| 강제 업데이트 | ⬜ PASS / ⬜ FAIL | |
-| 선택적 업데이트 | ⬜ PASS / ⬜ FAIL | |
-| SharedPreferences 초기화 | ⬜ PASS / ⬜ FAIL | |
-| 정리 (비활성화) | ⬜ PASS / ⬜ FAIL | |
-
-### 2 발견된 이슈
-
-```
-1. _____________________________________________
-2. _____________________________________________
-3. _____________________________________________
-```
-
----
-
-## 📚 관련 문서
-
-- **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 전체 릴리즈 테스트
-- **[RELEASE-TEST-PHASE2.2-SETUP.md](RELEASE-TEST-PHASE2.2-SETUP.md)** - Phase 2.2: 시간 기반 재표시 설정
-- **[RELEASE-TEST-PHASE2.4-SCENARIOS.md](RELEASE-TEST-PHASE2.4-SCENARIOS.md)** - Phase 2.4: 시나리오 테스트
-- **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency (팝업 시스템 개요)
+| 강제 업데이트 | ☐ PASS / ☐ FAIL | |
+| 선택적 업데이트 | ☐ PASS / ☐ FAIL | |
+| SharedPreferences 초기화 | ☐ PASS / ☐ FAIL | |
+| 정리 (비활성화) | ☐ PASS / ☐ FAIL | |
 
 ---
 

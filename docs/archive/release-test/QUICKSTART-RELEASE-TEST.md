@@ -295,25 +295,6 @@ adb shell am start -n com.sweetapps.pocketchord.releasetest/com.sweetapps.pocket
   .\gradlew.bat installReleaseTest
   ```
 
-## 📚 관련 문서
-
-- **[release-test-guide.md](./release-test-guide.md)** - 전체 가이드 (상세)
-- **[supabase-inactive-policy-fix.md](./supabase-inactive-policy-fix.md)** - 정책 비활성화 문제 해결
-- **[release-build-guide.md](./release-build-guide.md)** - 실제 Release 빌드 가이드
-
-## 📝 체크리스트
-
-- [x] releaseTest 빌드 타입 추가
-- [x] 빌드 성공
-- [x] 에뮬레이터 설치 성공
-- [x] **SUPABASE_APP_ID 수정 완료** - `.releasetest` suffix 사용 ✅
-- [ ] Supabase에 Release Test 데이터 추가 (`app_id='...releasetest'`)
-- [ ] Release Test 앱 재빌드 및 설치
-- [ ] SUPABASE_APP_ID 확인 (로그)
-- [ ] 강제 업데이트 팝업 테스트
-- [ ] 팝업 비활성화 테스트
-- [ ] 로컬 캐시 삭제 확인
-
 ---
 
 **작성일**: 2025-11-08  
@@ -327,7 +308,7 @@ D/AppPolicyRepo: ✅ Policy found:
 D/AppPolicyRepo:   - id: 2
 D/AppPolicyRepo:   - app_id: com.sweetapps.pocketchord.releasetest
 D/AppPolicyRepo:   - is_active: true
-D/AppPolicyRepo:   - active_popup_type: force_update
+D<AppPolicyRepo:   - active_popup_type: force_update
 D/AppPolicyRepo:   - content: [테스트] 필수 업데이트가 있습니다...
 ```
 
@@ -433,4 +414,3 @@ package:com.sweetapps.pocketchord
 3. Sync 완료 후 앱 실행
 
 또는 수동으로: **File > Sync Project with Gradle Files**
-

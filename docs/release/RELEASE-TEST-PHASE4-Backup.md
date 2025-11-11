@@ -174,14 +174,5 @@ WHERE app_id = 'com.sweetapps.pocketchord';
 
 ---
 
-## 📚 관련 문서
-
-- **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 전체 릴리즈 테스트
-- **[RELEASE-TEST-PHASE1-Emergency.md](RELEASE-TEST-PHASE1-Emergency.md)** - Phase 1: Emergency (팝업 시스템 개요)
-- **[RELEASE-TEST-PHASE2.1-RELEASE.md](RELEASE-TEST-PHASE2.1-RELEASE.md)** - Phase 2: Update Policy
-- **[RELEASE-TEST-PHASE3-DataValidation.md](RELEASE-TEST-PHASE3-DataValidation.md)** - Phase 3: Notice Policy
-
----
-
 **문서 버전**: v2.0.0 (구조 개선)  
 **마지막 수정**: 2025-11-10

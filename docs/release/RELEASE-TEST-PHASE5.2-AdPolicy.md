@@ -346,17 +346,6 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 ---
 
-### 5.2 다음 단계: Phase 5.3
-
-**Phase 5.3에서 수행할 내용**:
-- 📋 **빈도 제한 테스트**: 시간당/일일 제한 확인 (선택사항)
-- 📋 **최종 검증**: 모든 광고 설정 최종 확인
-- 📋 **배포 준비**: Release 빌드 및 Play Store 준비
-
-**Phase 5.3 문서**: [RELEASE-TEST-PHASE5.3-AdPolicy.md](RELEASE-TEST-PHASE5.3-AdPolicy.md)
-
----
-
 ## 6 긴급 광고 제어
 
 ### 6.1 운영 중 긴급 상황 대응
@@ -385,14 +374,14 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 ---
 
-## 7 참고 문서
+### 5.2 다음 단계: Phase 5.3
 
-### 관련 문서
-- `docs/release/RELEASE-TEST-PHASE5.1-AdPolicy.md` - Phase 5.1: RLS 정책 수정
-- `docs/release/RELEASE-TEST-PHASE5.3-AdPolicy.md` - Phase 5.3: 최종 검증 + 배포
+**Phase 5.3에서 수행할 내용**:
+- 📋 **빈도 제한 테스트**: 시간당/일일 제한 확인 (선택사항)
+- 📋 **최종 검증**: 모든 광고 설정 최종 확인
+- 📋 **배포 준비**: Release 빌드 및 Play Store 준비
 
-### 변경 이력
-- **v3.1 (2025-11-11)**: 개별 광고 제어 테스트, 전면광고 조건 상세화
+**Phase 5.3 문서**: [RELEASE-TEST-PHASE5.3-AdPolicy.md](RELEASE-TEST-PHASE5.3-AdPolicy.md)
 
 ---
 

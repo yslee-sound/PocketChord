@@ -255,15 +255,6 @@ download_url 이동
 
 ---
 
-## 관련 문서
-
-1. `docs/supabase-app-policy-hybrid.md` - 전체 설계 문서
-2. `docs/supabase-app-policy-implementation.md` - 구현 가이드
-3. `docs/homescreen-update-hybrid-policy.md` - HomeScreen 업데이트 내역
-4. `docs/emergency-popup-troubleshooting.md` - 상세 문제 해결 가이드
-
----
-
 **작성일**: 2025-11-08  
 **상태**: ✅ 해결 완료  
 **다음 단계**: 앱 빌드 및 테스트
@@ -275,4 +266,3 @@ gradlew.bat assembleDebug
 ```
 
 이제 앱을 빌드하고 실행하면 긴급 팝업이 정상적으로 표시됩니다! 🎉
-

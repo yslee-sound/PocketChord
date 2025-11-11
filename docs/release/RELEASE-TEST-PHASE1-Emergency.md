@@ -124,9 +124,9 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 | 시나리오 | 결과 | 비고 |
 |----------|------|------|
-| X 버튼 있음 | ⬜ PASS / ⬜ FAIL | |
-| X 버튼 없음 (강제) | ⬜ PASS / ⬜ FAIL | |
-| 정리 (비활성화) | ⬜ PASS / ⬜ FAIL | |
+| X 버튼 있음 | ☐ PASS / ☐ FAIL | |
+| X 버튼 없음 (강제) | ☐ PASS / ☐ FAIL | |
+| 정리 (비활성화) | ☐ PASS / ☐ FAIL | |
 
 ### 2 발견된 이슈
 
@@ -134,13 +134,6 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 1. _____________________________________________
 2. _____________________________________________
 ```
-
----
-
-## 📚 관련 문서
-
-- **[RELEASE-TEST-CHECKLIST.md](RELEASE-TEST-CHECKLIST.md)** - 전체 릴리즈 테스트
-- **[RELEASE-TEST-PHASE2.1-RELEASE.md](RELEASE-TEST-PHASE2.1-RELEASE.md)** - Phase 2: Update Policy
 
 ---
 

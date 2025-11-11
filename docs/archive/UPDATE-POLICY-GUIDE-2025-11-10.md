@@ -465,15 +465,5 @@ WHERE app_id = 'com.sweetapps.pocketchord.debug';
 
 ---
 
-## 📚 관련 문서
-
-- **[RELEASE-TEST-PHASE2-RELEASE.md](RELEASE-TEST-PHASE2-RELEASE.md)** - Phase 2: Update 기본 테스트
-- **[RELEASE-TEST-PHASE2.5-SETUP.md](RELEASE-TEST-PHASE2.5-SETUP.md)** - Phase 2.5: 설정 가이드
-- **[RELEASE-TEST-PHASE2.5-SCENARIOS.md](RELEASE-TEST-PHASE2.5-SCENARIOS.md)** - Phase 2.5: 시나리오 테스트
-- **[RELEASE-TEST-PHASE1-RELEASE.md](RELEASE-TEST-PHASE1-RELEASE.md)** - Phase 1: Emergency (팝업 시스템 개요 포함)
-
----
-
 **문서 버전**: v2.0.0  
 **마지막 수정**: 2025-11-10 KST
-

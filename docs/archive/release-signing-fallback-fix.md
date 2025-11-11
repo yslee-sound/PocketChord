@@ -225,14 +225,6 @@ env:
 
 ---
 
-## 📚 관련 문서
-
-- `docs/a_RELEASE_SIGNING.md` - Release 서명 상세 가이드
-- `docs/release-signing-setup-complete.md` - 서명 설정 완료 문서
-- `docs/release-build-guide.md` - Release 빌드 가이드
-
----
-
 ## 📝 완료된 작업
 
 - [x] 문제 원인 분석
@@ -251,4 +243,3 @@ env:
 
 이제 환경변수 없이도 Release 빌드를 로컬에서 테스트할 수 있습니다! 🎉  
 (실제 Play Store 배포 시에는 환경변수 설정 필요)
-

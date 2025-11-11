@@ -11,8 +11,7 @@
 1. [개요](#1-개요)
 2. [빈도 제한 테스트 (선택사항)](#2-빈도-제한-테스트-선택사항)
 3. [최종 검증](#3-최종-검증)
-4. [배포 체크리스트](#4-배포-체크리스트)
-5. [완료 체크리스트](#5-완료-체크리스트)
+4. [완료 체크리스트](#5-완료-체크리스트)
 
 ---
 
@@ -335,28 +334,6 @@ AdPolicyRepo: ===== Ad Policy Fetch Completed =====
 
 ---
 
-## 4 배포 체크리스트
-
-### 4.1 Supabase 최종 확인
-
-#### Step 1: Supabase Dashboard 접속
-- [ ] URL: https://supabase.com 접속
-- [ ] PocketChord 프로젝트 선택
-- [ ] SQL Editor 열기
-
-#### Step 2: 테이블 데이터 확인
-
-```sql
-SELECT * FROM ad_policy 
-WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug');
-```
-
-- [ ] ✅ 2개 행 반환 (release, debug)
-- [ ] ✅ 모든 광고 플래그 = true
-- [ ] ✅ 빈도 제한 = 기본값
-
----
-
 ## 5 완료 체크리스트
 
 ### 5.1 Phase 5.1, 5.2, 5.3 통합 결과
@@ -433,4 +410,3 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 **버전**: v3.1  
 **Phase 5.3 완료**: ⬜ PASS / ⬜ FAIL  
 **배포 준비**: ⬜ 완료 / ⬜ 미완료
-

@@ -380,18 +380,6 @@ WHERE app_id IN ('com.sweetapps.pocketchord', 'com.sweetapps.pocketchord.debug')
 
 ---
 
-## 7 참고 문서
-
-### 관련 문서
-- `docs/sql/fix-rls-policy.sql` - RLS 정책 수정 SQL
-- `docs/archive/IS-ACTIVE-FIX-COMPLETE.md` - is_active 근본 해결 완전 가이드
-- `docs/release/RELEASE-TEST-PHASE5.2-AdPolicy.md` - Phase 5.2: 개별 광고 제어
-
-### 변경 이력
-- **v3.1 (2025-11-11)**: is_active 근본 해결, RLS 정책 수정, 3분 캐싱
-
----
-
 **문서 작성**: GitHub Copilot  
 **최종 업데이트**: 2025-11-11  
 **버전**: v3.1  
