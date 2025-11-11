@@ -49,8 +49,6 @@
   - 4회차부터: 클라이언트에서 `isForce = true`로 동적 전환
   - "나중에" 버튼 사라짐
 
-[PHASE2.2 문서](RELEASE-TEST-PHASE2.2-SETUP.md) 참조
-
 ---
 
 ## 2 Phase 2 테스트
@@ -66,10 +64,6 @@
 1~3회차: "나중에" 클릭 → 24시간 후 재표시
 4회차: laterCount >= 3 → 강제 전환 (나중에 버튼 숨김)
 ```
-
-**⚠️ 중요**: Phase 2.2는 별도 문서 참조:
-- [RELEASE-TEST-PHASE2.2-SETUP.md](RELEASE-TEST-PHASE2.2-SETUP.md)
-- [RELEASE-TEST-PHASE2.4-SCENARIOS.md](RELEASE-TEST-PHASE2.4-SCENARIOS.md)
 
 ---
 
